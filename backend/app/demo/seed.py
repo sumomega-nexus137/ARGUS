@@ -258,7 +258,7 @@ def seed_area(db: Session, area_dir: Path) -> None:
         ("scenario", "synthetic_stage_hand", "DEMO synthetic ensemble", "SIMULATION", "OK",
          datetime.fromisoformat(sc["issued_at"]), False, 360),
         ("road_status", "field", "Field reports / manual road events", "SIMULATION", "OK", ref - timedelta(minutes=40), False, None),
-        ("resources", "operational", "Operational resource register (DEMO)", "SIMULATION", "OK", ref - timedelta(hours=3), False, None),
+        ("resources", "operational", "Operational resource register (DEMO)", "SIMULATION", "OK", ref - timedelta(minutes=25), False, None),
         ("terrain", "local_dem", "Synthetic DEM (DEMO)", "STATIC", "OK", None, False, None),
         ("buildings", "local_file", "Synthetic buildings (DEMO)", "STATIC", "OK", None, False, None),
         ("roads", "local_file", "Synthetic road network (DEMO)", "STATIC", "OK", None, False, None),

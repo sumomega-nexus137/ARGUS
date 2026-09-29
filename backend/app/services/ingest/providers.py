@@ -33,7 +33,8 @@ def freshness(ps: ProviderStatus, now: datetime) -> dict:
     elif ps.mode == "STATIC":
         cls = "STATIC"
     elif ps.mode == "SIMULATION":
-        cls = "SIMULATION" if age is None or age <= s.stale_after_min else "STALE"
+        limit = max(s.stale_after_min, (ps.schedule_min or 0) * 1.5)
+        cls = "SIMULATION" if age is None or age <= limit else "STALE"
     elif ps.mode == "HISTORICAL":
         cls = "HISTORICAL"
     elif age is None:

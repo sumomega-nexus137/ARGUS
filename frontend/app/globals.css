@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* ARGUS FloodOps — dark command-centre design tokens. Semantic status colours are always paired with
+   text / icons so status never relies on colour alone. */
+@theme {
+  --color-bg: #0a0e13;
+  --color-panel: #10161e;
+  --color-panel-2: #151d27;
+  --color-panel-3: #1b2531;
+  --color-line: #223040;
+  --color-line-2: #2d3e52;
+  --color-ink: #dbe4ee;
+  --color-ink-2: #a9b6c4;
+  --color-muted: #738396;
+  --color-accent: #3fb3ff;
+  --color-accent-2: #1e88d6;
+  --color-water: #2f8fe8;
+
+  --color-ok: #34c38f;
+  --color-watch: #e2c541;
+  --color-warn: #f59e2b;
+  --color-crit: #ef4d4d;
+  --color-sim: #a78bfa;
+  --color-live: #34c38f;
+  --color-cached: #7aa2c7;
+  --color-stale: #e0a13a;
+  --color-offline: #ef4d4d;
+  --color-static: #8b98a8;
+
+  --font-sans: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #243242; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* MapLibre overrides for the dark UI */
+.maplibregl-ctrl-group { background: var(--color-panel) !important; border: 1px solid var(--color-line); }
+.maplibregl-ctrl-group button { filter: invert(0.85); }
+.maplibregl-ctrl-attrib { background: rgba(10, 14, 19, 0.7) !important; color: var(--color-muted); font-size: 10px; }
+.maplibregl-ctrl-attrib a { color: var(--color-ink-2) !important; }
+.maplibregl-popup-content { background: var(--color-panel); color: var(--color-ink); border: 1px solid var(--color-line-2); border-radius: 4px; padding: 8px 10px; font-size: 12px; }
+.maplibregl-popup-tip { display: none; }
+
+.argus-marker { cursor: pointer; }
+.argus-marker:focus-visible { outline: 2px solid var(--color-accent); }
+
+@media print {
+  body { background: white; color: black; }
+  .no-print { display: none !important; }
+}
