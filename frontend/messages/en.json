@@ -966,7 +966,11 @@
     "requirements": "Requirements",
     "durations": "Setup / execution / buffer",
     "approvedBy": "Approved by",
-    "holds": "Holds until horizon"
+    "holds": "Holds until horizon",
+    "demoReset": "Reset demo",
+    "demoResetHint": "Restores the DEMO dataset to its initial state (Plan A at risk). Everything, including the audit trail, is reset.",
+    "demoResetConfirm": "Reset all demo data?",
+    "resetDone": "Demo dataset restored"
   },
   "errors": {
     "network_unavailable": "ARGUS server unreachable",

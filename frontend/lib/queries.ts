@@ -35,7 +35,7 @@ export function useAreas() {
 }
 
 export function useArea(areaId: string) {
-  return useQuery({ queryKey: ["area", areaId], queryFn: () => api<AreaDetail>(`/api/areas/${areaId}`), refetchInterval: 30_000 });
+  return useQuery({ queryKey: ["area", areaId], queryFn: () => api<AreaDetail>(`/api/areas/${areaId}`), refetchInterval: 30_000, enabled: !!areaId && areaId !== "__none__" });
 }
 
 export function useDataVersion(areaId: string): number | undefined {

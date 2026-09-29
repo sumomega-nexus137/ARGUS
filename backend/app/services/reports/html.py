@@ -46,6 +46,34 @@ LABELS = {
            "PLAN_VALID": "PLAN VALID", "PLAN_AT_RISK": "PLAN AT RISK"},
 }
 
+ROAD_STATE = {
+    "kk": {"OPEN": "Ашық", "AT_RISK": "Қауіпте", "CLOSES_IN": "Жабылады", "RESTRICTED": "Шектелген", "CLOSED": "Жабық"},
+    "ru": {"OPEN": "Открыта", "AT_RISK": "Под угрозой", "CLOSES_IN": "Закроется", "RESTRICTED": "Ограничена", "CLOSED": "Закрыта"},
+    "en": {"OPEN": "Open", "AT_RISK": "At risk", "CLOSES_IN": "Will close", "RESTRICTED": "Restricted", "CLOSED": "Closed"},
+}
+
+# causal chain node labels (subject is appended: road / resource / task)
+NODE = {
+    "kk": {"SCENARIO_CHANGED": "Су тасқыны сценарийі өзгерді", "HIGHER_WATER_LEVEL": "Су деңгейі жоғары",
+           "EARLIER_PEAK": "Шың ертерек", "ROAD_CLOSES_EARLIER": "Жол ертерек жабылады", "ROAD_CLOSED_FIELD": "Жол далалық хабармен жабылды",
+           "ROAD_CLOSED_AT": "Жол жабылады", "RESOURCE_LOSES_ACCESS": "Ресурс қолжетімділікті жоғалтады",
+           "RESOURCE_UNAVAILABLE": "Ресурс қолжетімсіз", "CREW_DELAYED": "Бригада кешігеді",
+           "TASK_MISSES_WINDOW": "Міндет әрекет терезесінен тыс қалады", "TASK_NO_ROUTE": "Міндетке бағыт жоқ",
+           "TASK_AT_RISK": "Міндет қауіпте", "DEADLINE_EARLIER": "Әрекет терезесі ертерек жабылады"},
+    "ru": {"SCENARIO_CHANGED": "Сценарий паводка изменился", "HIGHER_WATER_LEVEL": "Более высокий уровень воды",
+           "EARLIER_PEAK": "Пик раньше", "ROAD_CLOSES_EARLIER": "Дорога закрывается раньше", "ROAD_CLOSED_FIELD": "Дорога закрыта по полевому донесению",
+           "ROAD_CLOSED_AT": "Дорога закрывается", "RESOURCE_LOSES_ACCESS": "Ресурс теряет доступ",
+           "RESOURCE_UNAVAILABLE": "Ресурс недоступен", "CREW_DELAYED": "Бригада задерживается",
+           "TASK_MISSES_WINDOW": "Задача выходит за окно действий", "TASK_NO_ROUTE": "Нет маршрута для задачи",
+           "TASK_AT_RISK": "Задача под риском", "DEADLINE_EARLIER": "Окно действий закрывается раньше"},
+    "en": {"SCENARIO_CHANGED": "Flood scenario changed", "HIGHER_WATER_LEVEL": "Higher water level",
+           "EARLIER_PEAK": "Earlier peak", "ROAD_CLOSES_EARLIER": "Road closes earlier", "ROAD_CLOSED_FIELD": "Road closed by field report",
+           "ROAD_CLOSED_AT": "Road closes", "RESOURCE_LOSES_ACCESS": "Resource loses access",
+           "RESOURCE_UNAVAILABLE": "Resource unavailable", "CREW_DELAYED": "Crew delayed",
+           "TASK_MISSES_WINDOW": "Task misses action window", "TASK_NO_ROUTE": "No route for task",
+           "TASK_AT_RISK": "Task at risk", "DEADLINE_EARLIER": "Action window closes earlier"},
+}
+
 TEMPLATE = """<!doctype html><html lang="{{ lang }}"><head><meta charset="utf-8"><title>ARGUS FloodOps — {{ L.title }}</title>
 <style>
 body{font-family:"Inter","Segoe UI",Arial,sans-serif;color:#111;margin:24px;font-size:12px}
@@ -66,10 +94,10 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:3p
 <tr><td>{{ L.facilities }}</td><td>{{ r.impact_now.facilities_exposed }}</td><td>{{ r.impact_peak.facilities_exposed }}</td></tr>
 <tr><td>{{ L.exposure }} ({{ L.range }}, KZT)</td><td>{{ money(r.impact_now.economic.asset_exposure) }}</td><td>{{ money(r.impact_peak.economic.asset_exposure) }}</td></tr>
 <tr><td>{{ L.damage }} ({{ L.range }}, KZT)</td><td>{{ money(r.impact_now.economic.expected_damage) }}</td><td>{{ money(r.impact_peak.economic.expected_damage) }}</td></tr></table>
-<h2>{{ L.roads }}</h2><table>{% for x in r.critical_roads %}<tr><td>{{ x.road_id }}</td><td>{{ name(x.names) }}</td><td>{{ x.state }}</td><td>{% if x.closes_at is not none %}{{ L.closes }} {{ rel(x.closes_at) }}{% endif %}</td></tr>{% else %}<tr><td>{{ L.none }}</td></tr>{% endfor %}</table>
+<h2>{{ L.roads }}</h2><table>{% for x in r.critical_roads %}<tr><td>{{ x.road_id }}</td><td>{{ name(x.names) }}</td><td>{{ state(x.state) }}</td><td>{% if x.closes_at is not none %}{{ L.closes }} {{ rel(x.closes_at) }}{% endif %}</td></tr>{% else %}<tr><td>{{ L.none }}</td></tr>{% endfor %}</table>
 <h2>{{ L.sectors }}</h2><table>{% for s in r.sectors %}<tr><td>{{ name(s.names) }}</td><td>{% if s.isolated_now %}{{ L.isolated }}{% elif s.access_lost_at is not none %}{{ L.access_lost }} {{ rel(s.access_lost_at) }}{% else %}—{% endif %}</td><td>{{ s.population }}</td></tr>{% endfor %}</table>
 {% if r.plan %}<h2>{{ L.plan }}: {{ r.plan.name }} v{{ r.plan.version }} — {{ L[r.plan.health] if r.plan.health else '' }}</h2>
-{% for c in r.plan.chains %}<p><b>{{ L.why }} ({{ c.task }}):</b> {% for n in c.nodes %}{{ n.type }}{% if n.params.road %} {{ n.params.road }}{% endif %}{% if n.params.resource %} {{ n.params.resource }}{% endif %}{% if n.params.task %} {{ n.params.task }}{% endif %}{% if not loop.last %} → {% endif %}{% endfor %}</p>{% endfor %}
+{% for c in r.plan.chains %}<p><b>{{ L.why }} ({{ c.task }}):</b> {% for n in c.nodes %}{{ node(n.type) }}{% if n.params.road %} {{ n.params.road }}{% endif %}{% if n.params.resource %} {{ n.params.resource }}{% endif %}{% if n.params.task %} {{ n.params.task }}{% endif %}{% if not loop.last %} → {% endif %}{% endfor %}</p>{% endfor %}
 <table><tr><th>{{ L.tasks }}</th><th>{{ L.status }}</th><th>{{ L.latest }}</th><th>ETA</th></tr>{% for t in r.plan.tasks %}<tr><td>{{ t.code }} · {{ t.template_id }} · {{ t.site_id }}</td><td>{{ t.status }}</td><td>{{ rel(t.latest_departure) }}</td><td>{{ rel(t.arrival) }}</td></tr>{% endfor %}</table>
 {% endif %}
 {% if r.stress_test %}<h2>{{ L.stress }}</h2><p>{{ r.stress_test.n_feasible }} / {{ r.stress_test.n_scenarios }} ({{ L.feasible_in }})</p>{% endif %}
@@ -101,7 +129,13 @@ def render(report: dict, lang: str) -> str:
     def name(n: dict) -> str:
         return n.get(lang) or n.get("kk") or n.get("ru") or n.get("original") or ""
 
+    def state(code: str) -> str:
+        return ROAD_STATE[lang].get(code, code)
+
+    def node(code: str) -> str:
+        return NODE[lang].get(code, code.replace("_", " ").capitalize())
+
     env = Environment(autoescape=select_autoescape(["html"]))
     tpl = env.from_string(TEMPLATE)
-    return tpl.render(r=report, L=LABELS[lang], lang=lang, fmt=fmt, rel=rel, money=money, name=name,
+    return tpl.render(r=report, L=LABELS[lang], lang=lang, fmt=fmt, rel=rel, money=money, name=name, state=state, node=node,
                       area_name=name(report["area"]["names"]))
