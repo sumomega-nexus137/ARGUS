@@ -14,7 +14,7 @@ export function useChainText(fmt: (m: number | null | undefined) => string, site
   return (n: ChainNode): string => {
     const params: Record<string, string | number> = {};
     for (const [k, v] of Object.entries(n.params || {})) {
-      if (TIME_KEYS.has(k)) params[k] = typeof v === "number" ? fmt(v) : "—";
+      if (TIME_KEYS.has(k)) params[k] = typeof v === "number" ? fmt(v) : t("beyondHorizon");
       else if (k === "site" && typeof v === "string") params[k] = siteName ? siteName(v) : v;
       else if (typeof v === "number") params[k] = Math.round(v * 10) / 10;
       else if (v === null || v === undefined) params[k] = "—";

@@ -133,3 +133,17 @@ def test_outage_simulation(client, auth):
     # core functions keep working
     assert client.get("/api/areas/atbasar/access", headers=auth()).status_code == 200
     client.post("/api/admin/providers/outage", json={"enabled": False}, headers=auth("admin"))
+
+
+def test_policies_and_demo_reset(client, auth):
+    r = client.get("/api/policies", headers=auth("planner"))
+    assert r.status_code == 200 and r.json()["policies"]["LIFE_SAFETY"]["life"] == 70
+    # only an administrator may reset
+    assert client.post("/api/admin/demo/reset", headers=auth("planner")).status_code == 403
+    client.post("/api/areas/atbasar/resources/pool", json={"resource_type": "PUMP", "count": 8}, headers=auth("planner"))
+    r = client.post("/api/admin/demo/reset", headers=auth("admin"))
+    assert r.status_code == 200 and r.json()["reset"] is True
+    res = client.get("/api/areas/atbasar/resources", headers=auth("planner")).json()
+    assert sum(1 for x in res if x["resource_type"] == "PUMP" and x["status"] == "AVAILABLE") == 16
+    audit = client.get("/api/audit?area_id=atbasar", headers=auth("admin")).json()
+    assert audit is not None

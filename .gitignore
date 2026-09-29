@@ -31,4 +31,4 @@ data/imports/validation/*
 .env.local
 *.log
 .DS_Store
-public/maplibre/
+frontend/public/maplibre/

@@ -146,7 +146,7 @@ def stress(version_id: str, db: Session = Depends(get_db), actor: Actor = Depend
     pv = get_version(db, version_id)
     run = run_stress(db, load_context(db, pv.area_id), pv, actor)
     db.commit()
-    return clean({"id": run.id, "created_at": run.created_at, **run.result})
+    return clean({"id": run.id, "created_at": run.created_at, "data_version": run.data_version, **run.result})
 
 
 @router.get("/api/plan-versions/{version_id}/stress-tests")
@@ -154,7 +154,8 @@ def stress_list(version_id: str, db: Session = Depends(get_db), _: User = Depend
     rows = db.scalars(select(StressTestRun).where(StressTestRun.plan_version_id == version_id)
                       .order_by(StressTestRun.created_at.desc())).all()
     return clean([{"id": r.id, "created_at": r.created_at, "created_by": r.created_by, "n_scenarios": r.n_scenarios,
-                   "n_feasible": r.n_feasible, "robustness": r.robustness, "scenario_id": r.scenario_id} for r in rows])
+                   "n_feasible": r.n_feasible, "robustness": r.robustness, "scenario_id": r.scenario_id,
+                   "data_version": r.data_version} for r in rows])
 
 
 @router.get("/api/stress-tests/{run_id}")
@@ -162,7 +163,7 @@ def stress_get(run_id: str, db: Session = Depends(get_db), _: User = Depends(cur
     r = db.get(StressTestRun, run_id)
     if r is None:
         raise NotFound("stress test", run_id)
-    return clean({"id": r.id, "created_at": r.created_at, **r.result})
+    return clean({"id": r.id, "created_at": r.created_at, "data_version": r.data_version, **r.result})
 
 
 @router.post("/api/plan-versions/{version_id}/alternatives")
@@ -173,7 +174,8 @@ def alternatives(version_id: str, body: OptimizeRequest, db: Session = Depends(g
                            extra_constraints=[c.model_dump() for c in body.extra_constraints],
                            what_if_unavailable=body.what_if_unavailable, actor=actor)
     db.commit()
-    return clean({"id": run.id, "created_at": run.started_at, "status": run.status, **run.result})
+    return clean({"id": run.id, "created_at": run.started_at, "status": run.status, "data_version": run.data_version,
+                  **run.result})
 
 
 @router.post("/api/plan-versions/{version_id}/resource-gap")
@@ -183,7 +185,8 @@ def gap(version_id: str, body: OptimizeRequest, db: Session = Depends(get_db),
     run = run_gap(db, load_context(db, pv.area_id), pv, policy=body.policy, weights=body.weights, actor=actor,
                   what_if_unavailable=body.what_if_unavailable)
     db.commit()
-    return clean({"id": run.id, "created_at": run.started_at, "status": run.status, **run.result})
+    return clean({"id": run.id, "created_at": run.started_at, "status": run.status, "data_version": run.data_version,
+                  **run.result})
 
 
 @router.get("/api/optimization-runs/{run_id}")
@@ -192,7 +195,8 @@ def opt_get(run_id: str, db: Session = Depends(get_db), _: User = Depends(curren
     if r is None:
         raise NotFound("optimization run", run_id)
     return clean({"id": r.id, "kind": r.kind, "created_at": r.started_at, "status": r.status, "policy": r.policy,
-                  "plan_version_id": r.plan_version_id, **r.result})
+                  "plan_version_id": r.plan_version_id, "scenario_id": r.scenario_id, "data_version": r.data_version,
+                  **r.result})
 
 
 @router.get("/api/areas/{area_id}/optimization-runs")
@@ -202,6 +206,7 @@ def opt_list(area: OperationalArea = Depends(area_or_404), db: Session = Depends
                       .order_by(OptimizationRun.started_at.desc()).limit(30)).all()
     return clean([{"id": r.id, "kind": r.kind, "created_at": r.started_at, "status": r.status, "policy": r.policy,
                    "plan_version_id": r.plan_version_id, "created_by": r.created_by, "duration_s": r.duration_s,
+                   "data_version": r.data_version,
                    "alternatives": len(r.result.get("alternatives", [])) if r.kind != "RESOURCE_GAP" else None}
                   for r in rows])
 

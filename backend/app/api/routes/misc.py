@@ -118,6 +118,14 @@ def users(db: Session = Depends(get_db), _: Actor = Depends(require(Permission.U
                    "created_at": u.created_at} for u in db.scalars(select(User).order_by(User.id))])
 
 
+@router.get("/api/policies")
+def policies(_: User = Depends(current_user)) -> dict:
+    """Default weight presets and value-model assumptions. The weights actually used are always chosen by a human."""
+    from app.services.optimization.value import BENEFIT_SHARE, POLICIES
+
+    return {"policies": POLICIES, "benefit_share": BENEFIT_SHARE, "default": "BALANCED"}
+
+
 @router.get("/api/admin/model-versions")
 def model_versions(db: Session = Depends(get_db), _: User = Depends(current_user)) -> list[dict]:
     return clean([{"id": m.id, "component": m.component, "version": m.version, "description": m.description,
@@ -130,6 +138,21 @@ def outage(body: OutageToggle, db: Session = Depends(get_db), actor: Actor = Dep
     n = set_outage(db, body.enabled, actor)
     db.commit()
     return {"external_offline": outage_enabled(), "providers": n}
+
+
+@router.post("/api/admin/demo/reset")
+def demo_reset(actor: Actor = Depends(require(Permission.USER_ADMIN))) -> dict:
+    """Restore the DEMO dataset to its initial state (demo mode only). Everything, including the audit trail, is reset."""
+    from app.db.init import reset_demo
+
+    if not get_settings().demo_mode:
+        raise Conflict("not_demo", "Reset is only available in demo mode")
+    ok = reset_demo()
+    from app.db.session import session_scope
+
+    with session_scope() as db:
+        record(db, actor, "DEMO_RESET", "system", "demo", "DEMO dataset restored to its initial state")
+    return {"reset": ok}
 
 
 @router.post("/api/admin/providers/poll")

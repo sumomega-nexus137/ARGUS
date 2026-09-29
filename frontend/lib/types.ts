@@ -432,3 +432,143 @@ export interface SiteRow {
 
 export type Feature = { type: "Feature"; geometry: { type: string; coordinates: unknown }; properties: Record<string, unknown> };
 export type FeatureCollection = { type: "FeatureCollection"; features: Feature[]; demo?: boolean };
+
+export interface StressScenario {
+  id: string;
+  kind: string;
+  params: Record<string, unknown>;
+  member: string;
+  feasible: boolean;
+  status: "FEASIBLE" | "AT_RISK" | "INFEASIBLE";
+  failed_tasks: string[];
+  at_risk_tasks: string[];
+  task_status: Record<string, string>;
+  chains: CausalChain[];
+  min_slack: number | null;
+}
+
+export interface TaskCriticality {
+  task: string;
+  failures: number;
+  at_risk: number;
+  failure_share: number;
+}
+
+export interface StressResult {
+  id: string;
+  created_at: string;
+  n_scenarios: number;
+  n_feasible: number;
+  robustness: number;
+  baseline_status: string;
+  scenarios: StressScenario[];
+  task_criticality: TaskCriticality[];
+  duration_s: number;
+  member: string;
+  scenario_id: string;
+  as_of: number;
+  reference_time: string;
+}
+
+export interface ValueComponents {
+  life: number;
+  infra: number;
+  economic: number;
+  threatened_facilities: string[];
+  protected_sectors: string[];
+  exposed_population: number;
+  expected_damage_mid: number;
+}
+
+export interface AltTask {
+  code: string;
+  template_id: string;
+  site_id: string;
+  crew: string | null;
+  vehicle: string | null;
+  pumps: string[];
+  equipment: string[];
+  departure: number | null;
+  arrival: number | null;
+  end: number | null;
+  status: string;
+  deadline: number | null;
+  deadline_reason: string;
+  latest_departure: number | null;
+  route_roads: string[];
+  route_segments: string[];
+  prev_task: string | null;
+  why?: {
+    task: { value: number; rank: number; of: number; components: ValueComponents; weights: Record<string, number>; benefit_share: Record<string, number> };
+    resource: {
+      crew: string | null;
+      qualified_types: string[];
+      alternatives: { crew: string; subtype: string; earliest_arrival: number | null; assigned_to: string | null }[];
+      vehicle: string | null;
+      vehicle_types: string[];
+      pumps: number;
+    };
+    now: { latest_departure: number | null; route_closures: { road: string; closes_at: number | null }[]; deadline: number | null; deadline_reason: string; slack_min: number | null };
+    if_delayed: { tolerance_min: number | null; consequence: { delay_min: number; status: string; issues: string[]; other_tasks_affected: string[] } | null };
+  };
+}
+
+export interface Alternative {
+  id: string;
+  label: string;
+  tasks: AltTask[];
+  evaluation: PlanEvaluation;
+  metrics: { tasks_selected: number; tasks_feasible: number; value_total: number; life: number; infra: number; economic: number; high_priority_tasks: string[]; pumps_used: number; crews_used: number; min_slack: number | null };
+  robustness: { n_scenarios: number; n_feasible: number; robustness: number; task_criticality: TaskCriticality[] } | null;
+  excluded_candidates: { code: string; template_id: string; site_id: string; value: number; reason: string }[];
+  diff_vs_human: { added: string[]; removed: string[]; reassigned: { task: string; from: string; to: string }[]; retimed: { task: string; from: number | null; to: number | null }[] };
+  solver: { status: string; solve_time_s: number; objective: number };
+}
+
+export interface OptimizationResult {
+  id: string;
+  created_at: string;
+  status: string;
+  policy: string;
+  weights: Record<string, number>;
+  as_of: number;
+  member: string;
+  scenario_id: string;
+  alternatives: Alternative[];
+  candidates: { code: string; template_id: string; site_id: string; value: number; deadline: number | null; deadline_reason: string; origin: string }[];
+  resources: Record<string, number>;
+  fixed_tasks: string[];
+  duration_s: number;
+  feasible: boolean;
+  reference_time: string;
+  what_if_unavailable: string[];
+}
+
+export interface GapOption {
+  resource_type: string;
+  subtype: string;
+  count: number;
+  tasks_before: number;
+  tasks_after: number;
+  delta_tasks: number;
+  value_before: number;
+  value_after: number;
+  delta_value: number;
+  tasks_added: string[];
+  tasks_removed: string[];
+  high_priority_added: string[];
+  min_slack_gain_min: number;
+  statement: { key: string; params: Record<string, unknown> };
+}
+
+export interface GapResult {
+  id: string;
+  created_at: string;
+  status: string;
+  feasible: boolean;
+  policy: string;
+  weights: Record<string, number>;
+  baseline: { tasks: string[]; value_total: number; min_slack: number | null };
+  options: GapOption[];
+  duration_s: number;
+}

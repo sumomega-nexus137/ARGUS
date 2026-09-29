@@ -149,14 +149,15 @@ def _explain(ctx: AreaContext, p: OptProblem, travel: TravelTable, ev: PlanEvalu
             first = min(m.closure_from(s, p.as_of) for s in ctx.roads[rid].segment_ids)
             if first <= rt.horizon_end:
                 route_closures.append({"road": rid, "closes_at": finite_or_none(first)})
-        # WHAT IF DELAYED: re-evaluate with the crew delayed beyond the tolerance
+        # WHAT IF DELAYED: re-evaluate with THIS task departing later than its tolerance (the crew's later tasks shift too)
         slack_dep = (tr.latest_departure - a.departure) if tr and tr.latest_departure is not None else None
         consequence = None
         if slack_dep is not None and slack_dep < 600:
             delay = max(5.0, slack_dep + 10)
-            dcfg = EvalConfig(access=cfg.access, as_of=cfg.as_of, delays=((a.crew, delay),), constraints=cfg.constraints,
-                              label="delay")
-            dev = evaluate_plan(ctx, rt, fixed_specs + sol.to_specs(), dcfg, models)
+            dspecs = [replace(s, planned_departure=(s.planned_departure if s.planned_departure is not None else a.departure)
+                              + delay) if s.code == a.code else s for s in sol.to_specs()]
+            dcfg = EvalConfig(access=cfg.access, as_of=cfg.as_of, constraints=cfg.constraints, label="delay")
+            dev = evaluate_plan(ctx, rt, fixed_specs + dspecs, dcfg, models)
             dt = dev.by_code.get(a.code)
             if dt is not None:
                 consequence = {"delay_min": round(delay), "status": dt.status,

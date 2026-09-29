@@ -62,7 +62,7 @@ export function TaskTable({ areaId, version, evalTasks, fmt, utcOffset, referenc
     return (
       <div className="space-y-2">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-xs">
+          <table className="w-full min-w-[760px] text-xs [&_td]:px-1 [&_th]:px-1">
             <thead className="text-left text-[10px] uppercase tracking-wider text-muted">
               <tr><th className="py-1">{tp("task")}</th><th>{tp("template")}</th><th>{tp("site")}</th><th>{tp("resources")}</th><th>{tp("plannedDeparture")}</th><th>{tp("dependencies")}</th><th /></tr>
             </thead>
@@ -101,7 +101,7 @@ export function TaskTable({ areaId, version, evalTasks, fmt, utcOffset, referenc
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-xs">
+        <table className="w-full min-w-[720px] text-xs [&_td]:px-1.5 [&_th]:px-1.5 [&_th]:align-bottom">
           <thead className="text-left text-[10px] uppercase tracking-wider text-muted">
             <tr>
               <th className="py-1">{tp("task")}</th><th>{tp("template")} · {tp("site")}</th><th>{tp("resources")}</th>

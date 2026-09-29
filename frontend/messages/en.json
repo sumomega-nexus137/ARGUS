@@ -525,7 +525,20 @@
     "evaluationAt": "Evaluated at {time} against scenario v{v} ({member})",
     "status": "Status",
     "selectVersion": "Version",
-    "basisVsCurrent": "Approved against v{basis}; current scenario v{current}"
+    "basisVsCurrent": "Approved against v{basis}; current scenario v{current}",
+    "forked": "New draft version v{v} created",
+    "readOnly": "Read-only access: stress tests and alternatives require the Planner role.",
+    "runningSolver": "CP-SAT is solving and every candidate is re-simulated…",
+    "optimizerInputs": "Optimizer inputs (set by a human)",
+    "humanDecides": "ARGUS calculates; authorised people decide.",
+    "versionConstraints": "Constraints stored in version v{v}",
+    "sessionConstraints": "Constraints for the next optimizer run",
+    "sessionConstraintsHint": "This version is not a draft, so constraints apply to the next optimizer run only and are recorded with it.",
+    "saveConstraints": "Save constraints",
+    "constraintKind": "Constraint",
+    "sector": "Sector",
+    "availableOf": "Available: {type}",
+    "why": "WHY?"
   },
   "policy": {
     "LIFE_SAFETY": "Life safety",
@@ -559,7 +572,19 @@
     "notRun": "Stress test not run yet",
     "matrix": "Perturbation × task matrix",
     "notProbability": "Robustness counts evaluated scenarios; it is not a probability of success.",
-    "duration": "{n} scenarios in {s} s"
+    "duration": "{n} scenarios in {s} s",
+    "outdated": "Data changed after this stress test — re-run it to reflect the current situation.",
+    "baseline": "Current conditions",
+    "member": "Forecast member {member}",
+    "mostCritical": "Most fragile task",
+    "computed": "Computed",
+    "atRiskN": "{n} at risk",
+    "minSlack": "Min slack",
+    "legend": {
+      "FEASIBLE": "feasible",
+      "AT_RISK": "at risk (low slack)",
+      "INFEASIBLE": "infeasible"
+    }
   },
   "optimizer": {
     "title": "Alternatives (CP-SAT)",
@@ -600,14 +625,21 @@
     "nowExplain": "Window closes at {deadline} ({reason}); latest safe departure {latest}.",
     "roadClosesAt": "{road} expected closed at {time}",
     "toleranceExplain": "Can be delayed by up to {minutes} min.",
-    "delayConsequence": "If delayed {minutes} min: {status}",
+    "delayConsequence": "If delayed {minutes} min:",
     "noDeadline": "No action-window constraint within the forecast horizon.",
     "solverStatus": "{status} · {time} s",
     "verified": "Every alternative is re-simulated by the time-dependent plan evaluator before it is shown.",
     "candidates": "Candidate tasks",
     "noFeasible": "No feasible alternative with the current resources and constraints",
     "whatIfPumps": "What-if: unavailable resources",
-    "selectAlternative": "Select an alternative to see explanations"
+    "selectAlternative": "Select an alternative to see explanations",
+    "outdated": "Data changed after these alternatives were generated — generate again before adopting.",
+    "computedIn": "{n} candidate tasks · {s} s",
+    "noChanges": "Same as the human plan",
+    "notRun": "No alternatives generated yet",
+    "addUnavailable": "+ assume unavailable…",
+    "pumpsAssigned": "{n, plural, one {# pump assigned} other {# pumps assigned}}",
+    "othersAffected": "also affects {tasks}"
   },
   "gap": {
     "title": "Resource gap analysis",
@@ -619,7 +651,15 @@
     "added": "Tasks enabled",
     "statement": "{count, plural, one {One additional} other {# additional}} {subtype}: {n_tasks, plural, =0 {no additional tasks} one {# more task} other {# more tasks}} before windows close{n_high, plural, =0 {} one { (# high-priority)} other { (# high-priority)}}.",
     "slackGain": "min slack {gain} min",
-    "computedNote": "Each row is a complete CP-SAT re-run — computed, not estimated."
+    "computedNote": "Each row is a complete CP-SAT re-run — computed, not estimated.",
+    "outdated": "Data changed after this analysis — run it again.",
+    "baselineValue": "{n} tasks · value {v}",
+    "bestOption": "Largest gain",
+    "noGain": "No additional unit changes the result",
+    "options": "Options evaluated",
+    "computed": "Computed in",
+    "slack": "Slack gain",
+    "notRun": "Resource gap not analysed yet"
   },
   "causal": {
     "SCENARIO_CHANGED": "FLOOD SCENARIO CHANGED · {from_member} → {to_member}",
@@ -653,7 +693,8 @@
     "TASK_RESOURCE_CONFLICT": "TASK {task}: RESOURCE CONFLICT",
     "TASK_VIOLATES_CONSTRAINT": "TASK {task} VIOLATES A HUMAN CONSTRAINT",
     "TASK_AT_RISK": "TASK {task} AT RISK · SLACK {slack_min} MIN",
-    "TASK_FAILS": "TASK {task} FAILS"
+    "TASK_FAILS": "TASK {task} FAILS",
+    "beyondHorizon": "beyond horizon"
   },
   "headline": {
     "ROAD_CLOSES_EARLIER": "Road {road} is expected to become unavailable earlier than assumed.",
@@ -1019,5 +1060,21 @@
     "km2": "km²",
     "min": "min",
     "h": "h"
+  },
+  "methodology": {
+    "title": "Methodology and limitations",
+    "stress": {
+      "robustness": "Robustness = feasible scenarios ÷ evaluated scenarios. A scenario is feasible when no task is infeasible; at-risk tasks are reported but counted as feasible.",
+      "perturbations": "Perturbations: next higher forecast members; flood peak 60/120 min earlier; each road on the plan's routes closing 60 min earlier; most-used roads unavailable; each assigned crew 30 min late; each assigned vehicle and one pump per pump task unavailable; two combined cases.",
+      "limitations": "Perturbations are single-factor or pairwise, not a probabilistic ensemble. Robustness is not a probability of success."
+    },
+    "optimizer": {
+      "objective": "Objective: maximise the weighted value of completed tasks, minus total completion time, with a small bonus for keeping human assignments.",
+      "value": "Value = Σ weight × component (life safety, critical infrastructure, economic loss), each normalised 0–100 across candidate tasks. Weights are set by a human.",
+      "verification": "Every solution is re-simulated on the time-dependent road graph; infeasible legs are corrected or forbidden and the model is solved again.",
+      "modes": "Alternatives: policy optimum; robust (rewards slack, 20-min margin); minimal change to the human plan.",
+      "solver": "Solver: Google OR-Tools CP-SAT (routing circuits per crew, vehicle no-overlap, pump and equipment capacity, human constraints)."
+    },
+    "bottleneck": "Criticality combines newly isolated population, facility criticality and single points of failure when the bottleneck is removed from the road graph at the selected time. Structural candidates come from edge betweenness and cut edges of the network — they are candidates for review, not predictions."
   }
 }

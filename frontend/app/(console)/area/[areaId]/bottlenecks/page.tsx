@@ -33,6 +33,7 @@ export default function BottlenecksPage() {
   const { areaId, area, t, fmt, setOverlays, clearOverlays } = useAreaCtx();
   const tb = useTranslations("bottleneck");
   const tf = useTranslations("facilityType");
+  const tm = useTranslations("methodology");
   const { locale } = useLocale();
   const [sel, setSel] = useState<string | null>(null);
   const q = useQuery({
@@ -119,7 +120,7 @@ export default function BottlenecksPage() {
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-[10.5px] leading-snug text-muted">{q.data.methodology}</p>
+          <p className="mt-2 text-[10.5px] leading-snug text-muted">{tm("bottleneck")}</p>
         </Panel>
       )}
     </div>

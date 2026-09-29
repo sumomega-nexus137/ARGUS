@@ -81,6 +81,7 @@ def run_pipeline(db: Session, area_id: str, trigger: str, trigger_ref: str | Non
 
     def _access():
         rows, _ = sector_access(model_holder["m"], now_min)
+        model_holder["sectors"] = rows
         return {"isolated_sectors": [r["code"] for r in rows if r["isolated_now"]]}
 
     step("ACCESS_UPDATE", _access)
@@ -95,7 +96,13 @@ def run_pipeline(db: Session, area_id: str, trigger: str, trigger_ref: str | Non
         return {"plan_version": pv.id, "status": h["status"], "failed": h["evaluation"]["failed"],
                 "at_risk": h["evaluation"]["at_risk"], "next_critical_decision": h["next_critical_decision"]}
 
-    step("ACTION_WINDOWS_UPDATE", lambda: {"computed": True})
+    def _windows():
+        losing = [r for r in model_holder.get("sectors", []) if r.get("access_lost_at") is not None and not r["isolated_now"]]
+        first = min((r["access_lost_at"] for r in losing), default=None)
+        return {"sectors_losing_access": [r["code"] for r in losing],
+                "earliest_access_loss_min": None if first is None else round(first - now_min)}
+
+    step("ACTION_WINDOWS_UPDATE", _windows)
     detail = step("PLAN_STRESS_CHECK", _windows_and_plan) or {}
     outcome = detail.get("status") or "NO_ACTIVE_PLAN"
     run = PipelineRun(id=new_id("pl-"), area_id=area_id, trigger=trigger, trigger_ref=trigger_ref, steps=steps,

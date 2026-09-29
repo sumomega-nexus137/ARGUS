@@ -12,7 +12,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 from app.repositories.context import AreaContext
-from app.services.planning.causality import ChainNode, explain_evaluation
+from app.services.planning.causality import explain_evaluation
 from app.services.planning.evaluator import ModelCache, evaluate_plan
 from app.services.planning.model import Constraint, EvalConfig, PlanEvaluation, TaskSpec
 from app.services.routing.access import AccessConfig, build_access_model
@@ -134,12 +134,9 @@ def run_stress_test(ctx: AreaContext, rt: ScenarioRuntime, specs: list[TaskSpec]
                 task_risk[t.code] += 1
         chains = []
         if p.kind != "BASELINE":
+            # root_nodes() already prefixes HIGHER_WATER_LEVEL / EARLIER_PEAK / ROAD_CLOSURE_ADVANCED
             chains = explain_evaluation(ctx, ev, baseline, models.get(), base_models.get(), cfg, base_cfg,
                                         None, (rt.id, rt.version), include_at_risk=False)
-            if p.member_shift:
-                for c in chains:
-                    c.nodes.insert(0, ChainNode("HIGHER_WATER_LEVEL", {"from_member": rt.member, "to_member": member},
-                                                "warning"))
         else:
             chains = explain_evaluation(ctx, ev, None, models.get(), None, cfg, None, None, (rt.id, rt.version),
                                         include_at_risk=False)

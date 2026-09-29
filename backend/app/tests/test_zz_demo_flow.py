@@ -9,7 +9,7 @@ from __future__ import annotations
 
 
 def test_competition_demo_flow(client, auth):
-    P, C, O = auth("planner"), auth("commander"), auth("operator")
+    P, C, OP = auth("planner"), auth("commander"), auth("operator")
 
     # 1. PLAN A — AT RISK, with WHY
     ops = client.get("/api/areas/atbasar/operations", headers=P).json()
@@ -58,14 +58,14 @@ def test_competition_demo_flow(client, auth):
 
     # 6. operator updates a task
     first = ops["active_version"]["tasks"][0]
-    r = client.post(f"/api/plan-tasks/{first['id']}/status", json={"status": "EN_ROUTE"}, headers=O)
+    r = client.post(f"/api/plan-tasks/{first['id']}/status", json={"status": "EN_ROUTE"}, headers=OP)
     assert r.status_code == 200
 
     # 7. manually close a road used by the active plan → road graph changes → PLAN AT RISK
     routes = [t for t in ops["health"]["evaluation"]["tasks"] if t["route_roads"] and t["code"] != first["code"]]
     road = next(r for t in routes for r in t["route_roads"] if r in ("R7", "R4", "R3", "R2", "R10"))
     ev = client.post("/api/areas/atbasar/road-events", json={"road_id": road, "state": "CLOSED", "verification": "VERIFIED",
-                                                            "source": "Field patrol (test)"}, headers=O).json()
+                                                            "source": "Field patrol (test)"}, headers=OP).json()
     assert ev["pipeline"]["steps"][0]["step"] == "STORE"
     assert [s["step"] for s in ev["pipeline"]["steps"]][-1] == "PLAN_STRESS_CHECK"
     health = client.get(f"/api/plan-versions/{pv['id']}/health", headers=P).json()

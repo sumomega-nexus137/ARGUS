@@ -89,7 +89,7 @@ def _road_closure_changes(ref_m: AccessModel | None, cur_m: AccessModel, segs: l
             nodes.append(ChainNode("ROAD_UNAVAILABLE_ASSUMED", {"road": rid, "segment": sid}, "critical"))
             continue
         ref_c = ref_m.closure_from(sid, t_from) if ref_m is not None else INF
-        if cur_c < ref_c - SIGNIFICANT_SHIFT_MIN and cur_c <= when + 1:
+        if ref_m is not None and cur_c < ref_c - SIGNIFICANT_SHIFT_MIN and cur_c <= when + 1:
             seen.add(rid)
             nodes.append(ChainNode("ROAD_CLOSES_EARLIER", {"road": rid, "segment": sid, "from": finite_or_none(ref_c),
                                                            "to": finite_or_none(cur_c)}, "critical"))

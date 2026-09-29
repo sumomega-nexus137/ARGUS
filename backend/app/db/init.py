@@ -36,3 +36,20 @@ def init_and_seed() -> bool:
 
     with session_scope() as db:
         return seed_if_empty(db)
+
+
+def reset_demo() -> bool:
+    """Drop every ARGUS table and re-seed the DEMO dataset (demo mode only). Returns True when re-seeded."""
+    if not get_settings().demo_mode:
+        return False
+    import app.models  # noqa: F401
+    from app.repositories.context import invalidate_static
+    from app.services.routing import access
+
+    engine = get_engine()
+    Base.metadata.drop_all(engine)
+    for area_id in ("atbasar", "kokshetau"):
+        invalidate_static(area_id)
+    access._series_cache.clear()
+    log.info("demo database dropped; re-seeding")
+    return init_and_seed()

@@ -144,7 +144,7 @@ export function InlineNote({ tone = "info", children, className }: { tone?: Tone
 }
 
 export function Tabs<T extends string>({ tabs, value, onChange, className }: {
-  tabs: { id: T; label: ReactNode }[]; value: T; onChange: (v: T) => void; className?: string;
+  tabs: { id: T; label: ReactNode; badge?: ReactNode }[]; value: T; onChange: (v: T) => void; className?: string;
 }) {
   return (
     <div role="tablist" className={clsx("flex flex-wrap gap-0.5 border-b border-line", className)}>
@@ -160,6 +160,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, className }: {
           )}
         >
           {tb.label}
+          {tb.badge !== undefined && <span className="ml-1.5 rounded-[3px] bg-line-2 px-1 py-[1px] text-[10px] tabular text-ink-2">{tb.badge}</span>}
         </button>
       ))}
     </div>
