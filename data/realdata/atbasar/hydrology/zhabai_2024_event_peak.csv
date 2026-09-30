@@ -1,0 +1,2 @@
+event_id,event_period,variable,value,unit,reference_type,quality,source_url,notes
+ZHB-2024-PEAK,2024-04-11/2024-04-19,event_peak_water_level,6.2,m,local_operational_level,official_retrospective,https://www.gov.kz/memleket/entities/aqmola/press/news/details/752624?lang=ru,"Retrospective statement: during the flood the Zhabai level rose to 6.20 m. Exact peak timestamp is not stated, so this must not be inserted as a timestamped gauge observation."
