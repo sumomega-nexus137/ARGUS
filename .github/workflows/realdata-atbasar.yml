@@ -1,0 +1,49 @@
+name: ARGUS real data — Atbasar 2024
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/festive-faraday-90f1gh
+    paths:
+      - ".github/workflows/realdata-atbasar.yml"
+      - "scripts/realdata/**"
+      - "data/realdata/atbasar/**"
+
+jobs:
+  build-atbasar-realdata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: scripts/realdata/requirements.txt
+
+      - name: Install geospatial dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/realdata/requirements.txt
+
+      - name: Build Atbasar real-data pack
+        run: |
+          python scripts/realdata/atbasar_pipeline.py --output data/realdata/atbasar/generated
+
+      - name: Show manifest
+        if: always()
+        run: |
+          test -f data/realdata/atbasar/generated/metadata/dataset_manifest.json && cat data/realdata/atbasar/generated/metadata/dataset_manifest.json || true
+          du -sh data/realdata/atbasar/generated || true
+
+      - name: Upload real-data artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: argus-atbasar-realdata
+          path: data/realdata/atbasar/generated
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
