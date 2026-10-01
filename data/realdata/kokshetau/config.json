@@ -1,0 +1,36 @@
+{
+  "area_id": "kokshetau",
+  "display_name": "Kokshetau / Kylshakty",
+  "country": "Kazakhstan",
+  "region": "Akmola",
+  "center_wgs84": [
+    69.4049,
+    53.2836
+  ],
+  "analysis_bbox_wgs84": [
+    69.24,
+    53.17,
+    69.57,
+    53.39
+  ],
+  "city_bbox_wgs84": [
+    69.29,
+    53.22,
+    69.52,
+    53.35
+  ],
+  "projected_crs": "EPSG:32642",
+  "hydrology_focus": "Kylshakty River",
+  "receiving_water": "Lake Kopa",
+  "modelling_role": "PORTABILITY_AND_BOTTLENECK_PILOT",
+  "event": {
+    "name": "Kokshetau Kylshakty flood 2024",
+    "search_start": "2024-03-10",
+    "search_end": "2024-04-10",
+    "pre_flood_target_date": "2024-03-20",
+    "flood_target_date": "2024-03-29",
+    "flood_window_start": "2024-03-27",
+    "flood_window_end": "2024-04-02"
+  },
+  "scientific_note": "Kopa is treated as downstream receiving water, not the primary flood cause. Kokshetau is the portability/bottleneck pilot; Atbasar remains the primary historical validation pilot."
+}
