@@ -25,6 +25,7 @@ import rasterio
 from rasterio.features import rasterize, shapes
 from rasterio.warp import Resampling, reproject
 from scipy import ndimage
+from sklearn.ensemble import HistGradientBoostingClassifier
 from shapely.geometry import shape
 from shapely.ops import unary_union
 
@@ -309,13 +310,125 @@ def main() -> None:
     raw_base = domain & (distance_m <= max_km * 1000.0) & (eff_full <= stage)
     base_connected = connected_to_river(raw_base, river_mask)
 
-    train_metrics = metrics(observed, base_connected & ~permanent, train)
-    holdout_metrics = metrics(observed, base_connected & ~permanent, holdout)
-    all_metrics = metrics(observed, base_connected & ~permanent, eval_valid)
+    terrain_train_metrics = metrics(observed, base_connected & ~permanent, train)
+    terrain_holdout_metrics = metrics(observed, base_connected & ~permanent, holdout)
+    terrain_all_metrics = metrics(observed, base_connected & ~permanent, eval_valid)
 
-    # Historical validation mask is the modelled flood expansion, excluding
-    # permanent-water pixels exactly as the observed-change mask does.
-    model_validation = base_connected & ~permanent
+    # ------------------------------------------------------------------
+    # Terrain-only ML susceptibility refinement
+    # ------------------------------------------------------------------
+    # A classifier is trained only on terrain/hydro features (no raw X/Y
+    # coordinates and no settlement labels). Alternating ~1.2 km blocks are
+    # withheld from parameter/threshold selection. This is still same-event
+    # spatial holdout, not out-of-event forecast validation.
+    fill_dem = np.where(valid_dem, dem, float(np.nanmedian(dem))).astype("float32")
+    smooth3 = ndimage.gaussian_filter(fill_dem, sigma=3)
+    smooth10 = ndimage.gaussian_filter(fill_dem, sigma=10)
+    tpi3 = fill_dem - smooth3
+    tpi10 = fill_dem - smooth10
+    gy, gx = np.gradient(smooth3)
+    aspect = np.arctan2(gy, gx)
+    channel_elev = dem - relative
+
+    if permanent.any():
+        dist_perm_km = ndimage.distance_transform_edt(~permanent, sampling=(yres, xres)) / 1000.0
+    else:
+        dist_perm_km = np.full(dem.shape, 20.0, dtype="float32")
+    water50 = (jrc != 255) & (jrc >= 50) if jrc_path.exists() else np.zeros_like(observed, dtype=bool)
+    if water50.any():
+        dist_water50_km = ndimage.distance_transform_edt(~water50, sampling=(yres, xres)) / 1000.0
+    else:
+        dist_water50_km = np.full(dem.shape, 20.0, dtype="float32")
+
+    feature_names = [
+        "relative_elevation_to_zhabai_m",
+        "distance_to_zhabai_km",
+        "slope_deg",
+        "absolute_dem_m",
+        "nearest_channel_elevation_m",
+        "tpi_sigma3",
+        "tpi_sigma10",
+        "distance_to_jrc_permanent_water_km",
+        "distance_to_jrc_occurrence50_km",
+        "jrc_occurrence_fraction",
+        "aspect_sin",
+        "aspect_cos",
+    ]
+    feature_cube = np.stack([
+        np.nan_to_num(relative, nan=20.0),
+        np.nan_to_num(distance_m / 1000.0, nan=20.0),
+        np.nan_to_num(slope, nan=20.0),
+        np.nan_to_num(dem, nan=float(np.nanmedian(dem))),
+        np.nan_to_num(channel_elev, nan=float(np.nanmedian(channel_elev))),
+        np.nan_to_num(tpi3, nan=0.0),
+        np.nan_to_num(tpi10, nan=0.0),
+        np.nan_to_num(dist_perm_km, nan=20.0),
+        np.nan_to_num(dist_water50_km, nan=20.0),
+        np.nan_to_num(np.where(jrc == 255, 0.0, jrc / 100.0), nan=0.0),
+        np.sin(aspect).astype("float32"),
+        np.cos(aspect).astype("float32"),
+    ], axis=-1).astype("float32")
+
+    y_train_all = observed[train].astype("uint8")
+    train_features_all = feature_cube[train]
+    pos_idx = np.flatnonzero(y_train_all == 1)
+    neg_idx = np.flatnonzero(y_train_all == 0)
+    if len(pos_idx) < 50:
+        raise RuntimeError("Too few positive calibration pixels for susceptibility model")
+    rng = np.random.default_rng(42)
+    neg_take = min(len(neg_idx), len(pos_idx) * 6)
+    selected = np.concatenate([pos_idx, rng.choice(neg_idx, neg_take, replace=False)])
+    rng.shuffle(selected)
+
+    clf = HistGradientBoostingClassifier(
+        max_depth=7,
+        learning_rate=0.06,
+        max_iter=240,
+        l2_regularization=1.5,
+        random_state=42,
+    )
+    clf.fit(train_features_all[selected], y_train_all[selected])
+
+    train_prob = clf.predict_proba(train_features_all)[:, 1]
+    threshold_ranked = []
+    for threshold in np.linspace(0.10, 0.95, 35):
+        pred = np.zeros_like(observed, dtype=bool)
+        pred[train] = train_prob >= threshold
+        met = metrics(observed, pred, train)
+        threshold_ranked.append({
+            "threshold": float(threshold),
+            "iou": met["iou"],
+            "precision": met["precision"],
+            "recall": met["recall"],
+            "f1": met["f1"],
+        })
+    threshold_ranked.sort(key=lambda x: (
+        -1.0 if x["iou"] is None else x["iou"],
+        -1.0 if x["f1"] is None else x["f1"],
+    ), reverse=True)
+    susceptibility_threshold = float(threshold_ranked[0]["threshold"])
+
+    prediction_domain = domain & (distance_m <= 10000.0)
+    susceptibility_probability = np.zeros(observed.shape, dtype="float32")
+    susceptibility_probability[prediction_domain] = clf.predict_proba(
+        feature_cube[prediction_domain]
+    )[:, 1].astype("float32")
+    susceptibility_mask = susceptibility_probability >= susceptibility_threshold
+
+    susceptibility_train_metrics = metrics(observed, susceptibility_mask & ~permanent, train)
+    susceptibility_holdout_metrics = metrics(observed, susceptibility_mask & ~permanent, holdout)
+    susceptibility_all_metrics = metrics(observed, susceptibility_mask & ~permanent, eval_valid)
+
+    write_float(
+        scenario_dir / "flood_susceptibility_probability_2024.tif",
+        susceptibility_probability,
+        dm,
+    )
+
+    # Historical validation uses the terrain-feature susceptibility component.
+    # Operational scenario frames below additionally impose stage/time and
+    # river-connectivity constraints.
+    model_validation = susceptibility_mask & ~permanent
     reproject_modelled_mask(
         model_validation,
         dm,
@@ -325,31 +438,47 @@ def main() -> None:
     build_validation_aoi(processed / "sentinel2_common_clear_mask.tif", validation_dir)
 
     calibration = {
-        "model_kind": "TERRAIN_CONDITIONED_RIVER_RELATIVE_PROXY",
+        "model_kind": "HYBRID_TERRAIN_SUSCEPTIBILITY_AND_STAGE_PROXY",
         "not_a_hydrodynamic_model": True,
         "river": "Zhabai",
         "terrain_source": "Copernicus DEM GLO-30",
         "river_geometry_source": "OpenStreetMap",
         "observed_source": "Sentinel-2 L2A flood-vs-post-recession change baseline",
-        "selection_objective": "maximize IoU on alternating spatial calibration blocks",
-        "best_parameters": best,
-        "train_metrics_full_resolution": train_metrics,
-        "spatial_holdout_metrics_same_event": holdout_metrics,
-        "all_usable_pixels_metrics": all_metrics,
+        "selection_objective": "terrain-only susceptibility threshold selected on alternating spatial calibration blocks",
+        "susceptibility_model": {
+            "algorithm": "HistGradientBoostingClassifier",
+            "uses_raw_xy_coordinates": False,
+            "feature_names": feature_names,
+            "training_positive_pixels": int(len(pos_idx)),
+            "training_negative_pixels_sampled": int(neg_take),
+            "negative_to_positive_sample_ratio": 6,
+            "selected_probability_threshold": susceptibility_threshold,
+            "threshold_search_top_10": threshold_ranked[:10],
+        },
+        "spatial_holdout_metrics_same_event": susceptibility_holdout_metrics,
+        "train_metrics_full_resolution": susceptibility_train_metrics,
+        "all_usable_pixels_metrics": susceptibility_all_metrics,
+        "terrain_stage_component": {
+            "best_parameters": best,
+            "train_metrics_full_resolution": terrain_train_metrics,
+            "spatial_holdout_metrics_same_event": terrain_holdout_metrics,
+            "all_usable_pixels_metrics": terrain_all_metrics,
+            "top_20_parameter_sets": ranked[:20],
+        },
         "holdout_note": holdout_note,
         "evaluation_excludes": [
             "pixels unusable in either selected optical scene",
             "JRC >=90% long-term permanent water",
-            "terrain >8 km from rasterized Zhabai for calibration/evaluation",
+            "terrain >8 km from rasterized Zhabai for historical metric evaluation",
         ],
         "scientific_limitations": [
-            "This is a terrain-conditioned river-relative proxy, not HEC-RAS/LISFLOOD-FP or a surveyed hydraulic model.",
-            "The same historical event supplies the satellite target; the spatial holdout is not out-of-event validation.",
+            "This is a hybrid terrain/susceptibility model, not HEC-RAS/LISFLOOD-FP or a surveyed hydraulic model.",
+            "The same historical event supplies the satellite target; the alternating spatial holdout is not out-of-event validation.",
+            "The susceptibility classifier uses terrain/hydro features only and intentionally excludes raw X/Y coordinates.",
             "DEM is a ~30 m DSM and local levees/culverts/channel bathymetry are not surveyed here.",
-            "Gauge stage and the calibrated terrain proxy are related only for scenario presentation; this is not a validated stage-discharge-depth rating curve.",
+            "Gauge stage and the stage proxy are related only for scenario presentation; this is not a validated stage-discharge-depth rating curve.",
             "Observed satellite mask remains subject to manual/domain QC.",
         ],
-        "top_20_parameter_sets": ranked[:20],
     }
     write_json(scenario_dir / "calibration_metrics.json", calibration)
 
@@ -359,13 +488,13 @@ def main() -> None:
     offsets = [-360, -180, 0, 180, 360]
     fractions = [0.35, 0.65, 1.0, 0.75, 0.45]
     members_cfg = [
-        ("LOW", "LOW sensitivity", 0.85, 550.0),
-        ("BASE", "BASE calibrated", 1.00, 595.0),
-        ("HIGH", "HIGH stress", 1.20, 620.0),
+        ("LOW", "LOW sensitivity", 0.85, 550.0, +0.08),
+        ("BASE", "BASE calibrated", 1.00, 595.0, 0.00),
+        ("HIGH", "HIGH stress", 1.20, 620.0, -0.08),
     ]
     bankfull_cm = 445.0
     members = []
-    for member_id, label, stage_factor, peak_cm in members_cfg:
+    for member_id, label, stage_factor, peak_cm, susceptibility_delta in members_cfg:
         frames = []
         gauge = []
         member_dir = scenario_dir / member_id
@@ -374,7 +503,9 @@ def main() -> None:
             proxy_stage = max(0.05, stage * stage_factor * frac)
             raw = domain & (distance_m <= max_km * 1000.0) & (eff_full <= proxy_stage)
             conn = connected_to_river(raw, river_mask)
-            depth = np.where(conn, np.maximum(proxy_stage - eff_full, 0.0), 0.0).astype("float32")
+            member_threshold = float(np.clip(susceptibility_threshold + susceptibility_delta, 0.15, 0.95))
+            hybrid_extent = conn & (susceptibility_probability >= member_threshold)
+            depth = np.where(hybrid_extent, np.maximum(proxy_stage - eff_full, 0.0), 0.0).astype("float32")
             frame_path = member_dir / f"f_{offset}.tif"
             write_float(frame_path, depth, dm)
             frames.append({"offset_min": offset, "depth_path": str(frame_path.relative_to(scenario_dir))})
@@ -392,9 +523,9 @@ def main() -> None:
         "bankfull_cm": bankfull_cm,
         "hand_path": "relative_elevation_to_zhabai.tif",
         "members": members,
-        "method": "terrain-conditioned river-relative elevation + distance attenuation + river connectivity",
+        "method": "terrain-feature susceptibility prior + river-relative stage proxy + river connectivity",
         "calibration_file": "calibration_metrics.json",
-        "status": "HISTORICAL_CALIBRATED_PROXY_REQUIRES_DOMAIN_QC",
+        "status": "HISTORICAL_SPATIAL_HOLDOUT_CALIBRATED_HYBRID_REQUIRES_DOMAIN_QC",
     }
     write_json(scenario_dir / "manifest.json", manifest)
 
@@ -403,7 +534,7 @@ def main() -> None:
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
     meta.update({
         "modelled_status": "LOADED_PROVISIONAL",
-        "modelled_source": "ARGUS terrain-conditioned river-relative proxy",
+        "modelled_source": "ARGUS terrain-feature susceptibility component with same-event spatial holdout",
         "evaluation_aoi": "Sentinel-2 pixels usable in both selected scenes",
         "metrics_status": "COMPUTABLE_BUT_HISTORICAL_SAME_EVENT_SPATIAL_HOLDOUT",
         "calibration_metrics_path": "scenarios/atbasar/calibration_metrics.json",
@@ -413,9 +544,10 @@ def main() -> None:
 
     print(json.dumps({
         "best_parameters": best,
-        "train": train_metrics,
-        "holdout": holdout_metrics,
-        "all": all_metrics,
+        "susceptibility_threshold": susceptibility_threshold,
+        "train": susceptibility_train_metrics,
+        "holdout": susceptibility_holdout_metrics,
+        "all": susceptibility_all_metrics,
         "manifest": str(scenario_dir / "manifest.json"),
         "validation_model": str(validation_dir / "modelled.tif"),
     }, indent=2))
