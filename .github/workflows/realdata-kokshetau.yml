@@ -56,5 +56,5 @@ jobs:
           name: argus-kokshetau-realdata
           path: data/realdata/kokshetau/generated
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
           compression-level: 6
