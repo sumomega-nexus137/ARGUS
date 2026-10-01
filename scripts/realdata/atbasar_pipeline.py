@@ -443,7 +443,8 @@ def fetch_sentinel2(cfg: dict, out: Path) -> None:
             item.datetime.replace(tzinfo=timezone.utc) if item.datetime else None
         )
         cov = _coverage(item, cfg["analysis_bbox_wgs84"])
-        cloud = float(item.properties.get("eo:cloud_cover") or 100.0)
+        raw_cloud = item.properties.get("eo:cloud_cover")
+        cloud = 100.0 if raw_cloud is None else float(raw_cloud)
         ok_assets = required_assets.issubset(item.assets)
         diagnostics.append({
             "id": item.id,
@@ -608,10 +609,16 @@ def build_observed_mask_s1(out: Path) -> None:
 
     geoms = [shape(g) for g, val in shapes(candidate.astype("uint8"), mask=candidate, transform=tr) if int(val) == 1]
     gdf = gpd.GeoDataFrame({"class":["observed_flood"]*len(geoms)}, geometry=geoms, crs=crs)
+    vector_path = out / "processed" / "observed_flood_mask_2024.geojson"
     if len(gdf):
         gdf = gdf[gdf.geometry.area >= 1000].copy()
         gdf["area_m2"] = gdf.geometry.area
-    gdf.to_crs("EPSG:4326").to_file(out / "processed" / "observed_flood_mask_2024.geojson", driver="GeoJSON")
+        if len(gdf):
+            gdf.to_crs("EPSG:4326").to_file(vector_path, driver="GeoJSON")
+        else:
+            write_json(vector_path, {"type":"FeatureCollection","features":[]})
+    else:
+        write_json(vector_path, {"type":"FeatureCollection","features":[]})
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 6))
     axes[0].imshow(pre_db, cmap="gray"); axes[0].set_title("Pre-flood VV dB")
@@ -725,12 +732,16 @@ def build_observed_mask_s2(out: Path) -> None:
         if int(val) == 1
     ]
     gdf = gpd.GeoDataFrame({"class": ["observed_flood"] * len(geoms)}, geometry=geoms, crs=crs)
+    vector_path = out / "processed" / "observed_flood_mask_2024.geojson"
     if len(gdf):
         gdf = gdf[gdf.geometry.area >= 1000].copy()
         gdf["area_m2"] = gdf.geometry.area
-    gdf.to_crs("EPSG:4326").to_file(
-        out / "processed" / "observed_flood_mask_2024.geojson", driver="GeoJSON"
-    )
+        if len(gdf):
+            gdf.to_crs("EPSG:4326").to_file(vector_path, driver="GeoJSON")
+        else:
+            write_json(vector_path, {"type": "FeatureCollection", "features": []})
+    else:
+        write_json(vector_path, {"type": "FeatureCollection", "features": []})
 
     qc_valid = common_clear.astype("uint8")
     qc_valid_path = out / "processed" / "sentinel2_common_clear_mask.tif"
