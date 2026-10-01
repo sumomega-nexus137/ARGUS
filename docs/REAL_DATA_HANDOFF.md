@@ -118,3 +118,19 @@ Claude Code should:
 7. Never replace unavailable official data with simulation without an explicit SIMULATION badge.
 
 The acquisition pipelines remain reproducible update tools, not runtime dependencies.
+
+
+## Ready public runtime/context APIs
+
+For a no-secret competition deployment, ARGUS now has concrete provider profiles for:
+
+- **Open-Meteo Flood API (GloFAS v4)** for global-model river-discharge forecasts;
+- **Open-Meteo Forecast API** for precipitation, snowfall, snow depth, temperature and soil-moisture context;
+- **Open-Meteo Historical Weather API** for event-history context.
+
+These are global-model/reanalysis feeds, not official local measurements. The GloFAS grid is about
+5 km, so its selected river cell may not exactly represent Zhabai or Kylshakty. They must remain
+lower authority than local official/verified observations.
+
+Exact endpoints, parameters and normalization rules are stored in
+`data/realdata/api_profiles.json`; CI probes the public endpoints before handoff.
