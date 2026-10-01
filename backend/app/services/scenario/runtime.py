@@ -6,12 +6,11 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import lru_cache
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
+from app.core.config import resolve_data_path
 from app.core.errors import ArgusError, NotFound
 from app.models import Scenario
 from app.providers.flood.base import FloodScenarioProvider
@@ -22,15 +21,11 @@ from app.providers.flood.synthetic import SyntheticStageHandProvider
 @lru_cache(maxsize=32)
 def _provider_cached(kind: str, config_json: str, members_json: str) -> FloodScenarioProvider:
     cfg = json.loads(config_json)
-    data_dir = get_settings().data_dir
     if kind == "synthetic_stage_hand":
         members = json.loads(members_json)
-        return SyntheticStageHandProvider(data_dir / cfg["terrain_dir"], members, cfg["bankfull_cm"])
+        return SyntheticStageHandProvider(resolve_data_path(cfg["terrain_dir"]), members, cfg["bankfull_cm"])
     if kind == "raster_manifest":
-        path = Path(cfg["manifest_path"])
-        if not path.is_absolute():
-            path = data_dir / path
-        return RasterManifestProvider(path)
+        return RasterManifestProvider(resolve_data_path(cfg["manifest_path"]))
     raise ArgusError("unknown_provider", f"Unknown flood scenario provider '{kind}'")
 
 

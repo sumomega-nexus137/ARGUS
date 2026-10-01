@@ -20,10 +20,10 @@ class HydroStation(MultilingualName, Base):
     area_id: Mapped[str] = mapped_column(ForeignKey("operational_areas.id", ondelete="CASCADE"), index=True)
     geom: Mapped[Any] = mapped_column(GeometryType("POINT"))
     river: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    bankfull_stage_cm: Mapped[float] = mapped_column(Float)
-    watch_stage_cm: Mapped[float] = mapped_column(Float)
-    warning_stage_cm: Mapped[float] = mapped_column(Float)
-    critical_stage_cm: Mapped[float] = mapped_column(Float)
+    bankfull_stage_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    watch_stage_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    warning_stage_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    critical_stage_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
     provider: Mapped[str] = mapped_column(String(64), default="manual")
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -42,7 +42,7 @@ class Observation(Base):
     source_type: Mapped[str] = mapped_column(String(32))
     verification: Mapped[str] = mapped_column(String(16), default="UNVERIFIED")  # VERIFIED | UNVERIFIED | REJECTED
     mode: Mapped[str] = mapped_column(String(16), default="SIMULATION")
-    quality: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    quality: Mapped[str | None] = mapped_column(String(128), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     entered_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     entered_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

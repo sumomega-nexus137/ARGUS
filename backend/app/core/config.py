@@ -87,3 +87,13 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def resolve_data_path(p: str | Path) -> Path:
+    """Resolve '<realdata>/…' tokens and data-dir-relative paths stored in area/scenario configs."""
+    s = get_settings()
+    text = str(p)
+    if text.startswith("<realdata>/"):
+        return s.realdata_root / text[len("<realdata>/"):]
+    path = Path(text)
+    return path if path.is_absolute() else s.data_dir / path

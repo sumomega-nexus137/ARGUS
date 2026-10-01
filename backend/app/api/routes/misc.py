@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import area_or_404, current_user, require
 from app.api.serialize import clean
-from app.core.config import get_settings
+from app.core.config import get_settings, resolve_data_path
 from app.core.errors import ArgusError, Conflict, NotFound
 from app.core.security import Permission
 from app.db.session import get_db
@@ -183,7 +183,7 @@ def terrain_tile(z: int, x: int, y: int, area: OperationalArea = Depends(area_or
     cfg = area.config or {}
     path = cfg.get("dem_path")
     s = get_settings()
-    dem = (s.data_dir / path) if path else (s.demo_dir / area.id / "terrain" / "dem.tif")
+    dem = resolve_data_path(path) if path else (s.demo_dir / area.id / "terrain" / "dem.tif")
     if not dem.exists():
         raise NotFound("terrain", area.id)
     return Response(content=dem_tile(dem, z, x, y), media_type="image/png",

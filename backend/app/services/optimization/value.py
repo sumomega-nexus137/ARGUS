@@ -89,19 +89,16 @@ def compute_values(ctx: AreaContext, rt: ScenarioRuntime, model: AccessModel, ca
     peak = depth.max(axis=1) if depth.size else np.array([])
     b = ctx.buildings
     affected = peak >= A.AFFECTED_DEPTH_M
+    from app.services.impact.engine import money_enabled, zone_exposure
+
+    money = money_enabled(ctx)
     lo, hi = A.unit_values(b.use)
-    dmg_mid = b.floor_area * (lo + hi) / 2 * A.damage_fraction(peak)
+    # economic component: KZT (DEMO unit values) or, for real pilots, damage-weighted exposed floor area (m²)
+    dmg_mid = b.floor_area * ((lo + hi) / 2 if money else 1.0) * A.damage_fraction(peak)
     sec = np.array([s or "" for s in b.sector])
 
-    pop_exposed: dict[str, float] = {}
-    for z in ctx.zones:
-        if not z.sector or z.residential_idx.size == 0:
-            continue
-        fa = b.floor_area[z.residential_idx]
-        tot = float(fa.sum())
-        if tot > 0:
-            share = float(fa[affected[z.residential_idx]].sum()) / tot
-            pop_exposed[z.sector] = pop_exposed.get(z.sector, 0.0) + z.population * share * (1 + z.vulnerable_share)
+    peak_t = float(times[int(np.argmax(depth.sum(axis=0)))]) if depth.size else float(times[0])
+    _, _, pop_exposed, _ = zone_exposure(ctx, rt, member, peak_t, affected, vulnerable_weighted=True)
 
     fac_ids = list(ctx.facilities)
     fl = point_levels(rt, member, [ctx.facilities[f].x for f in fac_ids], [ctx.facilities[f].y for f in fac_ids],
@@ -137,7 +134,8 @@ def compute_values(ctx: AreaContext, rt: ScenarioRuntime, model: AccessModel, ca
                 continue
             infra += float(fi.attrs.get("criticality") or 0) * fac_threat.get(f, 0.1)
             life += FACILITY_OCCUPANTS.get(fi.kind, 0.0) * float(fi.attrs.get("population_served") or 0) * fac_threat.get(f, 0.1)
-            econ += FACILITY_ASSET_VALUE_KZT * fac_threat.get(f, 0.1) * (float(fi.attrs.get("criticality") or 0) / 100)
+            if money:
+                econ += FACILITY_ASSET_VALUE_KZT * fac_threat.get(f, 0.1) * (float(fi.attrs.get("criticality") or 0) / 100)
         out[c["code"]] = ValueComponents(
             c["code"], life * share["life"], infra * share["infra"], econ * share["economic"],
             threatened_facilities=[f for f in facs if fac_threat.get(f, 0) >= 0.5], protected_sectors=sectors,

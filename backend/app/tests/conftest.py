@@ -9,6 +9,7 @@ import pytest
 _TMP = Path(tempfile.mkdtemp(prefix="argus-test-"))
 os.environ["ARGUS_DATABASE_URL"] = f"sqlite:///{(_TMP / 'test.db').as_posix()}"
 os.environ["ARGUS_DEMO_MODE"] = "true"
+os.environ.setdefault("ARGUS_DATA_PROFILE", "demo")
 os.environ["ARGUS_OPTIMIZER_TIME_LIMIT_S"] = "2.0"
 
 

@@ -81,13 +81,23 @@ def site_deadline(model: AccessModel, site: PointFeature, template: ActionTempla
     if requires_egress:
         L = egress_times(model)
         comps["egress_lost"] = L.get(site.node, -INF) - site.access_min
+    else:
+        # one-way actions (e.g. pre-positioning) must still ARRIVE before the site is cut off from the bases
+        key = ("__access_loss__", t_from)
+        loss = model._rev_cache.get(key)
+        if loss is None:
+            loss = model.access_loss(safe_base_nodes(model.ctx), t0=t_from)
+            model._rev_cache[key] = loss
+        v = loss.get(site.node, -INF)
+        if v != INF:
+            comps["access_lost"] = v - site.access_min
     road_ids = (site.attrs.get("protects") or {}).get("road_ids") or []
     if road_ids:
         comps["protected_road_closes"] = min(road_first_closure(model, r, t_from) for r in road_ids)
     exp = site.attrs.get("explicit_deadline")
     if exp is not None and model.rt is not None:
         comps["explicit"] = to_minutes(model.rt.reference_time, exp)
-    reason_map = {"site_flooded": "SITE_FLOODED", "egress_lost": "EGRESS_LOST",
+    reason_map = {"site_flooded": "SITE_FLOODED", "egress_lost": "EGRESS_LOST", "access_lost": "ACCESS_LOST",
                   "protected_road_closes": "PROTECTED_ROAD_CLOSES", "explicit": "EXPLICIT"}
     best_k, best_v = None, INF
     for k, v in comps.items():

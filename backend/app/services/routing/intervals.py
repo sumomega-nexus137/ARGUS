@@ -73,7 +73,8 @@ def threshold_intervals(t: np.ndarray, d: np.ndarray, thr: float) -> list[Interv
             start = -INF
         else:
             d0, d1 = d[i - 1], d[i]
-            start = float(t[i - 1] + (thr - d0) / (d1 - d0) * (t[i] - t[i - 1])) if d1 != d0 else float(t[i])
+            ok = np.isfinite(d0) and np.isfinite(d1) and d1 != d0
+            start = float(t[i - 1] + (thr - d0) / (d1 - d0) * (t[i] - t[i - 1])) if ok else float(t[i])
         j = i
         while j < n and above[j]:
             j += 1
@@ -81,7 +82,8 @@ def threshold_intervals(t: np.ndarray, d: np.ndarray, thr: float) -> list[Interv
             end = INF
         else:
             d0, d1 = d[j - 1], d[j]
-            end = float(t[j - 1] + (d0 - thr) / (d0 - d1) * (t[j] - t[j - 1])) if d0 != d1 else float(t[j])
+            ok = np.isfinite(d0) and np.isfinite(d1) and d0 != d1
+            end = float(t[j - 1] + (d0 - thr) / (d0 - d1) * (t[j] - t[j - 1])) if ok else float(t[j])
         out.append((start, end))
         i = j
     return out

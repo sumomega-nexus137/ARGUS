@@ -112,9 +112,11 @@ class ZoneInfo:
     id: str
     sector: str | None
     population: int
-    vulnerable_share: float
+    vulnerable_share: float | None
     geom: BaseGeometry
     residential_idx: np.ndarray
+    cx: float = 0.0  # projected centroid (used when the zone has no mapped buildings)
+    cy: float = 0.0
 
 
 @dataclass
@@ -211,12 +213,14 @@ _lock = threading.Lock()
 
 
 def _nearest_node(nodes: dict[str, NodeInfo], x: float, y: float) -> tuple[str, float]:
-    best, bd = "", float("inf")
-    for n in nodes.values():
-        d = (n.x - x) ** 2 + (n.y - y) ** 2
-        if d < bd:
-            best, bd = n.id, d
-    return best, float(np.sqrt(bd))
+    ids = list(nodes)
+    if not ids:
+        return "", float("inf")
+    xs = np.fromiter((nodes[i].x for i in ids), float, len(ids))
+    ys = np.fromiter((nodes[i].y for i in ids), float, len(ids))
+    d = (xs - x) ** 2 + (ys - y) ** 2
+    k = int(np.argmin(d))
+    return ids[k], float(np.sqrt(d[k]))
 
 
 def _build_static(db: Session, area: OperationalArea) -> StaticContext:
@@ -300,7 +304,8 @@ def _build_static(db: Session, area: OperationalArea) -> StaticContext:
         use=np.array([b.use for b in blds]), floor_area=np.array([b.floor_area_m2 for b in blds], dtype=float),
         sector=[b.sector_id for b in blds],
     )
-    res_mask = buildings.use == "residential"
+    # untagged OSM buildings ("unknown") may be dwellings: population is allocated to them too (documented)
+    res_mask = np.isin(buildings.use, ["residential", "unknown"])
     zones: list[ZoneInfo] = []
     from shapely import points as shp_points
     from shapely.strtree import STRtree
@@ -310,7 +315,9 @@ def _build_static(db: Session, area: OperationalArea) -> StaticContext:
     for z in db.scalars(select(PopulationZone).where(PopulationZone.area_id == area.id)):
         idx = np.array(tree.query(z.geom, predicate="contains"), dtype=int) if tree is not None else np.array([], dtype=int)
         idx = idx[res_mask[idx]] if idx.size else idx
-        zones.append(ZoneInfo(z.id, z.sector_id, z.population, z.vulnerable_share, z.geom, idx))
+        zc = z.geom.centroid
+        zx, zy = proj(zc.x, zc.y)
+        zones.append(ZoneInfo(z.id, z.sector_id, z.population, z.vulnerable_share, z.geom, idx, zx, zy))
 
     return StaticContext(
         area_id=area.id, names=names_of(area), crs_epsg=area.crs_epsg, utc_offset_min=area.utc_offset_min,

@@ -53,6 +53,49 @@ def _range(lo: float, hi: float) -> dict:
     return {"low": A.round_sig(lo), "high": A.round_sig(hi), "currency": A.CURRENCY}
 
 
+def money_enabled(ctx: AreaContext) -> bool:
+    """Monetary valuation only where an (explicit, labelled) unit-value table applies (DEMO areas).
+
+    Real pilots have no approved regional valuation table → exposure is reported as floor area, not money."""
+    return (ctx.config or {}).get("economic_model", "demo_unit_values") == "demo_unit_values"
+
+
+def zone_exposure(ctx: AreaContext, rt: ScenarioRuntime, member: str, t: float, affected: np.ndarray,
+                  vulnerable_weighted: bool = False) -> tuple[float, float | None, dict, int]:
+    """Exposed population (dasymetric): buildings' floor-area share inside each zone; zones without mapped
+    buildings use the flood level at the zone centroid (WorldPop cells where OSM has no buildings)."""
+    b = ctx.buildings
+    empty = [z for z in ctx.zones if z.residential_idx.size == 0]
+    cent_lv = (point_levels(rt, member, [z.cx for z in empty], [z.cy for z in empty], np.array([t]))[:, 0]
+               if empty else np.array([]))
+    cent_wet = {z.id: bool(np.isfinite(v) and v >= A.AFFECTED_DEPTH_M) for z, v in zip(empty, cent_lv, strict=True)}
+    pop_exposed, vuln, vuln_known = 0.0, 0.0, True
+    sector_pop: dict[str, float] = {}
+    cell_only = 0
+    for z in ctx.zones:
+        if z.residential_idx.size == 0:
+            e = float(z.population) if cent_wet.get(z.id) else 0.0
+            if e:
+                cell_only += 1
+        else:
+            fa = b.floor_area[z.residential_idx]
+            tot = float(fa.sum())
+            if tot <= 0:
+                n = z.residential_idx.size
+                e = z.population * float(affected[z.residential_idx].sum()) / n if n else 0.0
+            else:
+                e = z.population * float(fa[affected[z.residential_idx]].sum()) / tot
+        pop_exposed += e
+        if z.vulnerable_share is None:
+            vuln_known = False
+        else:
+            vuln += e * z.vulnerable_share
+        if z.sector:
+            w = (1 + (z.vulnerable_share or 0.0)) if vulnerable_weighted else 1.0
+            sector_pop[z.sector] = sector_pop.get(z.sector, 0.0) + e * w
+    return pop_exposed, (vuln if vuln_known else None), sector_pop, cell_only
+
+
 def frame_impact(ctx: AreaContext, rt: ScenarioRuntime, member: str, t: float, access: AccessModel | None = None,
                  include_calculation: bool = False) -> dict:
     b = ctx.buildings
@@ -76,22 +119,11 @@ def frame_impact(ctx: AreaContext, rt: ScenarioRuntime, member: str, t: float, a
         m = affected & (b.use == u)
         by_use[u] = {"buildings": int(m.sum()), "floor_area_m2": round(float(b.floor_area[m].sum()), -1)}
 
-    pop_total, pop_exposed, vuln_exposed = 0, 0.0, 0.0
-    sector_pop: dict[str, float] = {}
-    for z in ctx.zones:
-        pop_total += z.population
-        if z.residential_idx.size == 0:
-            continue
-        fa = b.floor_area[z.residential_idx]
-        tot = float(fa.sum())
-        if tot <= 0:
-            continue
-        share = float(fa[affected[z.residential_idx]].sum()) / tot
-        e = z.population * share
-        pop_exposed += e
-        vuln_exposed += e * z.vulnerable_share
-        if z.sector:
-            sector_pop[z.sector] = sector_pop.get(z.sector, 0.0) + e
+    pop_total = sum(z.population for z in ctx.zones)
+    pop_exposed, vuln_exposed, sector_pop, cell_only = zone_exposure(ctx, rt, member, t, affected)
+    money = money_enabled(ctx)
+    fa_exposed = float(b.floor_area[affected].sum())
+    fa_weighted = float((b.floor_area * frac)[affected].sum())
 
     sectors = {}
     sec = np.array([s or "" for s in b.sector])
@@ -132,21 +164,31 @@ def frame_impact(ctx: AreaContext, rt: ScenarioRuntime, member: str, t: float, a
         "t_min": t,
         "buildings": {"total": len(b.ids), "affected": int(affected.sum()), "by_depth_class": classes, "by_use": by_use},
         "population": {"total": int(pop_total), "exposed": int(round(pop_exposed, -1)),
-                       "vulnerable_exposed": int(round(vuln_exposed, -1)), "aggregated": True},
+                       "vulnerable_exposed": None if vuln_exposed is None else int(round(vuln_exposed, -1)),
+                       "aggregated": True, "method": (ctx.config or {}).get("population_method", "zones_floor_area"),
+                       "zones_without_buildings_exposed": cell_only},
         "facilities": facilities,
         "facilities_exposed": sum(1 for f in facilities if f["exposed"]),
         "roads": {"km_flooded": round(roads_km_flooded, 2), "km_closed": round(roads_km_closed, 2),
                   "km_restricted": round(roads_km_restricted, 2),
                   "segments_closed": sum(1 for v in seg_states.values() if v == "CLOSED")},
         "sectors": sectors,
-        "economic": {
+        "economic": ({
             "asset_exposure": _range(exp_lo, exp_hi),
             "expected_damage": _range(dmg_lo, dmg_hi),
             "status": "DEMO_ASSUMPTIONS",
-        },
+            "floor_area_exposed_m2": round(fa_exposed, -1),
+        } if money else {
+            "asset_exposure": None, "expected_damage": None,
+            "status": "NOT_AVAILABLE_NO_APPROVED_VALUATION",
+            "floor_area_exposed_m2": round(fa_exposed, -1),
+            "damage_weighted_floor_area_m2": round(fa_weighted, -1),
+        }),
         "max_depth_m": round(float(depth.max()) if depth.size else 0.0, 2),
     }
-    if include_calculation:
+    if include_calculation and not money:
+        out["calculation"] = {"rows": [], "assumptions": {**A.as_dict(), "status": "NOT_AVAILABLE_NO_APPROVED_VALUATION"}}
+    elif include_calculation:
         calc_rows = []
         for u, (ulo, uhi) in A.UNIT_VALUE_KZT_M2.items():
             m = affected & (b.use == u)
@@ -177,7 +219,7 @@ def impact_timeline(ctx: AreaContext, rt: ScenarioRuntime, member: str, access: 
             "t_min": t, "buildings_affected": f["buildings"]["affected"], "population_exposed": f["population"]["exposed"],
             "facilities_exposed": f["facilities_exposed"], "roads_km_closed": f["roads"]["km_closed"],
             "asset_exposure": f["economic"]["asset_exposure"], "expected_damage": f["economic"]["expected_damage"],
-            "max_depth_m": f["max_depth_m"],
+            "floor_area_exposed_m2": f["economic"]["floor_area_exposed_m2"], "max_depth_m": f["max_depth_m"],
         })
     return {
         "frames": frames,
