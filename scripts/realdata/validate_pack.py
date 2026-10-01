@@ -144,7 +144,7 @@ def main():
             add(report, "sentinel1:selection", False, "missing selection metadata", True)
         validate_csv(
             base / "curated" / "hydrology" / "zhabai_2024_observations.csv",
-            ["timestamp", "water_level_m", "reference_type", "source_url"],
+            ["timestamp_local", "value", "reference_type", "source_url"],
             report,
             True,
         )
