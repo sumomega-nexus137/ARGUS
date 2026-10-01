@@ -32,6 +32,10 @@ jobs:
         run: |
           python scripts/realdata/atbasar_pipeline.py --output data/realdata/atbasar/generated
 
+      - name: Validate Atbasar data pack
+        run: |
+          python scripts/realdata/validate_pack.py --area atbasar --root data/realdata/atbasar/generated
+
       - name: Show manifest
         if: always()
         run: |
