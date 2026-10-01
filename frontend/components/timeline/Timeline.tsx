@@ -101,7 +101,7 @@ export function Timeline() {
         </div>
         {area?.clock_mode !== "LIVE" && can("plan_edit") && (
           <div className="ml-auto flex items-center gap-1" title={tt("clockHint")}>
-            <span className="hidden text-[10.5px] uppercase tracking-wider text-sim 2xl:inline">{tt("clockHint")}</span>
+            <span className="hidden text-[10.5px] uppercase tracking-wider text-sim 2xl:inline">{area?.clock_mode === "HISTORICAL" ? tt("clockHintHistorical") : tt("clockHint")}</span>
             <button onClick={() => clock({ advance_min: 30 })} className="flex items-center gap-1 rounded border border-sim/40 px-1.5 py-0.5 text-[11px] font-semibold text-sim hover:bg-sim/10">
               <TimerReset className="h-3.5 w-3.5" />{tt("advanceClock")}
             </button>

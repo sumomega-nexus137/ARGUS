@@ -56,7 +56,9 @@ export function OpsMap() {
     const m = new maplibregl.Map({
       container: el.current,
       transformRequest: (url) => mapTransformRequest(url),
-      attributionControl: { compact: true, customAttribution: "ARGUS FloodOps · DEMO synthetic geometry" },
+      attributionControl: { compact: true, customAttribution: area?.is_demo === false
+        ? "© OpenStreetMap contributors (ODbL) · Copernicus DEM GLO-30 · Sentinel-2 (ESA/Copernicus) · WorldPop · JRC GSW"
+        : "ARGUS FloodOps · DEMO synthetic geometry" },
       center: centerRef.current,
       zoom: 12.7,
       maxPitch: 75,
@@ -103,6 +105,7 @@ export function OpsMap() {
     const add = (id: string, src: ML.SourceSpecification) => { if (!m.getSource(id)) m.addSource(id, src); };
     add("sectors", { type: "geojson", data: (layers.sectors as unknown as GeoJSON.FeatureCollection) || EMPTY_FC });
     add("river", { type: "geojson", data: (layers.river as unknown as GeoJSON.FeatureCollection) || EMPTY_FC });
+    add("waterways", { type: "geojson", data: (layers.waterways as unknown as GeoJSON.FeatureCollection) || EMPTY_FC });
     add("flood-a", { type: "image", url: blank, coordinates: corners });
     add("flood-b", { type: "image", url: blank, coordinates: corners });
     add("extent", { type: "geojson", data: EMPTY_FC });
@@ -114,6 +117,10 @@ export function OpsMap() {
     addLayer({ id: "sectors-line", type: "line", source: "sectors", paint: { "line-color": "#7aa2c7", "line-width": 1, "line-dasharray": [3, 3], "line-opacity": 0.6 } });
     addLayer({ id: "flood-a", type: "raster", source: "flood-a", paint: { "raster-opacity": 0.9, "raster-fade-duration": 0, "raster-opacity-transition": { duration: 450, delay: 0 }, "raster-resampling": "linear" } });
     addLayer({ id: "flood-b", type: "raster", source: "flood-b", paint: { "raster-opacity": 0, "raster-fade-duration": 0, "raster-opacity-transition": { duration: 450, delay: 0 }, "raster-resampling": "linear" } });
+    addLayer({ id: "water-fill", type: "fill", source: "waterways", filter: ["==", ["geometry-type"], "Polygon"],
+      paint: { "fill-color": "#2a6fb0", "fill-opacity": 0.35 } });
+    addLayer({ id: "water-line", type: "line", source: "waterways", filter: ["==", ["geometry-type"], "LineString"],
+      paint: { "line-color": "#3d8fd6", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.6, 15, 2], "line-opacity": 0.6 } });
     addLayer({ id: "river", type: "line", source: "river", paint: { "line-color": "#5fb4ff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 15, 3], "line-opacity": 0.35 } });
     addLayer({ id: "extent", type: "line", source: "extent", paint: { "line-color": "#c8ecff", "line-width": 1.3, "line-opacity": 0.85, "line-dasharray": [2, 2] } });
     addLayer({
@@ -192,6 +199,7 @@ export function OpsMap() {
     set("buildings", layers.buildings);
     set("sectors", layers.sectors);
     set("river", layers.river);
+    set("waterways", layers.waterways);
   }, [ready, layers]);
 
   // ------------------------------------------------------------------ flood surface (crossfade)

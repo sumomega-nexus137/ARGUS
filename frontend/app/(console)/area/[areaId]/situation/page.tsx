@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { useAreaCtx } from "@/components/area/AreaContext";
+import { AssumptionsPanel, HistoryPanel, LiveContextPanel } from "@/components/area/HistoryPanels";
 import { Hydrograph, type HydroStation } from "@/components/charts/Hydrograph";
 import { FreshnessTable } from "@/components/common/Freshness";
 import { ScreenHeader } from "@/components/common/ScreenHeader";
@@ -60,7 +61,7 @@ export default function SituationPage() {
       {!scenario && <Loading />}
       {scenario && (
         <>
-          <Panel title={ts("title")} right={<Badge tone="sim">{tm.has(scenario.mode) ? tm(scenario.mode) : scenario.mode}</Badge>}>
+          <Panel title={ts("title")} right={<Badge tone={scenario.mode === "HISTORICAL" ? "info" : "sim"}>{tm.has(scenario.mode) ? tm(scenario.mode) : scenario.mode}</Badge>}>
             <div className="grid grid-cols-3 gap-3">
               <Metric label={ts("gauge")} value={frame?.gauge_stage_cm != null ? `${num(frame.gauge_stage_cm, 0, locale)} cm` : "—"} sub={fmt(t)} />
               <Metric label={ts("flooded")} value={frame ? `${num(frame.flooded_km2, 2, locale)} km²` : "—"} />
@@ -69,10 +70,10 @@ export default function SituationPage() {
             <div className="mt-3">
               <KeyValue rows={[
                 [ts("version"), `${scenario.name}`],
-                [ts("member"), <span key="m">{scenario.active_member} · {scenario.members.find((m) => m.id === scenario.active_member)?.label}</span>],
-                [ts("selection"), sel?.method ? ts(`method.${sel.method}`) : "—"],
+                [ts("member"), <span key="m">{ts.has(`memberLabel.${scenario.active_member}`) ? ts(`memberLabel.${scenario.active_member}`) : `${scenario.active_member} · ${scenario.members.find((m) => m.id === scenario.active_member)?.label}`}</span>],
+                [ts("selection"), <span key="s">{sel?.method ? ts(`method.${sel.method}`) : "—"}{typeof sel?.note === "string" && sel.note ? <span className="block text-[10.5px] text-muted">{sel.note}</span> : null}</span>],
                 [ts("referenceTime"), dateTime(scenario.reference_time, area?.utc_offset_min ?? 300)],
-                [ts("provider"), <span key="p" className="text-ink-2">{scenario.provider_note}</span>],
+                [ts("provider"), <span key="p" className="text-ink-2">{ts.has(`providerKind.${scenario.provider}`) ? ts(`providerKind.${scenario.provider}`) : scenario.provider_note}</span>],
                 [tc("modelVersion"), scenario.model_version],
               ]} />
             </div>
@@ -86,7 +87,9 @@ export default function SituationPage() {
             {hydro.data?.stations.map((st) => (
               <div key={st.station_id}>
                 <div className="mb-1 text-xs font-semibold">{pickName(st.names, locale)}</div>
-                {nowMin !== null && t !== null && <Hydrograph st={st} nowMin={nowMin} cursor={t} fmt={(m) => fmt(m)} />}
+                {nowMin !== null && t !== null && <Hydrograph st={st} nowMin={nowMin} cursor={t} fmt={(m) => fmt(m)}
+                  dateFmt={(iso) => dateTime(iso, area?.utc_offset_min ?? 300)} />}
+                {!st.scenario_station && st.provider === "official_report" && <p className="mb-2 mt-1 text-[10px] text-muted">{ts("officialDatumNote")}</p>}
               </div>
             ))}
           </Panel>
@@ -131,6 +134,12 @@ export default function SituationPage() {
             </Panel>
           )}
 
+          {area?.data_profile === "historical" && (
+            <AssumptionsPanel note={(scenario.provenance as { note?: string })?.note}
+              limitations={(scenario.provenance as { limitations?: string[] })?.limitations} assumptions={area.assumptions} />
+          )}
+          <HistoryPanel areaId={areaId} />
+          <LiveContextPanel areaId={areaId} />
           <Panel title={tf("title")}>
             {fresh.data ? <FreshnessTable rows={fresh.data.sources} utcOffset={area?.utc_offset_min ?? 300} compact /> : <Loading />}
           </Panel>

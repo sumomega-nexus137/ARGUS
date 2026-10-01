@@ -21,6 +21,14 @@ export function hhmm(d: Date | string | null | undefined, utcOffsetMin: number):
   return `${String(local.getUTCHours()).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")}`;
 }
 
+export function dateOnly(d: Date | string | null | undefined, utcOffsetMin: number): string {
+  if (!d) return DASH;
+  const t = typeof d === "string" ? new Date(d) : d;
+  if (Number.isNaN(t.getTime())) return DASH;
+  const local = new Date(t.getTime() + utcOffsetMin * 60000);
+  return `${String(local.getUTCDate()).padStart(2, "0")}.${String(local.getUTCMonth() + 1).padStart(2, "0")}.${local.getUTCFullYear()}`;
+}
+
 export function dateTime(d: Date | string | null | undefined, utcOffsetMin: number): string {
   if (!d) return DASH;
   const t = typeof d === "string" ? new Date(d) : d;

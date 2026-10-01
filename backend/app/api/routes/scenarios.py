@@ -109,7 +109,7 @@ def hydrograph(area: OperationalArea = Depends(area_or_404), db: Session = Depen
                         "verification": o.verification, "authority": authority_label(o.source_type, o.verification),
                         "rank": authority_rank(o.source_type, o.verification), "effective": o.id in eff_ids,
                         "excluded": o.id in excluded, "conflict": conflict_of.get(o.id, (None, None))[0], "mode": o.mode,
-                        "future": o.observed_at > now})
+                        "future": o.observed_at > now, "quality": o.quality, "notes": o.notes})
         is_proxy = sid == (s.parameters or {}).get("station_id")
         envelope = ((s.uncertainty or {}).get("envelope") or []) if is_proxy else []
         series = {}

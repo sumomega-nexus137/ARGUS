@@ -45,8 +45,10 @@ export interface Gauge {
   trend_cm_h: number | null;
   forecast_peak_cm: number | null;
   forecast_peak_at_min: number | null;
-  thresholds: { bankfull: number; watch: number; warning: number; critical: number };
+  thresholds: { bankfull: number | null; watch: number | null; warning: number | null; critical: number | null };
   open_conflict: boolean;
+  scenario_station?: boolean;
+  provider?: string;
 }
 
 export interface ChainNode {
@@ -167,6 +169,15 @@ export interface AreaDetail {
   static_version: number;
   reference_time: string;
   demo_note: string | null;
+  data_profile?: "historical" | "demo";
+  role?: string | null;
+  assumptions?: { key: string; value: unknown; note: string }[];
+  pack?: { archive_sha256: string; run_id: number; artifact_id: number } | null;
+  clock_start?: string | null;
+  population_meta?: { worldpop_total_in_pack: number; allocated_to_building_cells: number; not_allocated_no_mapped_buildings: number; zones: number } | null;
+  road_meta?: { segments: number; nodes: number; dropped_disconnected_segments: number; roads: number } | null;
+  economic_model?: string;
+  scenario_station_id?: string | null;
 }
 
 export interface ScenarioInfo {
@@ -290,12 +301,12 @@ export interface ImpactFrame {
     by_depth_class: { min_m: number; max_m: number | null; buildings: number }[];
     by_use: Record<string, { buildings: number; floor_area_m2: number }>;
   };
-  population: { total: number; exposed: number; vulnerable_exposed: number; aggregated: boolean };
+  population: { total: number; exposed: number; vulnerable_exposed: number | null; aggregated: boolean; method?: string; zones_without_buildings_exposed?: number };
   facilities: { id: string; type: string; names: Names; criticality: number | null; depth_m: number; exposed: boolean; lon: number; lat: number }[];
   facilities_exposed: number;
   roads: { km_flooded: number; km_closed: number; km_restricted: number; segments_closed: number };
   sectors: Record<string, { names: Names; buildings_affected: number; population_exposed: number }>;
-  economic: { asset_exposure: MoneyRange; expected_damage: MoneyRange; status: string };
+  economic: { asset_exposure: MoneyRange | null; expected_damage: MoneyRange | null; status: string; floor_area_exposed_m2?: number; damage_weighted_floor_area_m2?: number };
   max_depth_m: number;
   kind: "ANALYSIS" | "FORECAST";
   mode: string;
@@ -324,8 +335,9 @@ export interface ImpactTimeline {
     population_exposed: number;
     facilities_exposed: number;
     roads_km_closed: number;
-    asset_exposure: MoneyRange;
-    expected_damage: MoneyRange;
+    asset_exposure: MoneyRange | null;
+    expected_damage: MoneyRange | null;
+    floor_area_exposed_m2?: number;
     max_depth_m: number;
   }[];
   buildings: { ids: string[]; depth_cm: number[][] };

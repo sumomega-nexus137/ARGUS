@@ -13,14 +13,28 @@ import { dateTime, num, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import type { Names } from "@/lib/types";
 
+interface Conf { iou: number | null; precision: number | null; recall: number | null; f1: number | null; tp_cells: number; fp_cells: number; fn_cells: number; evaluated_cells: number; true_overlap_km2: number; false_positive_km2: number; false_negative_km2: number }
 interface Run {
   id: string; dataset_id: string; kind: string; status: string; created_at: string; created_by: string;
   metrics: { iou: number; precision: number; recall: number; f1: number; true_overlap_km2: number; false_positive_km2: number; false_negative_km2: number; observed_km2: number; modelled_km2: number };
-  result: { warning?: string };
+  result: {
+    warning?: string; label?: string; headline?: string; direct_aoi?: Conf;
+    protocol_metrics?: { holdout: Conf; calibration: Conf; all_usable: Conf; grid_m: number; protocol: { slope_max_deg: number; distance_max_m: number; jrc_permanent_min: number; block_m: number } };
+  };
+}
+interface HistoricalInfo {
+  label: string;
+  observed_qc: { status: string; technical_visual_review: string | null; certification: string };
+  satellite: { flood_item: string; flood_datetime: string; reference_item: string; reference_datetime: string; flood_cloud_cover_percent: number; reason: string } | null;
+  mask_method: { common_clear_fraction: number; observed_flood_area_m2_raw_pixel_count: number; caveats: string[] } | null;
+  model: { kind: string; algorithm: string; uses_raw_xy_coordinates: boolean } | null;
+  limitations: string[];
+  has_qc_png: boolean;
 }
 interface ValidationPayload {
   datasets: { id: string; name: Names; event: string; observed_source: string; status: string; path: string; kind: string }[];
   runs: Run[];
+  historical: HistoricalInfo | null;
 }
 interface AAR {
   plan_versions: { id: string; plan: string; version: number; status: string; origin: string; approved_by: string | null }[];
@@ -83,9 +97,17 @@ export default function ValidationPage() {
         {(synth.error || real.error) && <ErrorState error={synth.error || real.error} />}
       </Panel>
 
+      {v.data!.historical && <HistoricalEvidence h={v.data!.historical} areaId={areaId} />}
+
       {run ? (
         <Panel title={`${tv("metrics")} · ${run.dataset_id} · ${dateTime(run.created_at, area.utc_offset_min)}`}>
           {run.kind === "SYNTHETIC_SELF_TEST" && <InlineNote tone="sim" className="mb-2">{tv("syntheticWarning")}</InlineNote>}
+          {run.result.label === "HISTORICAL_SAME_EVENT_SPATIAL_HOLDOUT" && (
+            <div className="mb-2 space-y-1">
+              <div className="flex flex-wrap gap-1"><Badge tone="info">{tv("holdoutLabel")}</Badge><Badge tone="muted">{tv("historical")}</Badge></div>
+              <InlineNote tone="warn">{tv("holdoutNot")}</InlineNote>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Metric big label={tv("iou")} value={pct(run.metrics.iou)} />
             <Metric big label={tv("precision")} value={pct(run.metrics.precision)} />
@@ -96,6 +118,7 @@ export default function ValidationPage() {
             <Metric label={tv("fn")} value={`${num(run.metrics.false_negative_km2, 2, locale)} ${tv("km2")}`} tone="crit" />
           </div>
           <p className="mt-2 font-mono text-[10.5px] text-muted">{tv("formula")}</p>
+          {run.result.protocol_metrics && <ProtocolTable r={run.result} />}
           <Curtain runId={run.id} />
           {v.data!.runs.length > 1 && (
             <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
@@ -119,6 +142,69 @@ export default function ValidationPage() {
         ) : <Loading />}
       </Panel>
     </div>
+  );
+}
+
+function ProtocolTable({ r }: { r: Run["result"] }) {
+  const tv = useTranslations("validation");
+  const { locale } = useLocale();
+  const pm = r.protocol_metrics!;
+  const rows: [string, Conf, string][] = [
+    [tv("rowHoldout"), pm.holdout, "font-bold text-ink"], [tv("rowCalibration"), pm.calibration, ""], [tv("rowAllUsable"), pm.all_usable, ""],
+    ...(r.direct_aoi ? [[tv("rowDirect"), r.direct_aoi, "text-muted"] as [string, Conf, string]] : []),
+  ];
+  const p = (x: number | null) => (x === null ? "—" : num(x, 4, locale));
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full text-[11px] [&_td]:px-1.5 [&_th]:px-1.5">
+        <thead className="text-left text-[10px] uppercase tracking-wider text-muted">
+          <tr><th>{tv("evaluation")}</th><th>IoU</th><th>{tv("precision")}</th><th>{tv("recall")}</th><th>F1</th><th>{tv("cells")}</th></tr>
+        </thead>
+        <tbody>
+          {rows.map(([label, c, cls]) => (
+            <tr key={label} className={`border-t border-line/60 ${cls}`}>
+              <td className="py-1">{label}</td><td className="tabular">{p(c.iou)}</td><td className="tabular">{p(c.precision)}</td>
+              <td className="tabular">{p(c.recall)}</td><td className="tabular">{p(c.f1)}</td><td className="tabular">{num(c.evaluated_cells, 0, locale)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-1 text-[10.5px] text-muted">{tv("protocolText", { grid: pm.grid_m, block: pm.protocol.block_m, slope: pm.protocol.slope_max_deg, dist: pm.protocol.distance_max_m / 1000, jrc: pm.protocol.jrc_permanent_min })}</p>
+      <p className="text-[10.5px] text-muted">{tv("directExplain")}</p>
+    </div>
+  );
+}
+
+function HistoricalEvidence({ h, areaId }: { h: HistoricalInfo; areaId: string }) {
+  const tv = useTranslations("validation");
+  const { locale } = useLocale();
+  const qc = useAuthImage(h.has_qc_png ? `/api/areas/${areaId}/validation/qc.png` : null);
+  return (
+    <Panel title={tv("evidence")} right={<Badge tone="warn">{tv("requiresQc")}</Badge>}>
+      <div className="grid grid-cols-1 gap-3 text-[11.5px] md:grid-cols-2">
+        <div className="space-y-1">
+          {h.satellite && (
+            <>
+              <div className="font-semibold">{tv("sentinel2Fallback")}</div>
+              <div>{tv("floodScene")}: <span className="font-mono">{h.satellite.flood_item}</span> · {h.satellite.flood_datetime.slice(0, 16).replace("T", " ")} UTC · {tv("cloud")} {num(h.satellite.flood_cloud_cover_percent, 1, locale)}%</div>
+              <div>{tv("referenceScene")}: <span className="font-mono">{h.satellite.reference_item}</span> · {h.satellite.reference_datetime.slice(0, 16).replace("T", " ")} UTC</div>
+              <div className="text-muted">{tv("noS1")}</div>
+            </>
+          )}
+          {h.mask_method && <div>{tv("usableCoverage")}: {num(h.mask_method.common_clear_fraction * 100, 2, locale)}% · {tv("observedArea")}: {num(h.mask_method.observed_flood_area_m2_raw_pixel_count / 1e6, 2, locale)} {tv("km2")}</div>}
+          <InlineNote tone="warn">{tv("qcState")}: {h.observed_qc.status} · {tv("visualReview")}: {h.observed_qc.technical_visual_review || "—"} · {tv("notCertified")}</InlineNote>
+          {h.model && <div className="text-muted">{tv("modelKind")}: {h.model.algorithm} · {tv("noXY")}</div>}
+          {h.limitations.length > 0 && (
+            <details className="text-[11px]"><summary className="cursor-pointer font-semibold text-muted">{tv("limitations")}</summary>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-ink-2">{h.limitations.map((l, i) => <li key={i}>{l}</li>)}</ul></details>
+          )}
+        </div>
+        <div>
+          {qc && <img src={qc} alt={tv("qcFigure")} className="w-full rounded-[3px] border border-line" />}
+          <p className="mt-1 text-[10px] text-muted">{tv("qcFigure")}</p>
+        </div>
+      </div>
+    </Panel>
   );
 }
 

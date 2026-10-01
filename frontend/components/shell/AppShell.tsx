@@ -25,7 +25,7 @@ import { useTranslations } from "use-intl";
 
 import { Badge } from "@/components/ui/primitives";
 import { useAuth } from "@/lib/auth";
-import { hhmm, pickName } from "@/lib/format";
+import { dateOnly, hhmm, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { useArea, useAreas, useHealth } from "@/lib/queries";
 
@@ -119,8 +119,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           {!serverDown && extOffline && <Badge tone="offline">{tf("externalOffline")}</Badge>}
           {areaInfo && (
             <div className="flex items-center gap-1.5 rounded-[3px] border border-line-2 px-2 py-0.5" title={areaInfo.clock_mode}>
+              {areaInfo.clock_mode === "HISTORICAL" && <span className="tabular text-[11px] text-ink-2">{dateOnly(areaInfo.now, areaInfo.utc_offset_min)}</span>}
               <span className="tabular text-[15px] font-bold">{hhmm(areaInfo.now, areaInfo.utc_offset_min)}</span>
-              <Badge tone={areaInfo.clock_mode === "LIVE" ? "live" : "sim"}>{areaInfo.clock_mode === "LIVE" ? ta("liveClock") : ta("simClock")}</Badge>
+              <Badge tone={areaInfo.clock_mode === "LIVE" ? "live" : areaInfo.clock_mode === "HISTORICAL" ? "info" : "sim"}>
+                {areaInfo.clock_mode === "LIVE" ? ta("liveClock") : areaInfo.clock_mode === "HISTORICAL" ? ta("historicalClock") : ta("simClock")}
+              </Badge>
             </div>
           )}
           <LanguageSwitcher />
@@ -136,6 +139,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
       {areaInfo?.is_demo && (
         <div className="shrink-0 border-b border-sim/30 bg-sim/10 px-3 py-0.5 text-center text-[10.5px] font-semibold tracking-wider text-sim">{ta("demoBanner")}</div>
+      )}
+      {areaInfo && !areaInfo.is_demo && areaInfo.data_profile === "historical" && (
+        <div className="shrink-0 border-b border-accent/30 bg-accent/5 px-3 py-0.5 text-center text-[10.5px] font-semibold tracking-wider text-accent">
+          {areaInfo.role === "PORTABILITY_AND_BOTTLENECK_PILOT" ? ta("historicalBannerKok") : ta("historicalBanner")}
+        </div>
       )}
       {serverDown && (
         <div role="alert" className="shrink-0 border-b border-offline/40 bg-offline/10 px-3 py-1 text-[11.5px] text-offline">

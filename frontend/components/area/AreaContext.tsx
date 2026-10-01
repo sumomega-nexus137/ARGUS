@@ -61,7 +61,7 @@ export function useAreaCtx(): Ctx {
   return c;
 }
 
-const LAYERS = ["roads", "buildings", "facilities", "task_sites", "bases", "bridges", "bottlenecks", "sectors", "river", "stations"];
+const LAYERS = ["roads", "buildings", "facilities", "task_sites", "bases", "bridges", "bottlenecks", "sectors", "river", "waterways", "stations"];
 
 export function AreaProvider({ areaId, children }: { areaId: string; children: ReactNode }) {
   const area = useArea(areaId);
@@ -76,6 +76,7 @@ export function AreaProvider({ areaId, children }: { areaId: string; children: R
     bridges: useLayer(areaId, "bridges", sv),
     bottlenecks: useLayer(areaId, "bottlenecks", sv),
     sectors: useLayer(areaId, "sectors", sv),
+    waterways: useLayer(areaId, "waterways", sv),
     river: useLayer(areaId, "river", sv),
     stations: useLayer(areaId, "stations", sv),
   } as const;

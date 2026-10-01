@@ -4,8 +4,10 @@ import { useTranslations } from "use-intl";
 
 export interface HydroStation {
   station_id: string;
-  thresholds: { bankfull: number; watch: number; warning: number; critical: number };
-  observations: { id: string; t_min: number; stage_cm: number; effective: boolean; excluded: boolean; conflict: string | null; source_type: string; verification: string; authority: string; source: string }[];
+  thresholds: { bankfull: number | null; watch: number | null; warning: number | null; critical: number | null };
+  observations: { id: string; t_min: number; stage_cm: number; effective: boolean; excluded: boolean; conflict: string | null; source_type: string; verification: string; authority: string; source: string; observed_at?: string; mode?: string; future?: boolean; quality?: string | null; notes?: string | null }[];
+  scenario_station?: boolean;
+  provider?: string;
   members: Record<string, [number, number][]>;
   active_member: string;
   envelope: string[];
@@ -17,15 +19,38 @@ const W = 400;
 const H = 210;
 const PAD = { l: 34, r: 8, t: 10, b: 20 };
 
-export function Hydrograph({ st, nowMin, cursor, fmt }: { st: HydroStation; nowMin: number; cursor: number; fmt: (m: number) => string }) {
+/** Official gauges without a forecast series (other datum / date-precision reports): list, never plotted on the
+ * scenario stage axis. Records after the exercise clock are shown as hindsight. */
+function ObservationList({ st, dateFmt }: { st: HydroStation; dateFmt: (iso: string) => string }) {
+  const t = useTranslations("scenario");
+  if (!st.observations.length) return <p className="text-[11px] text-muted">{t("noObservations")}</p>;
+  return (
+    <table className="w-full text-[11px] [&_td]:px-1">
+      <tbody>
+        {st.observations.map((o) => (
+          <tr key={o.id} className={o.future ? "text-muted" : ""} title={o.notes || undefined}>
+            <td className="tabular py-0.5">{o.observed_at ? dateFmt(o.observed_at) : "—"}</td>
+            <td className="tabular font-semibold">{o.stage_cm} cm</td>
+            <td className="truncate">{o.quality || o.source_type}</td>
+            <td>{o.future ? t("hindsight") : ""}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+export function Hydrograph({ st, nowMin, cursor, fmt, dateFmt }: { st: HydroStation; nowMin: number; cursor: number; fmt: (m: number) => string; dateFmt?: (iso: string) => string }) {
   const t = useTranslations("scenario");
   const tt = useTranslations("timeline");
   const active = st.members[st.active_member] || [];
   const all = Object.values(st.members).flat();
+  if (!all.length) return <ObservationList st={st} dateFmt={dateFmt || ((x) => x)} />;
   const xs = all.map((p) => p[0]);
   const x0 = Math.min(...xs);
   const x1 = Math.max(...xs);
-  const ys = [...all.map((p) => p[1]), ...st.observations.map((o) => o.stage_cm), st.thresholds.bankfull];
+  const inWin = st.observations.filter((o) => o.t_min >= Math.min(...xs) && o.t_min <= Math.max(...xs));
+  const ys = [...all.map((p) => p[1]), ...inWin.map((o) => o.stage_cm), ...(st.thresholds.bankfull !== null ? [st.thresholds.bankfull] : [])];
   const y0 = Math.floor((Math.min(...ys) - 10) / 20) * 20;
   const y1 = Math.ceil((Math.max(...ys) + 10) / 20) * 20;
   const X = (m: number) => PAD.l + ((m - x0) / (x1 - x0)) * (W - PAD.l - PAD.r);
@@ -52,19 +77,23 @@ export function Hydrograph({ st, nowMin, cursor, fmt }: { st: HydroStation; nowM
           <text key={m} x={X(m)} y={H - 6} textAnchor="middle" fontSize={8.5} fill="#738396">{fmt(m)}</text>
         ))}
         <rect x={X(nowMin)} y={PAD.t} width={Math.max(0, X(x1) - X(nowMin))} height={H - PAD.t - PAD.b} fill="#f59e2b" opacity={0.05} />
-        {thr.map(([k, c]) => st.thresholds[k] >= y0 && st.thresholds[k] <= y1 && (
-          <g key={k}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={Y(st.thresholds[k])} y2={Y(st.thresholds[k])} stroke={c} strokeDasharray="4 3" strokeWidth={1} opacity={0.8} />
-            <text x={W - PAD.r - 2} y={Y(st.thresholds[k]) - 2} textAnchor="end" fontSize={8} fill={c}>{t(`thresholds.${k}`)} {st.thresholds[k]}</text>
-          </g>
-        ))}
+        {thr.map(([k, c]) => {
+          const v = st.thresholds[k];
+          if (v === null || v < y0 || v > y1) return null;
+          return (
+            <g key={k}>
+              <line x1={PAD.l} x2={W - PAD.r} y1={Y(v)} y2={Y(v)} stroke={c} strokeDasharray="4 3" strokeWidth={1} opacity={0.8} />
+              <text x={W - PAD.r - 2} y={Y(v) - 2} textAnchor="end" fontSize={8} fill={c}>{t(`thresholds.${k}`)} {v}</text>
+            </g>
+          );
+        })}
         {band && <path d={band} fill="#3fb3ff" opacity={0.13} />}
         {Object.entries(st.members).filter(([m]) => m !== st.active_member).map(([m, pts]) => (
           <path key={m} d={path(pts)} fill="none" stroke="#6c7f94" strokeWidth={0.8} opacity={0.45} />
         ))}
         <path d={path(past)} fill="none" stroke="#3fb3ff" strokeWidth={2} />
         <path d={path(future)} fill="none" stroke="#f59e2b" strokeWidth={2} strokeDasharray="5 3" />
-        {st.observations.map((o) => (
+        {inWin.map((o) => (
           <g key={o.id}>
             <circle cx={X(o.t_min)} cy={Y(o.stage_cm)} r={3.2}
               fill={o.effective ? (o.authority === "VERIFIED_FIELD" ? "#34c38f" : "#dbe4ee") : "none"}

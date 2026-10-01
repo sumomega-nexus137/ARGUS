@@ -43,13 +43,25 @@ export default function ImpactPage() {
           <Panel>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Metric label={ti("buildingsAffected")} value={num(d.buildings.affected, 0, locale)} sub={`/ ${num(d.buildings.total, 0, locale)}`} tone={d.buildings.affected ? "warn" : undefined} />
-              <Metric label={ti("populationExposed")} value={num(d.population.exposed, 0, locale)} sub={`${ti("vulnerable")}: ${num(d.population.vulnerable_exposed, 0, locale)}`} tone={d.population.exposed ? "warn" : undefined} />
+              <Metric label={ti("populationExposed")} value={num(d.population.exposed, 0, locale)}
+                sub={`${ti("vulnerable")}: ${d.population.vulnerable_exposed === null ? ti("notAvailable") : num(d.population.vulnerable_exposed, 0, locale)}`} tone={d.population.exposed ? "warn" : undefined} />
               <Metric label={ti("facilitiesExposed")} value={d.facilities_exposed} tone={d.facilities_exposed ? "crit" : undefined} />
               <Metric label={ti("roadsClosed")} value={`${num(d.roads.km_closed, 1, locale)} km`} sub={`${ti("roadsFlooded")}: ${num(d.roads.km_flooded, 1, locale)} km`} />
-              <Metric label={`${ti("assetExposure")} · ${ti("currencyM")}`} value={moneyRangeM(d.economic.asset_exposure)} sub={ti("range")} />
-              <Metric label={`${ti("expectedDamage")} · ${ti("currencyM")}`} value={moneyRangeM(d.economic.expected_damage)} sub={ti("range")} />
+              {d.economic.asset_exposure ? (
+                <>
+                  <Metric label={`${ti("assetExposure")} · ${ti("currencyM")}`} value={moneyRangeM(d.economic.asset_exposure)} sub={ti("range")} />
+                  <Metric label={`${ti("expectedDamage")} · ${ti("currencyM")}`} value={moneyRangeM(d.economic.expected_damage)} sub={ti("range")} />
+                </>
+              ) : (
+                <>
+                  <Metric label={ti("floorAreaExposed")} value={`${num(d.economic.floor_area_exposed_m2 ?? 0, 0, locale)} m²`} sub={ti("exposureOnly")} />
+                  <Metric label={ti("expectedDamage")} value={<span className="text-sm">{ti("notAvailable")}</span>} sub={ti("noValuation")} />
+                </>
+              )}
             </div>
-            <InlineNote tone="sim" className="mt-3">{ti("exposureNotDamage")} · {ti("demoAssumptions")}</InlineNote>
+            {d.economic.asset_exposure
+              ? <InlineNote tone="sim" className="mt-3">{ti("exposureNotDamage")} · {ti("demoAssumptions")}</InlineNote>
+              : <InlineNote tone="info" className="mt-3">{ti("exposureOnlyNote")} · {ti("populationMethod")}</InlineNote>}
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Button size="sm" icon={Calculator} onClick={() => setDlg("calc")}>{tc("showCalculation")}</Button>
               <Button size="sm" icon={ListChecks} onClick={() => setDlg("assump")}>{tc("showAssumptions")}</Button>

@@ -27,7 +27,9 @@ function AreaCard({ a }: { a: AreaOverview }) {
   const tm = useTranslations("mode");
   const tu = useTranslations("units");
   const { locale } = useLocale();
-  const g = a.gauges[0];
+  // forecast from the scenario's stage station; latest observation from any gauge (official gauges may use other datums)
+  const g = a.gauges.find((x) => x.scenario_station) || a.gauges[0];
+  const obsG = [...a.gauges].filter((x) => x.stage_cm !== null).sort((x, y) => (y.observed_at || "").localeCompare(x.observed_at || ""))[0];
   const ref = a.scenario.reference_time;
   const nd = a.plan?.next_critical_decision;
   return (
@@ -54,15 +56,16 @@ function AreaCard({ a }: { a: AreaOverview }) {
         )}
         {g && (
           <div className="grid grid-cols-3 gap-3 rounded-[3px] border border-line bg-panel-2 p-3">
-            <Metric label={<span className="flex items-center gap-1"><Droplets className="h-3 w-3" />{t("stage")}</span>} value={`${num(g.stage_cm, 0, locale)} ${tu("cm")}`}
-              sub={`${g.source_type ? ts(g.source_type === "FIELD" && g.verification === "VERIFIED" ? "VERIFIED_FIELD" : g.source_type) : "—"} · ${ageLabel(g.age_min)}`} />
-            <Metric label={<span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{t("trend")}</span>} value={<span className="whitespace-nowrap text-base">{g.trend_cm_h === null ? "—" : t("trendValue", { v: num(g.trend_cm_h, 1, locale) })}</span>}
-              tone={g.trend_cm_h && g.trend_cm_h > 0 ? "warn" : undefined} />
+            <Metric label={<span className="flex items-center gap-1"><Droplets className="h-3 w-3" />{t("stage")}</span>} value={obsG ? `${num(obsG.stage_cm, 0, locale)} ${tu("cm")}` : "—"}
+              sub={obsG ? `${obsG.source_type ? ts(obsG.source_type === "FIELD" && obsG.verification === "VERIFIED" ? "VERIFIED_FIELD" : obsG.source_type) : "—"} · ${ageLabel(obsG.age_min)}` : t("noObservation")} />
+            <Metric label={<span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{t("trend")}</span>} value={<span className="whitespace-nowrap text-base">{!obsG || obsG.trend_cm_h === null ? "—" : t("trendValue", { v: num(obsG.trend_cm_h, 1, locale) })}</span>}
+              tone={obsG?.trend_cm_h && obsG.trend_cm_h > 0 ? "warn" : undefined} />
             <Metric label={t("forecastPeak")} value={`${num(g.forecast_peak_cm, 0, locale)} ${tu("cm")}`} sub={relHHMM(ref, g.forecast_peak_at_min, a.utc_offset_min)}
-              tone={g.forecast_peak_cm && g.forecast_peak_cm >= g.thresholds.critical ? "crit" : g.forecast_peak_cm && g.forecast_peak_cm >= g.thresholds.warning ? "warn" : undefined} />
+              tone={g.forecast_peak_cm && g.thresholds.critical !== null && g.forecast_peak_cm >= g.thresholds.critical ? "crit" : g.forecast_peak_cm && g.thresholds.warning !== null && g.forecast_peak_cm >= g.thresholds.warning ? "warn" : undefined} />
             <div className="col-span-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
-              {g.verification && <Badge tone={toneOf(g.verification)}>{tv(g.verification)}</Badge>}
-              <Badge tone="sim">{tm.has(a.scenario.mode) ? tm(a.scenario.mode) : a.scenario.mode}</Badge>
+              {obsG?.verification && <Badge tone={toneOf(obsG.verification)}>{tv(obsG.verification)}</Badge>}
+              {obsG?.mode && <Badge tone={obsG.mode === "LIVE" ? "live" : obsG.mode === "HISTORICAL" ? "info" : "sim"}>{tm.has(obsG.mode) ? tm(obsG.mode) : obsG.mode}</Badge>}
+              <Badge tone={a.scenario.mode === "HISTORICAL" ? "info" : "sim"}>{t("scenarioMode")}: {tm.has(a.scenario.mode) ? tm(a.scenario.mode) : a.scenario.mode}</Badge>
               {g.open_conflict && <Badge tone="warn">{t("conflict")}</Badge>}
             </div>
           </div>

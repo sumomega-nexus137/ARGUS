@@ -7,7 +7,10 @@
     "simClock": "SIMULATION CLOCK",
     "liveClock": "LIVE CLOCK",
     "loading": "Loading…",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "historicalClock": "HISTORICAL REPLAY",
+    "historicalBanner": "HISTORICAL 2024 RECONSTRUCTION · real geography (OpenStreetMap, Copernicus DEM, WorldPop, Sentinel-2) · exercise clock · plans, resources and injects are SIMULATION",
+    "historicalBannerKok": "PORTABILITY / BOTTLENECK PILOT · real geography (OpenStreetMap, Copernicus DEM, WorldPop) · flood scenario is an uncalibrated SIMULATION exercise"
   },
   "nav": {
     "overview": "Regional overview",
@@ -231,7 +234,12 @@
       "sentinel1": "Sentinel-1",
       "glofas": "GloFAS",
       "kazhydromet": "Kazhydromet",
-      "osm": "OpenStreetMap"
+      "osm": "OpenStreetMap",
+      "satellite": "Satellite (Sentinel-2)",
+      "water_baseline": "Permanent water (JRC)",
+      "glofas_context": "GloFAS (event period)",
+      "weather_context": "Weather (event period)",
+      "tasqyn": "Tasqyn"
     }
   },
   "source": {
@@ -270,8 +278,11 @@
     },
     "archetype": {
       "RIVERINE_FLOODPLAIN": "Riverine floodplain · historical validation site",
-      "URBAN_SNOWMELT_RIVER": "Urban snowmelt + river overflow · bottleneck analysis"
-    }
+      "URBAN_SNOWMELT_RIVER": "Urban snowmelt + river overflow · bottleneck analysis",
+      "URBAN_RIVER_BOTTLENECKS": "Urban river · bridge / culvert / low-road bottleneck analysis"
+    },
+    "noObservation": "no observation",
+    "scenarioMode": "Scenario"
   },
   "map": {
     "mode2d": "2D",
@@ -318,7 +329,8 @@
     "resetClock": "Reset clock",
     "clockHint": "Simulation clock (demo control)",
     "cursor": "Timeline position",
-    "forecastNote": "Future frames are FORECAST (simulation), never observations."
+    "forecastNote": "Future frames are FORECAST (simulation), never observations.",
+    "clockHintHistorical": "HISTORICAL REPLAY CLOCK (exercise control)"
   },
   "scenario": {
     "title": "Scenario",
@@ -357,7 +369,19 @@
     "notHydrodynamic": "Precomputed flood surfaces. ARGUS consumes them; it does not run hydrodynamics.",
     "versions": "Scenario versions",
     "active": "active",
-    "excluded": "excluded"
+    "excluded": "excluded",
+    "noObservations": "No observations",
+    "hindsight": "recorded after exercise time",
+    "officialDatumNote": "Official public reports (gov.kz). Local gauge datum and exact times are not established — listed, not plotted against the scenario stage proxy and not used for conditioning.",
+    "memberLabel": {
+      "LOW": "LOW — sensitivity member",
+      "BASE": "BASE — calibrated member",
+      "HIGH": "HIGH — stress member"
+    },
+    "providerKind": {
+      "raster_manifest": "Precomputed depth rasters from the real-data pack (hybrid terrain-susceptibility + stage proxy)",
+      "synthetic_stage_hand": "Static stage–HAND approximation (SIMULATION)"
+    }
   },
   "impact": {
     "title": "Impact",
@@ -393,7 +417,13 @@
     "limitations": "Limitations",
     "atTime": "At {time} · {kind}",
     "facilityDepth": "{d} m",
-    "maxDepth": "Max depth {d} m"
+    "maxDepth": "Max depth {d} m",
+    "notAvailable": "not available",
+    "floorAreaExposed": "Exposed floor area",
+    "exposureOnly": "exposure, not damage",
+    "noValuation": "no approved valuation table",
+    "exposureOnlyNote": "Economic exposure is reported as floor area of buildings with modelled depth ≥ 0.10 m. No monetary damage is shown: there is no approved regional unit-value / depth–damage table.",
+    "populationMethod": "Population: WorldPop 2024 (100 m, modelled) allocated to OSM buildings by floor area; cells without mapped buildings use the flood level at the cell centre; vulnerable share not available"
   },
   "windows": {
     "title": "Action windows",
@@ -418,7 +448,8 @@
       "EGRESS_LOST": "crew egress lost",
       "PROTECTED_ROAD_CLOSES": "protected road closes",
       "EXPLICIT": "explicit deadline",
-      "NONE": "no deadline"
+      "NONE": "no deadline",
+      "ACCESS_LOST": "access to the site lost"
     },
     "planned": "Planned",
     "latest": "Latest safe",
@@ -908,7 +939,34 @@
     "noRun": "No validation run yet",
     "km2": "km²",
     "unavailableResources": "Unavailable resources",
-    "delayMin": "+{n} min"
+    "delayMin": "+{n} min",
+    "holdoutLabel": "HISTORICAL SAME-EVENT SPATIAL HOLDOUT",
+    "historical": "HISTORICAL",
+    "holdoutNot": "Not independent future-event forecast accuracy · not hydrodynamic validation · not certified government accuracy.",
+    "rowHoldout": "Same-event spatial holdout blocks (headline)",
+    "rowCalibration": "Calibration blocks",
+    "rowAllUsable": "All usable pixels (protocol domain)",
+    "rowDirect": "Direct mask comparison over the whole satellite AOI (native grid)",
+    "evaluation": "Evaluation",
+    "cells": "Cells",
+    "protocolText": "Recomputed by ARGUS from observed.tif / modelled.tif on the {grid} m DEM grid; alternating {block} m blocks; excluded: pixels unusable in either optical scene, slope > {slope}°, > {dist} km from the river, JRC water occurrence ≥ {jrc}%.",
+    "directExplain": "The direct comparison also counts permanent water and terrain far from the river, which the documented protocol excludes — hence the lower score.",
+    "evidence": "Observed flood evidence (2024)",
+    "requiresQc": "REQUIRES QC",
+    "sentinel2Fallback": "Sentinel-2 L2A optical fallback",
+    "floodScene": "Flood-period scene",
+    "referenceScene": "Post-recession reference",
+    "cloud": "cloud",
+    "noS1": "Sentinel-1: no suitable acquisition for the event window — not fabricated.",
+    "usableCoverage": "Usable optical coverage",
+    "observedArea": "Observed new water (raw pixel count)",
+    "qcState": "QC state",
+    "visualReview": "technical visual review",
+    "notCertified": "no hydrologist / agency certification",
+    "modelKind": "Model",
+    "noXY": "terrain/hydro features only, no raw X/Y coordinates",
+    "limitations": "Scientific limitations",
+    "qcFigure": "QC figure from the data pack: flood-period vs post-recession spectral comparison and extracted mask"
   },
   "report": {
     "title": "Operational briefing",
@@ -1039,7 +1097,12 @@
     "HEATING": "Heating",
     "FIRE_STATION": "Fire station",
     "ADMINISTRATION": "Administration",
-    "OTHER": "Other"
+    "OTHER": "Other",
+    "KINDERGARTEN": "Kindergarten",
+    "POLICE": "Police",
+    "PHARMACY": "Pharmacy",
+    "DOCTORS": "Doctors' practice",
+    "DENTIST": "Dentist"
   },
   "actionType": {
     "PUMP_DEPLOYMENT": "Pump deployment",
@@ -1080,5 +1143,35 @@
       "solver": "Solver: Google OR-Tools CP-SAT (routing circuits per crew, vehicle no-overlap, pump and equipment capacity, human constraints)."
     },
     "bottleneck": "Criticality combines newly isolated population, facility criticality and single points of failure when the bottleneck is removed from the road graph at the selected time. Structural candidates come from edge betweenness and cut edges of the network — they are candidates for review, not predictions."
+  },
+  "history": {
+    "title": "2024 event context",
+    "historical": "HISTORICAL",
+    "chronology": "Official chronology (curated public reports)",
+    "source": "source",
+    "satellite": "Satellite evidence",
+    "satelliteText": "Sentinel-2 L2A flood-period scene {flood} vs post-recession reference {ref} (scene cloud {cloud}%).",
+    "noSentinel1": "No suitable Sentinel-1 acquisition was found for the event window — Sentinel-2 is the documented fallback.",
+    "glofas": "GloFAS v4 river discharge (event period, Open-Meteo)",
+    "globalModel": "GLOBAL MODEL",
+    "glofasCaveat": "≈5 km model cell: may not represent the local river; context only, never overrides local observations.",
+    "weather": "Historical weather (Open-Meteo archive): max temperature, precipitation",
+    "reanalysis": "REANALYSIS",
+    "max": "max"
+  },
+  "live": {
+    "title": "Live global-model context (today)",
+    "refresh": "Refresh",
+    "note": "Current conditions from public Open-Meteo APIs (GloFAS v4, weather forecast). GLOBAL MODEL authority: context only — not official local measurements and not part of the historical replay.",
+    "globalModel": "GLOBAL MODEL",
+    "dataAge": "Data age",
+    "minutes": "{n} min",
+    "fetched": "fetched",
+    "noData": "no data available"
+  },
+  "provenance": {
+    "title": "Provenance, assumptions & limitations",
+    "limitations": "Scientific limitations",
+    "assumptions": "Assumptions (configurable)"
   }
 }
