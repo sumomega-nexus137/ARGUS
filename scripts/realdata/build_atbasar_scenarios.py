@@ -14,6 +14,7 @@ historical event-fit evidence, NOT out-of-event forecast skill.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -34,6 +35,35 @@ def write_json(path: Path, obj: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, indent=2, ensure_ascii=False), encoding="utf-8")
 
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def refresh_dataset_manifest(pack: Path) -> None:
+    manifest_path = pack / "metadata" / "dataset_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    files = []
+    for p in sorted(pack.rglob("*")):
+        if p.is_file() and "raw" not in p.parts and p != manifest_path:
+            files.append({
+                "path": str(p.relative_to(pack)),
+                "bytes": p.stat().st_size,
+                "sha256": sha256(p),
+            })
+    manifest["files"] = files
+    manifest.setdefault("quality_gates", {})
+    manifest["quality_gates"].update({
+        "scenario_model": "TERRAIN_CONDITIONED_PROXY_NOT_FULL_HYDRODYNAMIC_MODEL",
+        "scenario_metrics": "HISTORICAL_SAME_EVENT_SPATIAL_HOLDOUT_NOT_OUT_OF_EVENT_SKILL",
+        "modelled_validation_mask": "PROVISIONAL_UNTIL_OBSERVED_SATELLITE_MASK_DOMAIN_QC",
+    })
+    write_json(manifest_path, manifest)
 
 def read_raster(path: Path) -> tuple[np.ndarray, dict]:
     with rasterio.open(path) as src:
@@ -379,6 +409,7 @@ def main() -> None:
         "calibration_metrics_path": "scenarios/atbasar/calibration_metrics.json",
     })
     write_json(meta_path, meta)
+    refresh_dataset_manifest(pack)
 
     print(json.dumps({
         "best_parameters": best,
