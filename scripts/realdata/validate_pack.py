@@ -143,7 +143,7 @@ def main():
             }), False)
             add(report, "satellite_source", True, "Sentinel-1 RTC", True)
         elif s2.exists():
-            for label in ("pre", "flood"):
+            for label in ("reference", "flood"):
                 for asset in ("green", "nir", "swir16", "scl"):
                     validate_raster(
                         base / "processed" / f"sentinel2_{label}_{asset}.tif",
