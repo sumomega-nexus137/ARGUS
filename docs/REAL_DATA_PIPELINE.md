@@ -25,7 +25,7 @@ The Atbasar artifact contains:
 - WorldPop 2024 population exposure where available;
 - JRC long-term surface-water occurrence where available;
 - official curated 2024 Zhabai observations and event chronology;
-- selected satellite pre-flood/flood-period evidence;
+- selected satellite flood-period/post-recession reference evidence;
 - automatic 2024 observed-flood baseline and QC figure;
 - provenance sidecars and SHA-256 manifest;
 - validation folder with `observed.tif` but deliberately no fabricated `modelled.tif`.
@@ -39,10 +39,8 @@ pipeline therefore records Sentinel-1 as unavailable for this event instead of m
 mislabeling data.
 
 The real fallback is **Sentinel-2 L2A from Element84 Earth Search**. April 2024 scenes are available
-over the Atbasar AOI. The pipeline selects a pre-flood and flood-period pair using AOI coverage,
-date proximity and cloud cover, downloads Green/NIR/SWIR1/SCL layers, masks cloud/shadow/snow,
-and derives a conservative newly-observed-water baseline from MNDWI/NDWI change, slope and
-permanent-water exclusions.
+over the Atbasar AOI. The pipeline selects a flood-period and post-recession reference pair using AOI coverage,
+date proximity and cloud cover, downloads Green/NIR/SWIR1/SCL layers, masks cloud/shadow/snow, and compares flood-period open water with a clear post-recession reference. This avoids using the snow/ice-heavy 4 April scene as a false clean baseline.
 
 Landsat Collection 2 Level-2 scenes are also confirmed available and remain an independent optical
 fallback/check.
