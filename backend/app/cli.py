@@ -5,6 +5,9 @@
     python -m app.cli seed               # seed DEMO data if the database is empty
     python -m app.cli reset-demo         # drop the SQLite demo DB and re-seed
     python -m app.cli export-scenario <area> <out_dir>   # export precomputed rasters + manifest (raster contract example)
+    python -m app.cli install-realdata [--area A] [--archive F.tar.gz] [--offline] [--force]
+                                         # download ONCE → verify SHA-256 → install real-data packs
+    python -m app.cli realdata-status [--verify]         # show installed packs (re-hash every file with --verify)
 """
 
 from __future__ import annotations
@@ -53,6 +56,25 @@ def main(argv: list[str]) -> int:
         init_and_seed()
         print("demo database reset")
         return 0
+    if cmd in ("install-realdata", "realdata-status"):
+        from app.realdata import install as rd
+
+        opts = argv[1:]
+        areas = [opts[opts.index("--area") + 1]] if "--area" in opts else list(rd.AREAS)
+        rc = 0
+        for area in areas:
+            try:
+                if cmd == "install-realdata":
+                    archive = Path(opts[opts.index("--archive") + 1]) if "--archive" in opts else None
+                    st = rd.install(area, archive=archive, force="--force" in opts, offline="--offline" in opts)
+                else:
+                    st = rd.verify_installed(area) if "--verify" in opts else rd.status(area)
+                print(json.dumps(st.as_dict()))
+                rc = rc or (0 if st.installed else 3)
+            except rd.PackError as exc:
+                print(json.dumps({"area": area, "installed": False, "error": str(exc)}))
+                rc = 2
+        return rc
     if cmd == "export-scenario":
         from app.db.session import session_scope
         from app.services.scenario.export import export_raster_manifest

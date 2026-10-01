@@ -42,6 +42,23 @@ class Settings(BaseSettings):
     stale_after_min: int = 120
     apply_unverified_closures: bool = True
 
+    # ------------------------------------------------------------------ real-data packs
+    # "auto": HISTORICAL real-data pilots when the packs are installed, otherwise DEMO synthetic areas.
+    # "historical": require the installed packs (startup fails loudly if missing — never silently synthetic).
+    # "demo": synthetic DEMO / SIMULATION areas only.
+    data_profile: str = "auto"
+    # Installed packs live in <realdata_dir>/<area>/generated (see docs/REAL_DATA_INSTALL.md).
+    realdata_dir: Path | None = None
+    realdata_release_base: str = (
+        "https://github.com/sumomega-nexus137/ARGUS/releases/download/realdata-2026-10-01"
+    )
+    # Public global-model providers (Open-Meteo GloFAS / weather). Server-side only.
+    open_meteo_enabled: bool = True
+    open_meteo_timeout_s: float = 8.0
+    open_meteo_retries: int = 1
+    open_meteo_cache_ttl_min: int = 60
+    open_meteo_stale_after_min: int = 360
+
     optimizer_time_limit_s: float = 3.0
     optimizer_workers: int = 4
     optimizer_max_alternatives: int = 3
@@ -49,6 +66,10 @@ class Settings(BaseSettings):
     @property
     def demo_dir(self) -> Path:
         return self.data_dir / "demo"
+
+    @property
+    def realdata_root(self) -> Path:
+        return self.realdata_dir or (self.data_dir / "realdata")
 
     @property
     def imports_dir(self) -> Path:

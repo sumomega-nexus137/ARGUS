@@ -1,0 +1,23 @@
+{
+  "description": "Pinned real-data pack archives. Installed once by `python -m app.cli install-realdata`; normal startup only reads installed files.",
+  "release_tag": "realdata-2026-10-01",
+  "release_workflow_run": 36903131622,
+  "packs": {
+    "atbasar": {
+      "file": "argus-atbasar-realdata.tar.gz",
+      "sha256": "4c310e03ab28a30413a5798c6c509febb7c892a9fd09c952b876b7ab2524696a",
+      "bytes": 98183309,
+      "source_run_id": 36886595533,
+      "source_artifact_id": 11174673127,
+      "integrity_checks": 36
+    },
+    "kokshetau": {
+      "file": "argus-kokshetau-realdata.tar.gz",
+      "sha256": "5423f4701c801759f9c4540a12231d7fa9c5c189276824ab3c12ca84f3181195",
+      "bytes": 53572135,
+      "source_run_id": 36886613476,
+      "source_artifact_id": 11174708363,
+      "integrity_checks": 15
+    }
+  }
+}

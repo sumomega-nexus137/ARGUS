@@ -32,3 +32,9 @@ data/imports/validation/*
 *.log
 .DS_Store
 frontend/public/maplibre/
+
+# Real-data packs: installed from release assets (see docs/REAL_DATA_INSTALL.md), never committed
+data/realdata/_cache/
+data/realdata/*/generated/
+data/realdata/*/.*-extract-*/
+data/runtime/
