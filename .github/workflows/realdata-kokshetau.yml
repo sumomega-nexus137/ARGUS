@@ -34,6 +34,10 @@ jobs:
         run: |
           python scripts/realdata/kokshetau_pipeline.py --output data/realdata/kokshetau/generated
 
+      - name: Validate Kokshetau data pack
+        run: |
+          python scripts/realdata/validate_pack.py --area kokshetau --root data/realdata/kokshetau/generated
+
       - name: Show manifest
         if: always()
         run: |
