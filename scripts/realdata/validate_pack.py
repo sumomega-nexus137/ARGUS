@@ -124,6 +124,7 @@ def main():
     validate_geojson(base / "processed" / "osm_bridges_culverts.geojson", report, required=False, allow_empty=True)
     validate_geojson(base / "processed" / "argus_critical_facilities.geojson", report, required=False, allow_empty=True)
     validate_raster(base / "processed" / "worldpop_2024_100m_utm42n.tif", expected_crs, report, required=False)
+    validate_raster(base / "processed" / "jrc_water_occurrence_utm42n.tif", expected_crs, report, required=False)
 
     if area == "atbasar":
         validate_raster(base / "processed" / "observed_flood_mask_2024.tif", expected_crs, report)
