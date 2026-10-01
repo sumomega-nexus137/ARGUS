@@ -23,16 +23,19 @@ const PAD = { l: 34, r: 8, t: 10, b: 20 };
  * scenario stage axis. Records after the exercise clock are shown as hindsight. */
 function ObservationList({ st, dateFmt }: { st: HydroStation; dateFmt: (iso: string) => string }) {
   const t = useTranslations("scenario");
+  const tu = useTranslations("units");
   if (!st.observations.length) return <p className="text-[11px] text-muted">{t("noObservations")}</p>;
   return (
     <table className="w-full text-[11px] [&_td]:px-1">
       <tbody>
         {st.observations.map((o) => (
-          <tr key={o.id} className={o.future ? "text-muted" : ""} title={o.notes || undefined}>
-            <td className="tabular py-0.5">{o.observed_at ? dateFmt(o.observed_at) : "—"}</td>
-            <td className="tabular font-semibold">{o.stage_cm} cm</td>
-            <td className="truncate">{o.quality || o.source_type}</td>
-            <td>{o.future ? t("hindsight") : ""}</td>
+          <tr key={o.id} className={o.future ? "align-top text-muted" : "align-top"} title={o.notes || undefined}>
+            <td className="tabular whitespace-nowrap py-0.5">{o.observed_at ? dateFmt(o.observed_at) : "—"}</td>
+            <td className="tabular whitespace-nowrap font-semibold">{o.stage_cm} {tu("cm")}</td>
+            <td className="w-full">
+              <span className="break-all">{o.quality || o.source_type}</span>
+              {o.future && <span className="ml-1 inline-block rounded-[2px] border border-line px-1 text-[9.5px] uppercase tracking-wide">{t("hindsight")}</span>}
+            </td>
           </tr>
         ))}
       </tbody>

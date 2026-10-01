@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import threading
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Response
@@ -20,12 +22,15 @@ from app.models import (
     HydroStation,
     OperationalArea,
     PopulationZone,
+    ProviderStatus,
     RoadNode,
     RoadSegment,
     Sector,
     TaskSite,
     User,
 )
+from app.realdata.texts import tri
+from app.repositories.context import on_invalidate
 from app.schemas.common import ClockUpdate
 from app.services.audit import Actor, changes_since, record
 from app.services.clock import area_now
@@ -67,12 +72,27 @@ def get_area(area: OperationalArea = Depends(area_or_404), db: Session = Depends
         "static_version": (area.config or {}).get("static_version", 1),
         "reference_time": sc.reference_time.isoformat(), "demo_note": (area.config or {}).get("demo_note"),
         "has_terrain": True, "data_profile": (area.config or {}).get("data_profile", "demo"),
-        "role": (area.config or {}).get("role"), "assumptions": (area.config or {}).get("assumptions", []),
+        "role": (area.config or {}).get("role"), "assumptions": [{**a, "notes": tri(a.get("note"))} for a in (area.config or {}).get("assumptions", [])],
         "pack": (area.config or {}).get("pack"), "clock_start": (area.config or {}).get("clock_start"),
         "population_meta": (area.config or {}).get("population_meta"), "road_meta": (area.config or {}).get("road_meta"),
         "economic_model": (area.config or {}).get("economic_model", "demo_unit_values"),
         "scenario_station_id": (sc.parameters or {}).get("station_id"),
+        "attribution": _attribution(db, area),
     })
+
+
+def _attribution(db: Session, area: OperationalArea) -> str:
+    """Map attribution for the data actually loaded for this area."""
+    if area.is_demo:
+        return "ARGUS FloodOps · DEMO synthetic geometry"
+    layers = set(db.scalars(select(ProviderStatus.layer).where(ProviderStatus.area_id == area.id,
+                                                              ProviderStatus.status == "OK")))
+    parts = ["© OpenStreetMap contributors (ODbL)"]
+    parts += ["Copernicus DEM GLO-30"] if "terrain" in layers else []
+    parts += ["Sentinel-2 (ESA/Copernicus)"] if "satellite" in layers else []
+    parts += ["WorldPop"] if "population" in layers else []
+    parts += ["JRC Global Surface Water"] if "water_baseline" in layers else []
+    return " · ".join(parts)
 
 
 def _layer(db: Session, area: OperationalArea, layer: str) -> dict:
@@ -134,14 +154,41 @@ def _layer(db: Session, area: OperationalArea, layer: str) -> dict:
     raise ArgusError("unknown_layer", f"Layer must be one of {LAYERS}")
 
 
-@router.get("/{area_id}/layers/{layer}")
-def get_layer(layer: str, response: Response, area: OperationalArea = Depends(area_or_404), db: Session = Depends(get_db),
-              _: User = Depends(current_user)) -> dict:
-    response.headers["Cache-Control"] = "private, max-age=60"
-    response.headers["X-Static-Version"] = str((area.config or {}).get("static_version", 1))
+_layer_cache: dict[tuple, bytes] = {}
+_layer_lock = threading.Lock()
+
+
+def _drop_layers(area_id: str) -> None:
+    with _layer_lock:
+        for k in [k for k in _layer_cache if k[0] == area_id]:
+            _layer_cache.pop(k, None)
+
+
+on_invalidate(_drop_layers)
+
+
+def layer_bytes(db: Session, area: OperationalArea, layer: str) -> bytes:
+    """Encoded GeoJSON for a static layer, cached per (area, layer, static_version): static layers only change
+    with a new static version, and encoding 20k real buildings on every request would block the API."""
+    key = (area.id, layer, int((area.config or {}).get("static_version", 1)))
+    with _layer_lock:
+        hit = _layer_cache.get(key)
+    if hit is not None:
+        return hit
     data = _layer(db, area, layer)
     data["demo"] = area.is_demo
-    return data
+    raw = json.dumps(data, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+    with _layer_lock:
+        _layer_cache[key] = raw
+    return raw
+
+
+@router.get("/{area_id}/layers/{layer}")
+def get_layer(layer: str, area: OperationalArea = Depends(area_or_404), db: Session = Depends(get_db),
+              _: User = Depends(current_user)) -> Response:
+    return Response(content=layer_bytes(db, area, layer), media_type="application/json",
+                    headers={"Cache-Control": "private, max-age=60",
+                             "X-Static-Version": str((area.config or {}).get("static_version", 1))})
 
 
 @router.get("/{area_id}/freshness")
@@ -191,6 +238,8 @@ def history(area: OperationalArea = Depends(area_or_404), _: User = Depends(curr
     data = _bundle_file(area, "history.json")
     if data is None:
         return {"available": False, "mode": "DEMO" if area.is_demo else None}
+    data = {**data, "events": [{**e, "description_i18n": tri(e.get("description"))} for e in data.get("events", [])],
+            "event_peak": [{**p, "notes_i18n": tri(p.get("notes"))} for p in data.get("event_peak", [])]}
     return clean({"available": True, **data, "scenario_note": (_bundle_file(area, "scenario.json") or {}).get("note"),
                   "scenario_limitations": (_bundle_file(area, "scenario.json") or {}).get("limitations", [])})
 

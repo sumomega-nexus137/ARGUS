@@ -205,7 +205,8 @@
     "UNKNOWN": "UNKNOWN",
     "OK": "OK",
     "DEGRADED": "DEGRADED",
-    "OPERATIONAL": "OPERATIONAL"
+    "OPERATIONAL": "OPERATIONAL",
+    "NOT_POLLED": "NOT POLLED"
   },
   "freshness": {
     "title": "Data freshness",
@@ -282,7 +283,10 @@
       "URBAN_RIVER_BOTTLENECKS": "Urban river · bridge / culvert / low-road bottleneck analysis"
     },
     "noObservation": "no observation",
-    "scenarioMode": "Scenario"
+    "scenarioMode": "Scenario",
+    "regionReal": "Akmola region · real-data pilot areas (historical 2024 event)",
+    "scenarioPeak": "Scenario stage",
+    "differentStations": "Observed: “{obs}”; scenario: “{sc}” — different stations and datums, not directly comparable."
   },
   "map": {
     "mode2d": "2D",
@@ -1157,7 +1161,18 @@
     "glofasCaveat": "≈5 km model cell: may not represent the local river; context only, never overrides local observations.",
     "weather": "Historical weather (Open-Meteo archive): max temperature, precipitation",
     "reanalysis": "REANALYSIS",
-    "max": "max"
+    "max": "max",
+    "eventType": {
+      "forecast_warning": "forecast warning",
+      "evacuation_warning": "evacuation warning",
+      "response": "response",
+      "levee_overflow": "levee overflow",
+      "recovery": "recovery",
+      "road_access": "road access",
+      "impact": "impact",
+      "evacuation": "evacuation",
+      "emergency_status": "emergency status"
+    }
   },
   "live": {
     "title": "Live global-model context (today)",

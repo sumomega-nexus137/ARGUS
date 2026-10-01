@@ -23,6 +23,10 @@ def outage_enabled() -> bool:
     return _outage["enabled"]
 
 
+# qualities of layers loaded from an installed real-data pack: a fixed local snapshot, not a polled feed
+PACK_QUALITIES = {"PACK", "REAL_DATA_PACK", "MODELLED", "OFFICIAL_REPORTED", "GLOBAL_MODEL", "REANALYSIS", "REQUIRES_QC"}
+
+
 def freshness(ps: ProviderStatus, now: datetime) -> dict:
     s = get_settings()
     age = (now - ps.last_success_at).total_seconds() / 60 if ps.last_success_at else None
@@ -36,6 +40,8 @@ def freshness(ps: ProviderStatus, now: datetime) -> dict:
         cls = "STALE" if age is not None and age > (get_settings().open_meteo_stale_after_min) else "CACHED"
     elif ps.mode == "STATIC":
         cls = "STATIC"
+    elif not ps.is_external and ps.quality in PACK_QUALITIES and ps.status == "OK":
+        cls = ps.mode  # CACHED / HISTORICAL / SIMULATION snapshot — never turns STALE by itself
     elif ps.mode == "SIMULATION":
         limit = max(s.stale_after_min, (ps.schedule_min or 0) * 1.5)
         cls = "SIMULATION" if age is None or age <= limit else "STALE"
@@ -53,20 +59,24 @@ def freshness(ps: ProviderStatus, now: datetime) -> dict:
         "id": ps.id, "layer": ps.layer, "provider": ps.provider, "source": ps.source, "mode": ps.mode, "status": ps.status,
         "quality": ps.quality, "last_success_at": ps.last_success_at.isoformat() if ps.last_success_at else None,
         "last_attempt_at": ps.last_attempt_at.isoformat() if ps.last_attempt_at else None,
-        "age_min": None if age is None else round(age, 1), "freshness": cls, "schedule_min": ps.schedule_min,
+        # a historical layer has a data time, not a data age (its age against any clock would mislead)
+        "age_min": None if age is None or cls == "HISTORICAL" else round(age, 1), "freshness": cls, "schedule_min": ps.schedule_min,
         "is_external": ps.is_external, "message": ps.message,
     }
 
 
 def area_freshness(db: Session, area: OperationalArea) -> list[dict]:
     """Freshness per source. External live feeds are aged against the WALL CLOCK (they describe current conditions);
-    local / historical layers against the area's operational clock."""
+    local / historical layers against the area's operational clock. A local copy stamped after the replay clock
+    (a real-data pack generated in the present for a past event) is aged on the wall clock as well — the age of
+    the local copy, never a negative age."""
     from datetime import UTC
 
     now = area_now(area)
     wall = datetime.now(UTC)
     rows = db.scalars(select(ProviderStatus).where(ProviderStatus.area_id == area.id).order_by(ProviderStatus.layer))
-    return [freshness(r, wall if (r.is_external and r.mode == "LIVE") else now) for r in rows]
+    return [freshness(r, wall if ((r.is_external and r.mode == "LIVE") or (r.last_success_at and r.last_success_at > now))
+                      else now) for r in rows]
 
 
 def set_outage(db: Session, enabled: bool, actor: Actor) -> int:

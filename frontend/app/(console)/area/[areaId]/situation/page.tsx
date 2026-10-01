@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { dateTime, num, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { useInvalidateArea } from "@/lib/queries";
-import type { Freshness } from "@/lib/types";
+import type { Freshness, Names } from "@/lib/types";
 
 export default function SituationPage() {
   const { areaId, scenario, area, t, nowMin, fmt, clearOverlays } = useAreaCtx();
@@ -23,6 +23,7 @@ export default function SituationPage() {
   const tf = useTranslations("freshness");
   const tc = useTranslations("common");
   const tm = useTranslations("mode");
+  const tu = useTranslations("units");
   const { locale } = useLocale();
   const { can } = useAuth();
   const errText = useErrorText();
@@ -55,6 +56,8 @@ export default function SituationPage() {
 
   const frame = stats.data?.frames.reduce((a, b) => (t !== null && Math.abs(b.offset_min - t) < Math.abs(a.offset_min - t) ? b : a), stats.data.frames[0]);
   const sel = scenario?.selection;
+  const prov = (scenario?.provenance || {}) as { note?: string; limitations?: string[]; name_i18n?: Names; note_i18n?: Names; limitations_i18n?: Names[] };
+  const selNote = sel?.note_i18n ? pickName(sel.note_i18n as Names, locale) : typeof sel?.note === "string" ? sel.note : "";
   return (
     <div className="space-y-3 p-3">
       <ScreenHeader screen="situation" />
@@ -63,15 +66,15 @@ export default function SituationPage() {
         <>
           <Panel title={ts("title")} right={<Badge tone={scenario.mode === "HISTORICAL" ? "info" : "sim"}>{tm.has(scenario.mode) ? tm(scenario.mode) : scenario.mode}</Badge>}>
             <div className="grid grid-cols-3 gap-3">
-              <Metric label={ts("gauge")} value={frame?.gauge_stage_cm != null ? `${num(frame.gauge_stage_cm, 0, locale)} cm` : "—"} sub={fmt(t)} />
+              <Metric label={ts("gauge")} value={frame?.gauge_stage_cm != null ? `${num(frame.gauge_stage_cm, 0, locale)} ${tu("cm")}` : "—"} sub={fmt(t)} />
               <Metric label={ts("flooded")} value={frame ? `${num(frame.flooded_km2, 2, locale)} km²` : "—"} />
               <Metric label={ts("maxDepth")} value={frame ? `${num(frame.max_depth_m, 1, locale)} m` : "—"} />
             </div>
             <div className="mt-3">
               <KeyValue rows={[
-                [ts("version"), `${scenario.name}`],
+                [ts("version"), prov.name_i18n ? `${pickName(prov.name_i18n, locale)} · v${scenario.version}` : scenario.name],
                 [ts("member"), <span key="m">{ts.has(`memberLabel.${scenario.active_member}`) ? ts(`memberLabel.${scenario.active_member}`) : `${scenario.active_member} · ${scenario.members.find((m) => m.id === scenario.active_member)?.label}`}</span>],
-                [ts("selection"), <span key="s">{sel?.method ? ts(`method.${sel.method}`) : "—"}{typeof sel?.note === "string" && sel.note ? <span className="block text-[10.5px] text-muted">{sel.note}</span> : null}</span>],
+                [ts("selection"), <span key="s">{sel?.method ? ts(`method.${sel.method}`) : "—"}{selNote ? <span className="block text-[10.5px] text-muted">{selNote}</span> : null}</span>],
                 [ts("referenceTime"), dateTime(scenario.reference_time, area?.utc_offset_min ?? 300)],
                 [ts("provider"), <span key="p" className="text-ink-2">{ts.has(`providerKind.${scenario.provider}`) ? ts(`providerKind.${scenario.provider}`) : scenario.provider_note}</span>],
                 [tc("modelVersion"), scenario.model_version],
@@ -135,8 +138,9 @@ export default function SituationPage() {
           )}
 
           {area?.data_profile === "historical" && (
-            <AssumptionsPanel note={(scenario.provenance as { note?: string })?.note}
-              limitations={(scenario.provenance as { limitations?: string[] })?.limitations} assumptions={area.assumptions} />
+            <AssumptionsPanel note={prov.note_i18n ? pickName(prov.note_i18n, locale) : prov.note}
+              limitations={prov.limitations_i18n ? prov.limitations_i18n.map((l) => pickName(l, locale)) : prov.limitations}
+              assumptions={area.assumptions?.map((a) => ({ key: a.key, note: a.notes ? pickName(a.notes, locale) : a.note }))} />
           )}
           <HistoryPanel areaId={areaId} />
           <LiveContextPanel areaId={areaId} />

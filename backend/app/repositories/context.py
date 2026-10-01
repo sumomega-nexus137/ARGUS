@@ -8,6 +8,7 @@ Engines never touch the ORM directly: they consume this context.
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -327,22 +328,40 @@ def _build_static(db: Session, area: OperationalArea) -> StaticContext:
     )
 
 
+_build_locks: dict[tuple, threading.Lock] = {}
+_invalidation_hooks: list[Callable[[str], None]] = []
+
+
+def on_invalidate(fn: Callable[[str], None]) -> None:
+    """Register a cache that derives from the static context and must be dropped with it."""
+    _invalidation_hooks.append(fn)
+
+
 def invalidate_static(area_id: str) -> None:
     with _lock:
         for k in [k for k in _cache if k[0] == area_id]:
             _cache.pop(k, None)
+    for fn in _invalidation_hooks:
+        fn(area_id)
 
 
 def load_static(db: Session, area: OperationalArea) -> StaticContext:
     key = (area.id, int((area.config or {}).get("static_version", 1)))
     with _lock:
         hit = _cache.get(key)
-    if hit is not None:
-        return hit
-    st = _build_static(db, area)
-    with _lock:
-        _cache[key] = st
-    return st
+        if hit is not None:
+            return hit
+        build_lock = _build_locks.setdefault(key, threading.Lock())
+    # one builder per key: concurrent requests (and the warm-up thread) wait for it instead of each rebuilding
+    with build_lock:
+        with _lock:
+            hit = _cache.get(key)
+        if hit is not None:
+            return hit
+        st = _build_static(db, area)
+        with _lock:
+            _cache[key] = st
+        return st
 
 
 def load_templates(db: Session, area_id: str) -> dict[str, ActionTemplate]:

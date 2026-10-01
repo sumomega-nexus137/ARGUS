@@ -8,12 +8,32 @@ dependencies (single points of failure). Purely network consequences — no hydr
 
 from __future__ import annotations
 
+import threading
+
 import networkx as nx
 
-from app.repositories.context import AreaContext
+from app.realdata.texts import tri
+from app.repositories.context import AreaContext, on_invalidate
 from app.services.routing.access import AccessConfig, AccessModel, build_access_model, safe_base_nodes
 from app.services.routing.intervals import INF, finite_or_none
 from app.services.scenario.runtime import ScenarioRuntime
+
+_lock = threading.Lock()
+_structural_cache: dict[tuple, list[dict]] = {}
+_analysis_cache: dict[tuple, dict] = {}
+_structural_lock = threading.Lock()
+EXACT_BETWEENNESS_MAX_NODES = 1500
+BETWEENNESS_SAMPLE = 400
+
+
+def _drop(area_id: str) -> None:
+    with _lock:
+        for c in (_structural_cache, _analysis_cache):
+            for k in [k for k in c if k[0] == area_id]:
+                c.pop(k, None)
+
+
+on_invalidate(_drop)
 
 
 def _travel_from_bases(m: AccessModel, t: float) -> dict[str, float]:
@@ -50,6 +70,22 @@ def _snapshot(m: AccessModel, t: float) -> dict:
 
 
 def analyze(ctx: AreaContext, rt: ScenarioRuntime, as_of: float, ids: list[str] | None = None) -> dict:
+    """Cached per (static layers, operational data version, scenario, member, analysis time, selection)."""
+    key = (ctx.area_id, ctx.static_version, ctx.data_version, rt.id, rt.member, round(float(as_of), 1),
+           tuple(sorted(ids)) if ids else None)
+    with _lock:
+        hit = _analysis_cache.get(key)
+    if hit is not None:
+        return hit
+    out = _analyze(ctx, rt, as_of, ids)
+    with _lock:
+        if len(_analysis_cache) > 64:
+            _analysis_cache.clear()
+        _analysis_cache[key] = out
+    return out
+
+
+def _analyze(ctx: AreaContext, rt: ScenarioRuntime, as_of: float, ids: list[str] | None = None) -> dict:
     base_m = build_access_model(ctx, rt, AccessConfig(member=rt.member), now_min=as_of)
     base = _snapshot(base_m, as_of)
     rows = []
@@ -92,7 +128,7 @@ def analyze(ctx: AreaContext, rt: ScenarioRuntime, as_of: float, ids: list[str] 
         own_closure = min((base_m.closure_from(s, as_of) for s in b["segment_ids"]), default=INF)
         rows.append({
             "id": bid, "kind": b["kind"], "names": b["names"], "segment_ids": b["segment_ids"], "lon": b["lon"], "lat": b["lat"],
-            "notes": b.get("notes"), "expected_closure_at": finite_or_none(own_closure) if own_closure <= rt.horizon_end else None,
+            "notes": b.get("notes"), "notes_i18n": tri(b.get("notes")), "expected_closure_at": finite_or_none(own_closure) if own_closure <= rt.horizon_end else None,
             "affected_sectors": sectors, "affected_facilities": facilities, "newly_isolated_population": newly_iso_pop,
             "single_points_of_failure": [f["id"] for f in facilities if f["single_point_of_failure"]],
             "criticality_score": round(score, 1),
@@ -107,11 +143,30 @@ def analyze(ctx: AreaContext, rt: ScenarioRuntime, as_of: float, ids: list[str] 
 
 
 def structural_candidates(ctx: AreaContext, top: int = 6) -> list[dict]:
+    """Road segments with the highest edge betweenness (static graph; cached per static version). Large real
+    networks use a fixed-seed sample of source nodes (deterministic approximation)."""
+    key = (ctx.area_id, ctx.static_version, top)
+    with _lock:
+        hit = _structural_cache.get(key)
+    if hit is not None:
+        return hit
+    with _structural_lock:  # computed once; concurrent callers wait for the result
+        with _lock:
+            hit = _structural_cache.get(key)
+        if hit is not None:
+            return hit
+        return _structural(ctx, key, top)
+
+
+def _structural(ctx: AreaContext, key: tuple, top: int) -> list[dict]:
     g = nx.Graph()
     for sid, s in ctx.segments.items():
         g.add_edge(s.u, s.v, key=sid, weight=s.length_m / max(s.speed_kmh, 1))
     bridges_graph = set(nx.bridges(g)) if g.number_of_edges() else set()
-    eb = nx.edge_betweenness_centrality(g, weight="weight", normalized=True) if g.number_of_edges() else {}
+    n = g.number_of_nodes()
+    k = None if n <= EXACT_BETWEENNESS_MAX_NODES else BETWEENNESS_SAMPLE
+    eb = nx.edge_betweenness_centrality(g, k=k, seed=0 if k else None, weight="weight", normalized=True) \
+        if g.number_of_edges() else {}
     seg_of = {frozenset((s.u, s.v)): sid for sid, s in ctx.segments.items()}
     ranked = sorted(eb.items(), key=lambda kv: -kv[1])[:top]
     out = []
@@ -120,5 +175,8 @@ def structural_candidates(ctx: AreaContext, top: int = 6) -> list[dict]:
         if sid is None:
             continue
         out.append({"segment_id": sid, "road_id": ctx.segments[sid].road_id, "betweenness": round(val, 3),
-                    "cut_edge": (u, v) in bridges_graph or (v, u) in bridges_graph})
+                    "cut_edge": (u, v) in bridges_graph or (v, u) in bridges_graph,
+                    "method": "exact" if k is None else f"sampled_k{k}"})
+    with _lock:
+        _structural_cache[key] = out
     return out

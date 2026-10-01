@@ -106,9 +106,9 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:3p
 {% if r.stress_test %}<h2>{{ L.stress }}</h2><p>{{ r.stress_test.n_feasible }} / {{ r.stress_test.n_scenarios }} ({{ L.feasible_in }})</p>{% endif %}
 {% if r.alternatives %}<h2>{{ L.alternatives }} ({{ r.alternatives.policy }})</h2><table>{% for a in r.alternatives.alternatives %}<tr><td>{{ a.id }} {{ a.label }}</td><td>{{ a.status }}</td><td>{{ a.metrics.tasks_selected }}</td><td>{% if a.robustness %}{{ a.robustness.n_feasible }}/{{ a.robustness.n_scenarios }}{% endif %}</td></tr>{% endfor %}</table>{% endif %}
 <h2>{{ L.sources }}</h2><table>{% for s in r.data_sources %}<tr><td>{{ s.layer }}</td><td>{{ s.source }}</td><td>{{ s.mode }}</td><td>{{ s.freshness }}</td><td>{{ fmt(s.last_success_at) if s.last_success_at else '—' }}</td></tr>{% endfor %}</table>
-<h2>{{ L.assumptions }}</h2><ul>{% for n in r.assumptions.notes %}<li>{{ n }}</li>{% endfor %}</ul>
+<h2>{{ L.assumptions }}</h2><ul>{% for n in r.assumptions.notes %}<li>{{ name(n) if n is mapping else n }}</li>{% endfor %}</ul>
 {% if r.historical and r.historical.validation %}<h2>{{ L.validation }}</h2><p>IoU {{ r.historical.validation.iou }} · Precision {{ r.historical.validation.precision }} · Recall {{ r.historical.validation.recall }} · F1 {{ r.historical.validation.f1 }}</p><p><i>{{ L.qc }}</i></p>{% endif %}
-{% if r.historical and r.historical.limitations %}<h2>{{ L.limits }}</h2><ul>{% for n in r.historical.limitations %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
+{% if r.historical and r.historical.limitations %}<h2>{{ L.limits }}</h2><ul>{% for n in r.historical.limitations %}<li>{{ name(n) if n is mapping else n }}</li>{% endfor %}</ul>{% endif %}
 <h2>{{ L.models }}</h2><p>{% for m in r.model_versions %}{{ m.component }} {{ m.version }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
 </body></html>"""
 

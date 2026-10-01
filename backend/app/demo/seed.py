@@ -42,6 +42,7 @@ from app.models import (
     TaskSite,
     User,
 )
+from app.realdata.texts import tri
 from app.services.audit import Actor, record
 from app.services.ingest.observations import detect_conflicts
 from app.services.scenario.conditioning import condition_current
@@ -200,7 +201,9 @@ def seed_area(db: Session, area_dir: Path) -> None:
                      ("LOW / BASE / HIGH sensitivity members (not probabilistic return periods)." if hist else
                       "Precomputed ensemble members (stage hydrograph variants).")},
         provenance={"note": sc["note"], "generator": "app.realdata.build" if hist else "app.demo.generator",
-                    "mode": sc.get("mode", "SIMULATION"), "limitations": sc.get("limitations", [])},
+                    "mode": sc.get("mode", "SIMULATION"), "limitations": sc.get("limitations", []),
+                    **({"name_i18n": tri(sc.get("name")), "note_i18n": tri(sc["note"]),
+                        "limitations_i18n": [tri(x) for x in sc.get("limitations", [])]} if hist else {})},
         model_version=sc["model_version"], is_current=True, created_by="seed",
     )
     db.add(v1)
@@ -353,16 +356,25 @@ def _seed_historical_tail(db: Session, area: OperationalArea, v1: Scenario, plan
             s2 = select_member_manually(db, v1, inj["member"], inj.get("note", "Exercise inject"),
                                         Actor("planner", "PLANNER"), lock=True)
             s2.created_at = start - timedelta(minutes=int(inj.get("minutes_before_start", 5)))
+            s2.selection = {**(s2.selection or {}), "note_i18n": tri(inj.get("note", "Exercise inject"))}
             record(db, Actor("planner", "PLANNER"), "EXERCISE_INJECT", "scenario", s2.id,
                    f"EXERCISE INJECT (SIMULATION): {inj.get('note', '')}", area_id=area_id, op_time=s2.created_at,
                    details={"inject": inj, "mode": "SIMULATION"})
     cfg = area.config or {}
-    pack_date = datetime.fromisoformat("2026-10-01T15:48:00+00:00")
+    # local pack layers carry the pack's own generation time (wall clock); the scenario carries its issue time
+    from app.realdata.install import pack_dir
+
+    try:
+        man = json.loads((pack_dir(area_id) / "metadata" / "dataset_manifest.json").read_text(encoding="utf-8"))
+        pack_date = datetime.fromisoformat(man["generated_at_utc"])
+    except (OSError, ValueError, KeyError):
+        pack_date = None
+    issued = v1.created_at
     rows = [
         ("scenario", "raster_manifest" if area_id == "atbasar" else "stage_hand_exercise",
          ("Atbasar 2024 hybrid terrain-susceptibility + stage proxy (real-data pack)" if area_id == "atbasar" else
           "Kylshakty stage–HAND exercise on real DEM (uncalibrated)"),
-         "HISTORICAL" if area_id == "atbasar" else "SIMULATION", "OK", pack_date, False, None, "REAL_DATA_PACK"),
+         "HISTORICAL" if area_id == "atbasar" else "SIMULATION", "OK", issued, False, None, "REAL_DATA_PACK"),
         ("terrain", "copernicus_dem", "Copernicus DEM GLO-30 (30 m DSM)", "HISTORICAL", "OK", pack_date, False, None, "PACK"),
         ("roads", "openstreetmap", "OpenStreetMap road graph (OSMnx, ODbL)", "CACHED", "OK", pack_date, False, None, "PACK"),
         ("buildings", "openstreetmap", "OpenStreetMap buildings (ODbL)", "CACHED", "OK", pack_date, False, None, "PACK"),

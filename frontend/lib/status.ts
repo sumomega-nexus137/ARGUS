@@ -41,7 +41,7 @@ const MAP: Record<string, Tone> = {
   RESOURCE_UNAVAILABLE: "crit",
   // data modes / freshness
   LIVE: "live", CACHED: "info", HISTORICAL: "info", SIMULATION: "sim", STATIC: "muted", STALE: "stale",
-  OFFLINE: "offline", NOT_CONFIGURED: "muted", UNKNOWN: "muted", OK: "ok", DEGRADED: "warn", OPERATIONAL: "info",
+  OFFLINE: "offline", NOT_CONFIGURED: "muted", NOT_POLLED: "muted", UNKNOWN: "muted", OK: "ok", DEGRADED: "warn", OPERATIONAL: "info",
   // verification
   VERIFIED: "ok", UNVERIFIED: "watch", SIMULATED: "sim",
   // resources

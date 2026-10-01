@@ -7,14 +7,16 @@ import { useTranslations } from "use-intl";
 
 import { Badge, Button, InlineNote, Loading, Panel } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
-import { num } from "@/lib/format";
+import { num, pickName } from "@/lib/format";
+import { useLocale } from "@/lib/i18n";
+import type { Names } from "@/lib/types";
 
 interface Row { [k: string]: string }
 interface History {
   available: boolean;
-  events: Row[];
+  events: (Row & { description_i18n?: Names })[];
   hydrology: Row[];
-  event_peak: Row[];
+  event_peak: (Row & { notes_i18n?: Names })[];
   glofas: { rows: Row[]; source: string; quality: string; caveat: string; returned_coordinate?: { lat: number; lon: number } };
   weather: { rows: Row[]; source: string; quality: string };
   satellite?: { flood_item: string; flood_datetime: string; reference_item: string; reference_datetime: string; flood_cloud_cover_percent: number; reason: string };
@@ -46,6 +48,7 @@ function DailyChart({ rows, field, color, unit }: { rows: Row[]; field: string; 
 
 export function HistoryPanel({ areaId }: { areaId: string }) {
   const th = useTranslations("history");
+  const { locale } = useLocale();
   const q = useQuery({ queryKey: ["history", areaId], queryFn: () => api<History>(`/api/areas/${areaId}/history`), staleTime: 3_600_000 });
   if (q.isLoading) return <Loading />;
   if (!q.data?.available) return null;
@@ -59,15 +62,15 @@ export function HistoryPanel({ areaId }: { areaId: string }) {
             {h.events.map((e, i) => (
               <li key={i} className="border-l-2 border-accent/40 pl-2">
                 <span className="tabular font-semibold">{(e.timestamp_local || e.event_time || "").replace("T", " ").slice(0, 16)}</span>
-                <span className="ml-1 text-muted">· {e.event_type}</span>
-                <div className="text-ink-2">{e.description}</div>
+                <span className="ml-1 text-muted">· {th.has(`eventType.${(e.event_type || "").toLowerCase()}`) ? th(`eventType.${(e.event_type || "").toLowerCase()}`) : e.event_type}</span>
+                <div className="text-ink-2">{e.description_i18n ? pickName(e.description_i18n, locale) : e.description}</div>
                 {e.source_url && <a className="text-[10px] text-accent underline" href={e.source_url} target="_blank" rel="noreferrer">{th("source")}</a>}
               </li>
             ))}
           </ul>
         </div>
         {h.event_peak.length > 0 && (
-          <InlineNote tone="info">{h.event_peak.map((p) => `${p.event_period}: ${p.value} ${p.unit} — ${p.notes}`).join(" ")}</InlineNote>
+          <InlineNote tone="info">{h.event_peak.map((p) => `${p.event_period}: ${p.value} ${p.unit} — ${p.notes_i18n ? pickName(p.notes_i18n, locale) : p.notes}`).join(" ")}</InlineNote>
         )}
         {h.satellite && (
           <div>

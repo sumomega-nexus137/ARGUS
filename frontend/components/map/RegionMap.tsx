@@ -2,13 +2,15 @@
 
 import type * as MLType from "maplibre-gl";
 
+import { api } from "@/lib/api";
 import { getMaplibre } from "@/lib/maplibre";
 import { useEffect, useRef } from "react";
 
 import { TONE_HEX, toneOf } from "@/lib/status";
 import type { AreaOverview } from "@/lib/types";
 
-/** Regional context map: operational area extents and status markers (real geography basemap optional). */
+/** Regional context map: operational area extents and status markers. Each area's river / waterway geometry is
+ *  drawn from the locally installed data (works offline); the external raster basemap is optional context only. */
 export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; labels: Record<string, string>; onSelect: (id: string) => void }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLType.Map | null>(null);
@@ -70,6 +72,18 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
         m.addLayer({ id: "areas-fill", type: "fill", source: "areas", paint: { "fill-color": ["get", "color"], "fill-opacity": 0.12 } });
         m.addLayer({ id: "areas-line", type: "line", source: "areas", paint: { "line-color": ["get", "color"], "line-width": 2 } });
       }
+      // local geography (OSM rivers / waterways from the installed packs) — independent of the external basemap
+      areas.forEach((a) => {
+        (["waterways", "river"] as const).forEach((layer) => {
+          const id = `geo-${a.id}-${layer}`;
+          if (m.getSource(id)) return;
+          m.addSource(id, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+          m.addLayer({ id, type: "line", source: id, paint: { "line-color": "#3fb3ff", "line-width": layer === "river" ? 1.6 : 0.8, "line-opacity": layer === "river" ? 0.9 : 0.55 } }, "areas-fill");
+          api<GeoJSON.FeatureCollection>(`/api/areas/${a.id}/layers/${layer}`)
+            .then((fc) => (m.getSource(id) as MLType.GeoJSONSource | undefined)?.setData(fc))
+            .catch(() => { /* layer unavailable — extents and markers still render */ });
+        });
+      });
       markers.current.forEach((mk) => mk.remove());
       markers.current = areas.map((a) => {
         const d = document.createElement("button");

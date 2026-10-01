@@ -60,8 +60,11 @@ function AreaCard({ a }: { a: AreaOverview }) {
               sub={obsG ? `${obsG.source_type ? ts(obsG.source_type === "FIELD" && obsG.verification === "VERIFIED" ? "VERIFIED_FIELD" : obsG.source_type) : "—"} · ${ageLabel(obsG.age_min)}` : t("noObservation")} />
             <Metric label={<span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{t("trend")}</span>} value={<span className="whitespace-nowrap text-base">{!obsG || obsG.trend_cm_h === null ? "—" : t("trendValue", { v: num(obsG.trend_cm_h, 1, locale) })}</span>}
               tone={obsG?.trend_cm_h && obsG.trend_cm_h > 0 ? "warn" : undefined} />
-            <Metric label={t("forecastPeak")} value={`${num(g.forecast_peak_cm, 0, locale)} ${tu("cm")}`} sub={relHHMM(ref, g.forecast_peak_at_min, a.utc_offset_min)}
+            <Metric label={a.scenario.mode === "SIMULATION" ? t("scenarioPeak") : t("forecastPeak")} value={`${num(g.forecast_peak_cm, 0, locale)} ${tu("cm")}`} sub={relHHMM(ref, g.forecast_peak_at_min, a.utc_offset_min)}
               tone={g.forecast_peak_cm && g.thresholds.critical !== null && g.forecast_peak_cm >= g.thresholds.critical ? "crit" : g.forecast_peak_cm && g.thresholds.warning !== null && g.forecast_peak_cm >= g.thresholds.warning ? "warn" : undefined} />
+            {obsG && obsG.station_id !== g.station_id && (
+              <p className="col-span-3 text-[10.5px] leading-snug text-muted">{t("differentStations", { obs: pickName(obsG.names, locale), sc: pickName(g.names, locale) })}</p>
+            )}
             <div className="col-span-3 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
               {obsG?.verification && <Badge tone={toneOf(obsG.verification)}>{tv(obsG.verification)}</Badge>}
               {obsG?.mode && <Badge tone={obsG.mode === "LIVE" ? "live" : obsG.mode === "HISTORICAL" ? "info" : "sim"}>{tm.has(obsG.mode) ? tm(obsG.mode) : obsG.mode}</Badge>}
@@ -112,7 +115,7 @@ export default function OverviewPage() {
         <div>
           <h1 className="text-lg font-bold tracking-wide">{t("title")}</h1>
           <p className="text-sm text-accent">{tq("overview")}</p>
-          <p className="text-[11.5px] text-muted">{t("region")}</p>
+          <p className="text-[11.5px] text-muted">{areas.data && areas.data.length > 0 && areas.data.every((a) => !a.is_demo) ? t("regionReal") : t("region")}</p>
         </div>
         {areas.isLoading && <Loading />}
         {areas.isError && <ErrorState error={areas.error} onRetry={() => areas.refetch()} />}

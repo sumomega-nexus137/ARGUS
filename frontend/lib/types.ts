@@ -171,13 +171,14 @@ export interface AreaDetail {
   demo_note: string | null;
   data_profile?: "historical" | "demo";
   role?: string | null;
-  assumptions?: { key: string; value: unknown; note: string }[];
+  assumptions?: { key: string; value: unknown; note: string; notes?: Names | null }[];
   pack?: { archive_sha256: string; run_id: number; artifact_id: number } | null;
   clock_start?: string | null;
   population_meta?: { worldpop_total_in_pack: number; allocated_to_building_cells: number; not_allocated_no_mapped_buildings: number; zones: number } | null;
   road_meta?: { segments: number; nodes: number; dropped_disconnected_segments: number; roads: number } | null;
   economic_model?: string;
   scenario_station_id?: string | null;
+  attribution?: string;
 }
 
 export interface ScenarioInfo {

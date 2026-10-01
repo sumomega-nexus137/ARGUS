@@ -56,9 +56,9 @@ export function OpsMap() {
     const m = new maplibregl.Map({
       container: el.current,
       transformRequest: (url) => mapTransformRequest(url),
-      attributionControl: { compact: true, customAttribution: area?.is_demo === false
-        ? "© OpenStreetMap contributors (ODbL) · Copernicus DEM GLO-30 · Sentinel-2 (ESA/Copernicus) · WorldPop · JRC GSW"
-        : "ARGUS FloodOps · DEMO synthetic geometry" },
+      attributionControl: { compact: true, customAttribution: area?.attribution || (area?.is_demo === false
+        ? "© OpenStreetMap contributors (ODbL) · Copernicus DEM GLO-30 · WorldPop · JRC GSW"
+        : "ARGUS FloodOps · DEMO synthetic geometry") },
       center: centerRef.current,
       zoom: 12.7,
       maxPitch: 75,
@@ -316,7 +316,10 @@ export function OpsMap() {
       const p = f.properties as { id: string; facility_type: string; names: Record<string, string>; criticality: number };
       const st = facilityStates[p.id];
       const name = pickName(p.names, locale);
-      return make(featureMarker({ kind: p.facility_type, label: name, tone: p.criticality >= 90 ? "info" : "muted", showLabel: lay.labels, ring: st?.ring ?? null,
+      // HTML markers have no label collision: on real (dense) data label only the most critical facilities and
+      // those with an active state ring; every marker keeps its icon and accessible name
+      const showLabel = lay.labels && (area?.is_demo !== false || p.criticality >= 70 || !!st?.ring);
+      return make(featureMarker({ kind: p.facility_type, label: name, tone: p.criticality >= 90 ? "info" : "muted", showLabel, ring: st?.ring ?? null,
         ariaLabel: `${tf.has(p.facility_type) ? tf(p.facility_type) : p.facility_type}: ${name}` }), f.geometry.coordinates as [number, number], "left");
     }));
     rebuild("sites", !lay.sites ? [] : (layers.task_sites?.features || []).map((f) => {
@@ -360,7 +363,7 @@ export function OpsMap() {
       d.innerHTML = `<div style="font:700 11px Inter,Segoe UI,sans-serif;color:#7aa2c7;opacity:.9;text-shadow:0 1px 2px #000">${pickName(p.names, locale)}</div>`;
       return make(d, [cx, cy]);
     }));
-  }, [ready, layers, lay.facilities, lay.sites, lay.labels, lay.sectors, facilityStates, roadStates, access, locale, rebuild, tr, tf, tk, tmap]);
+  }, [ready, layers, area?.is_demo, lay.facilities, lay.sites, lay.labels, lay.sectors, facilityStates, roadStates, access, locale, rebuild, tr, tf, tk, tmap]);
 
   useEffect(() => {
     const m = mapRef.current;

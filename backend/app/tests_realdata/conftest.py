@@ -17,6 +17,7 @@ os.environ["ARGUS_DATABASE_URL"] = f"sqlite:///{(_TMP / 'test.db').as_posix()}"
 os.environ["ARGUS_DEMO_MODE"] = "true"
 os.environ["ARGUS_DATA_PROFILE"] = "historical"
 os.environ["ARGUS_OPTIMIZER_TIME_LIMIT_S"] = "2.0"
+os.environ["ARGUS_WARMUP"] = "false"
 
 
 def _packs_installed() -> bool:

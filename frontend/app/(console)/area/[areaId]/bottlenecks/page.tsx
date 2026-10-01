@@ -21,6 +21,7 @@ interface BN {
   lon: number;
   lat: number;
   notes: string | null;
+  notes_i18n?: Names | null;
   expected_closure_at: number | null;
   affected_sectors: { code: string; names: Names; isolated: boolean; was_isolated: boolean; population: number; access_lost_at: number | null; baseline_access_lost_at: number | null; travel_increase_min: number | null }[];
   affected_facilities: { id: string; names: Names; type: string; criticality: number; accessible: boolean; single_point_of_failure: boolean; access_lost_at: number | null; baseline_access_lost_at: number | null; travel_increase_min: number | null }[];
@@ -104,7 +105,7 @@ export default function BottlenecksPage() {
               </div>
             </div>
           )}
-          {b.notes && <p className="mt-1 text-[10.5px] text-muted">{b.notes}</p>}
+          {b.notes && <p className="mt-1 text-[10.5px] text-muted">{b.notes_i18n ? pickName(b.notes_i18n, locale) : b.notes}</p>}
         </button>
       ))}
       {q.data && (
