@@ -126,12 +126,13 @@ def main():
     validate_raster(base / "processed" / "worldpop_2024_100m_utm42n.tif", expected_crs, report, required=False)
 
     if area == "atbasar":
-        validate_raster(base / "processed" / "sentinel1_pre_vv.tif", expected_crs, report)
-        validate_raster(base / "processed" / "sentinel1_flood_vv.tif", expected_crs, report)
         validate_raster(base / "processed" / "observed_flood_mask_2024.tif", expected_crs, report)
-        selection = base / "metadata" / "sentinel1_selection.json"
-        if selection.exists():
-            s = json.loads(selection.read_text(encoding="utf-8"))
+        s1 = base / "metadata" / "sentinel1_selection.json"
+        s2 = base / "metadata" / "sentinel2_selection.json"
+        if s1.exists():
+            validate_raster(base / "processed" / "sentinel1_pre_vv.tif", expected_crs, report)
+            validate_raster(base / "processed" / "sentinel1_flood_vv.tif", expected_crs, report)
+            s = json.loads(s1.read_text(encoding="utf-8"))
             same_orbit = (
                 s.get("pre_relative_orbit") is None or s.get("flood_relative_orbit") is None
                 or s.get("pre_relative_orbit") == s.get("flood_relative_orbit")
@@ -139,9 +140,50 @@ def main():
             add(report, "sentinel1:same_relative_orbit", same_orbit, json.dumps({
                 "pre": s.get("pre_relative_orbit"), "flood": s.get("flood_relative_orbit")
             }), False)
-            add(report, "sentinel1:observed_mask_qc_state", True, "REQUIRES_QC is expected; this validator does not certify ground truth.", False)
+            add(report, "satellite_source", True, "Sentinel-1 RTC", True)
+        elif s2.exists():
+            for label in ("pre", "flood"):
+                for asset in ("green", "nir", "swir16", "scl"):
+                    validate_raster(
+                        base / "processed" / f"sentinel2_{label}_{asset}.tif",
+                        expected_crs,
+                        report,
+                    )
+            validate_raster(base / "processed" / "sentinel2_common_clear_mask.tif", expected_crs, report)
+            s = json.loads(s2.read_text(encoding="utf-8"))
+            flood_cloud = float(s.get("flood_cloud_cover_percent", 100))
+            add(
+                report,
+                "sentinel2:flood_scene_cloud",
+                flood_cloud < 60,
+                f"scene cloud cover={flood_cloud:.2f}% (local clear-pixel coverage is checked in mask metadata)",
+                True,
+            )
+            add(report, "satellite_source", True, "Sentinel-2 L2A optical fallback", True)
         else:
-            add(report, "sentinel1:selection", False, "missing selection metadata", True)
+            add(report, "satellite_source", False, "Neither Sentinel-1 nor Sentinel-2 selection metadata exists", True)
+
+        method = base / "metadata" / "flood_mask_method.json"
+        if method.exists():
+            m = json.loads(method.read_text(encoding="utf-8"))
+            clear_fraction = m.get("common_clear_fraction")
+            if clear_fraction is not None:
+                add(
+                    report,
+                    "observed_mask:common_clear_fraction",
+                    float(clear_fraction) >= 0.50,
+                    f"{float(clear_fraction):.3f}",
+                    True,
+                )
+            add(
+                report,
+                "observed_mask:qc_state",
+                m.get("status") == "AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC",
+                str(m.get("status")),
+                True,
+            )
+        else:
+            add(report, "observed_mask:method_metadata", False, "missing", True)
         validate_csv(
             base / "curated" / "hydrology" / "zhabai_2024_observations.csv",
             ["timestamp_local", "value", "reference_type", "source_url"],
