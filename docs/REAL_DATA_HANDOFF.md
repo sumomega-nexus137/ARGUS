@@ -70,10 +70,12 @@ Expected core contents after a successful build:
 - provenance/selection/manifests under `metadata/`
 - official event/hydrology CSVs under `curated/`
 
-The observed mask is always labelled
-`AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC`. It is not ground truth merely because it
-came from a satellite. No IoU/precision/recall should be shown until a modelled mask exists and the
-observed mask has passed visual QC.
+The observed mask remains labelled
+`AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC`. It is not official ground truth merely because
+it came from a satellite. A modelled mask now exists and development-level technical visual QC has
+been performed, so historical same-event spatial-holdout metrics are computable and recorded in
+`docs/REAL_DATA_FINAL_STATUS.md`. Those metrics must remain explicitly provisional and must not be
+presented as independent future-event forecast accuracy or hydrologist/agency certification.
 
 ### Kokshetau / Kylshakty
 
