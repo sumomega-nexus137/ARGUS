@@ -103,6 +103,7 @@ def main() -> None:
     shared.run_step("terrain", lambda: shared.fetch_dem(cfg, out), statuses, required=True)
     rename_terrain(out)
     shared.run_step("osm", lambda: shared.fetch_osm(cfg, out), statuses, required=True)
+    shared.run_step("jrc_water", lambda: shared.fetch_jrc(cfg, out), statuses, required=False)
     if args.skip_population:
         statuses["population"] = {"status": "SKIPPED_BY_FLAG"}
     else:
