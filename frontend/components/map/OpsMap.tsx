@@ -318,7 +318,7 @@ export function OpsMap() {
       const name = pickName(p.names, locale);
       // HTML markers have no label collision: on real (dense) data label only the most critical facilities and
       // those with an active state ring; every marker keeps its icon and accessible name
-      const showLabel = lay.labels && (area?.is_demo !== false || p.criticality >= 70 || !!st?.ring);
+      const showLabel = lay.labels && (area?.is_demo !== false || p.criticality >= 90 || !!st?.ring);
       return make(featureMarker({ kind: p.facility_type, label: name, tone: p.criticality >= 90 ? "info" : "muted", showLabel, ring: st?.ring ?? null,
         ariaLabel: `${tf.has(p.facility_type) ? tf(p.facility_type) : p.facility_type}: ${name}` }), f.geometry.coordinates as [number, number], "left");
     }));

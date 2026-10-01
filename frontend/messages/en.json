@@ -490,7 +490,13 @@
     "whatIf": "What-if: unavailable from {time}",
     "noHydroClaim": "Network consequences only — no hydrodynamic claim is made.",
     "isolated": "isolated",
-    "accessLost": "access lost {from} → {to}"
+    "accessLost": "access lost {from} → {to}",
+    "planImpact": "Plan impact (if the bottleneck is unavailable)",
+    "closedRoads": "Roads closed",
+    "detourRoads": "Detour roads (load increases)",
+    "noPlanImpact": "No effect on active plan tasks",
+    "noActivePlan": "No active plan",
+    "slackChange": "slack {min} min"
   },
   "plan": {
     "title": "Plan",

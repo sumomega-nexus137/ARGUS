@@ -128,4 +128,6 @@ def analyze_bottlenecks(body: WhatIfBottleneck, area: OperationalArea = Depends(
     ctx = load_context(db, area.id)
     rt = runtime_for(current_scenario(db, area.id))
     as_of = _t(rt, body.as_of_min, area)
-    return clean({**bn.analyze(ctx, rt, as_of, body.bottleneck_ids or None), "reference_time": rt.reference_time})
+    pv = active_version(db, area.id)
+    plan = None if pv is None else bn.PlanInput(pv.id, tuple(to_specs(version_tasks(db, pv), rt)), tuple(constraints_of(pv)))
+    return clean({**bn.analyze(ctx, rt, as_of, body.bottleneck_ids or None, plan), "reference_time": rt.reference_time})

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { useAreaCtx } from "@/components/area/AreaContext";
@@ -27,11 +27,47 @@ interface BN {
   affected_facilities: { id: string; names: Names; type: string; criticality: number; accessible: boolean; single_point_of_failure: boolean; access_lost_at: number | null; baseline_access_lost_at: number | null; travel_increase_min: number | null }[];
   newly_isolated_population: number;
   single_points_of_failure: string[];
+  closed_roads?: string[];
+  affected_tasks?: { code: string; template_id: string; site_id: string; status: string; baseline_status: string; newly_at_risk: boolean; slack_change_min: number | null; travel_increase_min: number | null }[] | null;
+  detour_roads?: string[] | null;
   criticality_score: number;
 }
 
+/** Plan re-evaluated with the selected bottleneck unavailable: tasks that lose feasibility / slack, detour roads. */
+function PlanImpact({ areaId, bid, t, roadName }: { areaId: string; bid: string; t: number | null; roadName: (id: string) => string }) {
+  const tb = useTranslations("bottleneck");
+  const te = useTranslations("evalStatus");
+  const { locale } = useLocale();
+  const q = useQuery({
+    queryKey: ["bottleneckPlan", areaId, bid, t],
+    queryFn: () => post<{ bottlenecks: BN[]; plan_version_id: string | null }>(`/api/areas/${areaId}/bottlenecks/analyze`, { bottleneck_ids: [bid], as_of_min: t }),
+  });
+  if (q.isLoading) return <Loading />;
+  const b = q.data?.bottlenecks[0];
+  if (!b) return null;
+  return (
+    <div className="mt-2 rounded-[3px] border border-line bg-panel-2 p-2 text-xs" onClick={(e) => e.stopPropagation()}>
+      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">{tb("planImpact")}</div>
+      {b.closed_roads && b.closed_roads.length > 0 && <div className="text-ink-2">{tb("closedRoads")}: {b.closed_roads.map(roadName).join(", ")}</div>}
+      {!q.data?.plan_version_id ? <div className="text-muted">{tb("noActivePlan")}</div> : !b.affected_tasks?.length ? (
+        <div className="text-ok">{tb("noPlanImpact")}</div>
+      ) : b.affected_tasks.map((x) => (
+        <div key={x.code} className="flex flex-wrap items-center justify-between gap-1 border-t border-line/60 py-0.5">
+          <span className="font-semibold">{x.code} <span className="font-normal text-muted">· {x.template_id} · {x.site_id}</span></span>
+          <span className="flex items-center gap-1">
+            {x.newly_at_risk ? <><Badge tone="ok">{te(x.baseline_status)}</Badge>→<Badge tone={x.status === "INFEASIBLE" ? "crit" : "warn"}>{te(x.status)}</Badge></> : null}
+            {x.slack_change_min !== null && x.slack_change_min < 0 && <span className="text-warn">{tb("slackChange", { min: num(x.slack_change_min, 0, locale) })}</span>}
+            {x.travel_increase_min !== null && x.travel_increase_min > 0 && <span className="text-ink-2">{tb("travelIncrease", { min: num(x.travel_increase_min, 0, locale) })}</span>}
+          </span>
+        </div>
+      ))}
+      {b.detour_roads && b.detour_roads.length > 0 && <div className="mt-1 text-ink-2">{tb("detourRoads")}: {b.detour_roads.map(roadName).join(", ")}</div>}
+    </div>
+  );
+}
+
 export default function BottlenecksPage() {
-  const { areaId, area, t, fmt, setOverlays, clearOverlays } = useAreaCtx();
+  const { areaId, area, t, fmt, setOverlays, clearOverlays, layers } = useAreaCtx();
   const tb = useTranslations("bottleneck");
   const tf = useTranslations("facilityType");
   const tm = useTranslations("methodology");
@@ -43,6 +79,15 @@ export default function BottlenecksPage() {
       `/api/areas/${areaId}/bottlenecks/analyze`, { bottleneck_ids: [], as_of_min: t }),
     enabled: !!area && t !== null,
   });
+  const roadNames = useMemo(() => {
+    const m = new Map<string, string>();
+    (layers.roads?.features || []).forEach((f) => {
+      const p = f.properties as { road_id: string; names: Names };
+      if (!m.has(p.road_id)) m.set(p.road_id, pickName(p.names, locale, ""));
+    });
+    return m;
+  }, [layers.roads, locale]);
+  const roadName = (id: string) => (roadNames.get(id) ? `${id} (${roadNames.get(id)})` : id);
   useEffect(() => () => clearOverlays(), [clearOverlays]);
   useEffect(() => {
     const b = q.data?.bottlenecks.find((x) => x.id === sel);
@@ -106,6 +151,7 @@ export default function BottlenecksPage() {
             </div>
           )}
           {b.notes && <p className="mt-1 text-[10.5px] text-muted">{b.notes_i18n ? pickName(b.notes_i18n, locale) : b.notes}</p>}
+          {sel === b.id && <PlanImpact areaId={areaId} bid={b.id} t={t} roadName={roadName} />}
         </button>
       ))}
       {q.data && (
