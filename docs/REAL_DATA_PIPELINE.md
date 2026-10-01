@@ -98,3 +98,38 @@ The next modelling step is a terrain/HAND-like scenario pipeline calibrated agai
 validated hydraulic model is actually integrated.
 
 See `docs/REAL_DATA_HANDOFF.md` for the application-integration boundary and API/provider status.
+
+
+## Terrain susceptibility refinement
+
+The Atbasar data workflow also builds a reproducible historical flood-extent component from the
+prepared evidence. It combines river-relative terrain features with a
+`HistGradientBoostingClassifier`. The classifier intentionally **does not use raw X/Y coordinates**.
+Features include relative elevation to the Zhabai, distance to river, slope, absolute/nearest-channel
+elevation, multi-scale topographic-position indices, aspect and JRC water-occurrence context.
+
+Parameter/threshold selection uses alternating ~1.2 km spatial calibration blocks; the other blocks
+are reported as a same-event spatial holdout. This is useful evidence that the terrain features
+generalise locally, but it is **not** out-of-event forecast validation and must never be described as
+such. The operational scenario rasters additionally impose river-relative stage/time and
+connectivity constraints.
+
+The workflow produces:
+
+- `scenarios/atbasar/flood_susceptibility_probability_2024.tif`;
+- `scenarios/atbasar/calibration_metrics.json`;
+- LOW / BASE / HIGH precomputed depth frames;
+- `scenarios/atbasar/manifest.json` for the existing `RasterManifestProvider`;
+- `validation/atbasar/atbasar-2024/modelled.tif`;
+- a satellite-usable validation AOI.
+
+## Public forecast/context APIs
+
+The static packs also include historical context fetched from public APIs:
+
+- Open-Meteo Flood API / GloFAS v4 river discharge;
+- Open-Meteo Historical Weather API for temperature, precipitation, rain and snowfall.
+
+These are labelled `GLOBAL_MODEL` or `REANALYSIS_OR_HISTORICAL_MODEL` and never override
+Kazhydromet, Tasqyn or verified field observations. Concrete request/normalisation profiles are in
+`data/realdata/api_profiles.json`.
