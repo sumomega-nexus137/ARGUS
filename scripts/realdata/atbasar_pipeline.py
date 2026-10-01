@@ -416,24 +416,27 @@ def fetch_sentinel1(cfg: dict, out: Path) -> None:
 
 
 def fetch_sentinel2(cfg: dict, out: Path) -> None:
-    """Fetch a clear pre-flood/flood-period Sentinel-2 L2A pair.
+    """Fetch flood-period and post-recession Sentinel-2 L2A scenes.
 
-    This is the documented optical fallback when no Sentinel-1 acquisition is
-    available for the 2024 Atbasar event. Cloud/snow masking is applied later
-    from the Scene Classification Layer (SCL).
+    The clear 2024-04-04 scene is largely classified as snow/ice over the AOI,
+    so it is unsuitable as a direct open-water baseline. The pipeline instead
+    compares flood-period water against a clear post-recession reference scene.
     """
     cat = pystac_client.Client.open(EARTH_SEARCH_URL)
     ev = cfg["event"]
     items = list(cat.search(
         collections=[S2_COLLECTION],
         bbox=cfg["analysis_bbox_wgs84"],
-        datetime=f"{ev['search_start']}T00:00:00Z/{ev['search_end']}T23:59:59Z",
+        datetime=f"{ev['search_start']}T00:00:00Z/{ev['post_flood_window_end']}T23:59:59Z",
         max_items=200,
     ).items())
-    pre_target = datetime.fromisoformat(ev["pre_flood_target_date"]).replace(tzinfo=timezone.utc)
+
     flood_target = datetime.fromisoformat(ev["flood_target_date"]).replace(tzinfo=timezone.utc)
     flood_start = datetime.fromisoformat(ev["flood_window_start"]).replace(tzinfo=timezone.utc)
     flood_end = datetime.fromisoformat(ev["flood_window_end"] + "T23:59:59").replace(tzinfo=timezone.utc)
+    post_target = datetime.fromisoformat(ev["post_flood_target_date"]).replace(tzinfo=timezone.utc)
+    post_start = datetime.fromisoformat(ev["post_flood_window_start"]).replace(tzinfo=timezone.utc)
+    post_end = datetime.fromisoformat(ev["post_flood_window_end"] + "T23:59:59").replace(tzinfo=timezone.utc)
 
     required_assets = {"green", "nir", "swir16", "scl"}
     candidates = []
@@ -464,35 +467,39 @@ def fetch_sentinel2(cfg: dict, out: Path) -> None:
         "items": diagnostics,
     })
 
-    pre = [x for x in candidates if x[1] < flood_start]
     flood = [x for x in candidates if flood_start <= x[1] <= flood_end]
-    if not pre or not flood:
+    post = [x for x in candidates if post_start <= x[1] <= post_end]
+    if not flood or not post:
         raise RuntimeError(
-            f"No suitable Sentinel-2 pair: pre={len(pre)} flood={len(flood)} "
+            f"No suitable Sentinel-2 flood/reference pair: flood={len(flood)} reference={len(post)} "
             f"from {len(items)} catalogue items"
         )
 
-    # Date proximity matters, but avoid selecting an almost fully cloudy scene.
-    # 0.15 means 20% cloud cover costs about three days in the score.
-    p = min(pre, key=lambda x: abs((x[1] - pre_target).total_seconds()) / 86400 + 0.15 * x[3])
+    # Date proximity matters, while scene-level cloud cover is penalized.
     f = min(flood, key=lambda x: abs((x[1] - flood_target).total_seconds()) / 86400 + 0.15 * x[3])
+    r = min(post, key=lambda x: abs((x[1] - post_target).total_seconds()) / 86400 + 0.15 * x[3])
 
     selection = {
         "source": "Sentinel-2 L2A via Element84 Earth Search",
-        "reason": "Optical fallback because Sentinel-1 catalogue probes returned zero acquisitions for the Atbasar 2024 search window.",
-        "pre_item": p[0].id,
-        "pre_datetime": p[1].isoformat(),
-        "pre_coverage": p[2],
-        "pre_cloud_cover_percent": p[3],
+        "reason": (
+            "Optical fallback because Sentinel-1 catalogue probes returned zero acquisitions for "
+            "Atbasar 2024. A post-recession optical reference is used because the clear 2024-04-04 "
+            "scene is predominantly snow/ice over the AOI."
+        ),
         "flood_item": f[0].id,
         "flood_datetime": f[1].isoformat(),
         "flood_coverage": f[2],
         "flood_cloud_cover_percent": f[3],
+        "reference_item": r[0].id,
+        "reference_datetime": r[1].isoformat(),
+        "reference_coverage": r[2],
+        "reference_cloud_cover_percent": r[3],
+        "reference_role": "POST_RECESSION_OPEN_WATER_BASELINE",
         "selection_rule": ">=90% AOI coverage, required spectral/SCL assets, nearest target dates with cloud penalty",
     }
     write_json(out / "metadata" / "sentinel2_selection.json", selection)
 
-    for label, chosen in (("pre", p), ("flood", f)):
+    for label, chosen in (("flood", f), ("reference", r)):
         item = chosen[0]
         for asset, nearest in (("green", False), ("nir", False), ("swir16", False), ("scl", True)):
             dst = out / "processed" / f"sentinel2_{label}_{asset}.tif"
@@ -509,10 +516,10 @@ def fetch_sentinel2(cfg: dict, out: Path) -> None:
                 "item_id": item.id,
                 "datetime": chosen[1].isoformat(),
                 "asset": asset,
+                "scene_role": label,
                 "cloud_cover_percent_scene": chosen[3],
                 "working_resolution_m": 20,
             })
-
 
 def fetch_jrc(cfg: dict, out: Path) -> None:
     cat = pystac_client.Client.open(STAC_URL, modifier=planetary_computer.sign_inplace)
@@ -664,53 +671,53 @@ def _s2_clear(scl: np.ndarray) -> np.ndarray:
 
 
 def build_observed_mask_s2(out: Path) -> None:
-    """Derive a conservative 2024 observed-inundation baseline from Sentinel-2.
+    """Derive a conservative Atbasar 2024 observed-inundation baseline.
 
-    The mask represents newly detected open water between a clear pre-flood
-    scene and a flood-period scene. It is deliberately labelled REQUIRES_QC;
-    snow/ice, cloud gaps and turbid/shallow water remain limitations.
+    Flood-period open water is compared with a clear post-recession reference
+    scene. This avoids treating the snow/ice-heavy 2024-04-04 scene as a
+    trustworthy pre-flood water baseline. The result remains REQUIRES_QC.
     """
-    pre_green_p = out / "processed" / "sentinel2_pre_green.tif"
+    ref_green_p = out / "processed" / "sentinel2_reference_green.tif"
     flood_green_p = out / "processed" / "sentinel2_flood_green.tif"
-    with rasterio.open(pre_green_p) as ref:
-        pre_green = ref.read(1).astype("float32")
+    with rasterio.open(ref_green_p) as ref:
+        ref_green = ref.read(1).astype("float32")
         profile = ref.profile.copy()
         tr = ref.transform
         crs = ref.crs
 
-    pre_nir = aligned(pre_green_p, out / "processed" / "sentinel2_pre_nir.tif")
-    pre_swir = aligned(pre_green_p, out / "processed" / "sentinel2_pre_swir16.tif")
-    pre_scl = aligned(pre_green_p, out / "processed" / "sentinel2_pre_scl.tif", nearest=True)
+    ref_nir = aligned(ref_green_p, out / "processed" / "sentinel2_reference_nir.tif")
+    ref_swir = aligned(ref_green_p, out / "processed" / "sentinel2_reference_swir16.tif")
+    ref_scl = aligned(ref_green_p, out / "processed" / "sentinel2_reference_scl.tif", nearest=True)
 
-    flood_green = aligned(pre_green_p, flood_green_p)
-    flood_nir = aligned(pre_green_p, out / "processed" / "sentinel2_flood_nir.tif")
-    flood_swir = aligned(pre_green_p, out / "processed" / "sentinel2_flood_swir16.tif")
-    flood_scl = aligned(pre_green_p, out / "processed" / "sentinel2_flood_scl.tif", nearest=True)
+    flood_green = aligned(ref_green_p, flood_green_p)
+    flood_nir = aligned(ref_green_p, out / "processed" / "sentinel2_flood_nir.tif")
+    flood_swir = aligned(ref_green_p, out / "processed" / "sentinel2_flood_swir16.tif")
+    flood_scl = aligned(ref_green_p, out / "processed" / "sentinel2_flood_scl.tif", nearest=True)
 
-    slope = aligned(pre_green_p, out / "processed" / "slope_atbasar_deg.tif")
+    slope = aligned(ref_green_p, out / "processed" / "slope_atbasar_deg.tif")
     jrc_p = out / "processed" / "jrc_water_occurrence_utm42n.tif"
-    occurrence = aligned(pre_green_p, jrc_p, nearest=True, nodata=255) if jrc_p.exists() else None
+    occurrence = aligned(ref_green_p, jrc_p, nearest=True, nodata=255) if jrc_p.exists() else None
 
-    pre_mndwi = _safe_index(pre_green, pre_swir)
-    pre_ndwi = _safe_index(pre_green, pre_nir)
+    ref_mndwi = _safe_index(ref_green, ref_swir)
+    ref_ndwi = _safe_index(ref_green, ref_nir)
     flood_mndwi = _safe_index(flood_green, flood_swir)
     flood_ndwi = _safe_index(flood_green, flood_nir)
-    pre_clear = _s2_clear(pre_scl)
+    ref_clear = _s2_clear(ref_scl)
     flood_clear = _s2_clear(flood_scl)
-    common_clear = pre_clear & flood_clear
+    common_clear = ref_clear & flood_clear
 
     fthr = float(np.clip(robust_otsu(flood_mndwi[common_clear], 0.05), -0.05, 0.30))
-    pthr = float(np.clip(robust_otsu(pre_mndwi[common_clear], 0.05), -0.05, 0.30))
+    rthr = float(np.clip(robust_otsu(ref_mndwi[common_clear], 0.05), -0.05, 0.30))
     flood_water = flood_clear & (flood_mndwi > fthr) & (flood_ndwi > -0.10)
-    pre_water = pre_clear & (pre_mndwi > pthr) & (pre_ndwi > -0.10)
-    delta = flood_mndwi - pre_mndwi
+    reference_water = ref_clear & (ref_mndwi > rthr) & (ref_ndwi > -0.10)
+    delta = flood_mndwi - ref_mndwi
 
     candidate = (
         common_clear
         & flood_water
-        & ~pre_water
+        & ~reference_water
         & np.isfinite(delta)
-        & (delta > 0.10)
+        & (delta > 0.08)
         & np.isfinite(slope)
         & (slope <= 7)
     )
@@ -731,12 +738,12 @@ def build_observed_mask_s2(out: Path) -> None:
         shape(g) for g, val in shapes(candidate.astype("uint8"), mask=candidate, transform=tr)
         if int(val) == 1
     ]
-    gdf = gpd.GeoDataFrame({"class": ["observed_flood"] * len(geoms)}, geometry=geoms, crs=crs)
     vector_path = out / "processed" / "observed_flood_mask_2024.geojson"
-    if len(gdf):
+    if geoms:
+        gdf = gpd.GeoDataFrame({"class": ["observed_flood"] * len(geoms)}, geometry=geoms, crs=crs)
         gdf = gdf[gdf.geometry.area >= 1000].copy()
-        gdf["area_m2"] = gdf.geometry.area
         if len(gdf):
+            gdf["area_m2"] = gdf.geometry.area
             gdf.to_crs("EPSG:4326").to_file(vector_path, driver="GeoJSON")
         else:
             write_json(vector_path, {"type": "FeatureCollection", "features": []})
@@ -751,9 +758,9 @@ def build_observed_mask_s2(out: Path) -> None:
         fh.write(qc_valid, 1)
 
     fig, axes = plt.subplots(1, 4, figsize=(18, 6))
-    axes[0].imshow(pre_mndwi, cmap="gray", vmin=-1, vmax=1); axes[0].set_title("Pre-flood MNDWI")
+    axes[0].imshow(ref_mndwi, cmap="gray", vmin=-1, vmax=1); axes[0].set_title("Post-recession reference MNDWI")
     axes[1].imshow(flood_mndwi, cmap="gray", vmin=-1, vmax=1); axes[1].set_title("Flood-period MNDWI")
-    axes[2].imshow(common_clear, cmap="gray"); axes[2].set_title("Clear in both scenes")
+    axes[2].imshow(common_clear, cmap="gray"); axes[2].set_title("Usable in both scenes")
     axes[3].imshow(candidate, cmap="Blues"); axes[3].set_title("Observed flood baseline — REQUIRES QC")
     for a in axes:
         a.axis("off")
@@ -765,18 +772,26 @@ def build_observed_mask_s2(out: Path) -> None:
     flooded_pixels = int(candidate.sum())
     pixel_area_m2 = abs(float(tr.a * tr.e))
     meta = {
-        "source": "Sentinel-2 L2A change detection via Element84 Earth Search",
-        "fallback_reason": "No Sentinel-1 acquisitions were returned for the Atbasar 2024 window by Planetary Computer, Copernicus Data Space STAC, or Element84 Earth Search probes.",
-        "method": "SCL cloud/shadow/snow masking; MNDWI + NDWI open-water test; flood-minus-pre change > 0.10; slope<=7 degrees; JRC >=90% permanent-water exclusion where available; morphology.",
-        "pre_mndwi_threshold": pthr,
+        "source": "Sentinel-2 L2A flood-vs-post-recession change detection via Element84 Earth Search",
+        "fallback_reason": (
+            "No Sentinel-1 acquisition was found for the Atbasar 2024 event window. "
+            "The clear early-April optical scene is snow/ice-heavy, so a clear post-recession "
+            "reference is used instead of pretending it is a valid pre-flood open-water baseline."
+        ),
+        "method": (
+            "SCL cloud/shadow/snow masking; MNDWI + NDWI open-water test; flood-minus-post-reference "
+            "MNDWI change > 0.08; slope<=7 degrees; JRC >=90% permanent-water exclusion where available; morphology."
+        ),
+        "reference_mndwi_threshold": rthr,
         "flood_mndwi_threshold": fthr,
         "common_clear_fraction": clear_fraction,
         "observed_flood_pixels": flooded_pixels,
         "observed_flood_area_m2_raw_pixel_count": flooded_pixels * pixel_area_m2,
         "status": "AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC",
         "caveats": [
-            "Optical imagery cannot observe through cloud and can miss turbid, shallow, vegetated or ice-covered floodwater.",
-            "The mask is conservative and only evaluates pixels clear in both selected scenes.",
+            "Flood water still present in the post-recession scene will be conservatively omitted.",
+            "Optical imagery can miss turbid, shallow, vegetated or cloud-obscured floodwater.",
+            "The mask evaluates only pixels usable in both selected scenes.",
             "This is observational evidence, not a hydrodynamic model.",
             "Visual QC is mandatory before using this mask as validation evidence."
         ],
@@ -784,10 +799,9 @@ def build_observed_mask_s2(out: Path) -> None:
     sidecar(dst, meta)
     sidecar(qc_valid_path, {
         "source": "Sentinel-2 SCL",
-        "meaning": "1 = clear in both selected pre-flood and flood-period scenes",
+        "meaning": "1 = usable in both flood-period and post-recession reference scenes",
     })
     write_json(out / "metadata" / "flood_mask_method.json", meta)
-
 
 def fetch_population(cfg: dict, out: Path) -> None:
     west, south, east, north = cfg["analysis_bbox_wgs84"]
