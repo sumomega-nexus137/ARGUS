@@ -20,8 +20,8 @@ jobs:
         run: |
           python - <<'PY'
           import json, urllib.parse, urllib.request
-          bbox="68.15,51.68,68.58,51.95"
-          dt="2024-03-20T00:00:00Z/2024-04-25T23:59:59Z"
+          bbox="67.0,50.5,70.0,53.0"
+          dt="2024-01-01T00:00:00Z/2024-12-31T23:59:59Z"
           urls={
             "cdse": "https://stac.dataspace.copernicus.eu/v1/search?"+urllib.parse.urlencode({"collections":"sentinel-1-grd","bbox":bbox,"datetime":dt,"limit":10}),
             "pc_rtc": "https://planetarycomputer.microsoft.com/api/stac/v1/search?"+urllib.parse.urlencode({"collections":"sentinel-1-rtc","bbox":bbox,"datetime":dt,"limit":10}),
