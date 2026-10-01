@@ -191,6 +191,62 @@ def main():
             report,
             True,
         )
+
+        scenario_manifest = base / "scenarios" / "atbasar" / "manifest.json"
+        add(report, "scenario:manifest", scenario_manifest.exists(), str(scenario_manifest), True)
+        if scenario_manifest.exists():
+            try:
+                sm = json.loads(scenario_manifest.read_text(encoding="utf-8"))
+                members = sm.get("members", [])
+                add(report, "scenario:members", len(members) >= 3, f"members={len(members)}", True)
+                missing_frames = []
+                for member in members:
+                    for frame in member.get("frames", []):
+                        p = scenario_manifest.parent / frame["depth_path"]
+                        if not p.exists():
+                            missing_frames.append(str(p))
+                add(report, "scenario:frame_files", not missing_frames, f"missing={missing_frames[:10]}", True)
+            except Exception as exc:
+                add(report, "scenario:manifest_parse", False, repr(exc), True)
+
+        validate_raster(
+            base / "validation" / "atbasar" / "atbasar-2024" / "modelled.tif",
+            expected_crs,
+            report,
+            True,
+        )
+        validate_geojson(
+            base / "validation" / "atbasar" / "atbasar-2024" / "aoi.geojson",
+            report,
+            True,
+            False,
+        )
+
+        calibration = base / "scenarios" / "atbasar" / "calibration_metrics.json"
+        add(report, "scenario:calibration_metrics", calibration.exists(), str(calibration), True)
+        if calibration.exists():
+            try:
+                cm = json.loads(calibration.read_text(encoding="utf-8"))
+                hold = cm.get("spatial_holdout_metrics_same_event", {})
+                iou = hold.get("iou")
+                evaluated = int(hold.get("evaluated_cells") or 0)
+                positives = int(hold.get("positives_observed") or 0)
+                add(
+                    report,
+                    "scenario:holdout_metrics_computable",
+                    iou is not None and evaluated > 0 and positives > 0,
+                    f"iou={iou}, evaluated={evaluated}, observed_positive={positives}",
+                    True,
+                )
+                add(
+                    report,
+                    "scenario:scientific_label",
+                    cm.get("not_a_hydrodynamic_model") is True,
+                    "must remain explicitly labelled terrain-conditioned proxy",
+                    True,
+                )
+            except Exception as exc:
+                add(report, "scenario:calibration_parse", False, repr(exc), True)
     else:
         validate_csv(
             base / "curated" / "hydrology" / "kylshakty_2024_observations.csv",
