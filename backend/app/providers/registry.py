@@ -139,7 +139,53 @@ class OsmRoadsProvider(DataProvider):
         return ProviderResult([], source="OpenStreetMap", mode="CACHED")
 
 
+class TasqynForecastProvider(DataProvider):
+    """Tasqyn official flood forecast feed. NO public API is assumed: requires an authorized integration endpoint.
+
+    When ``ARGUS_TASQYN_URL`` is supplied the raw payload is fetched and kept as OFFICIAL_FORECAST context only; the
+    field mapping must be agreed with the agency before it is used for scenario conditioning."""
+
+    key, layer, source, default_schedule_min = "tasqyn", "tasqyn", "Tasqyn", 60
+    env_endpoint = "ARGUS_TASQYN_URL"
+
+    def fetch(self, area: dict) -> ProviderResult:
+        if not self.configured():
+            raise ProviderNotConfigured(self.key)
+        data = self._get_json(f"{self.endpoint()}?lat={area['center'][1]}&lon={area['center'][0]}")
+        return ProviderResult([{"kind": "official_forecast_raw", "payload": data}], source="Tasqyn", mode="LIVE",
+                              quality="OFFICIAL_FORECAST")
+
+
+class _OpenMeteoProvider(DataProvider):
+    """Public Open-Meteo feeds (no key). GLOBAL_MODEL context; see app/providers/open_meteo.py."""
+
+    kind = "glofas"
+
+    def configured(self) -> bool:
+        from app.core.config import get_settings
+
+        return bool(get_settings().open_meteo_enabled)
+
+    def fetch(self, area: dict) -> ProviderResult:
+        from app.providers.open_meteo import live_context
+
+        if not self.configured():
+            raise ProviderNotConfigured(self.key)
+        res = live_context(area["id"], area["center"][1], area["center"][0], self.kind, refresh=True)
+        if res["mode"] != "LIVE":
+            raise RuntimeError(res.get("message") or res["mode"])
+        return ProviderResult([res["data"]], source=res["source"], mode="LIVE", quality="GLOBAL_MODEL")
+
+
+class OpenMeteoGlofasProvider(_OpenMeteoProvider):
+    key, layer, source, default_schedule_min, kind = "open_meteo_glofas", "glofas", "Open-Meteo GloFAS v4", 60, "glofas"
+
+
+class OpenMeteoForecastProvider(_OpenMeteoProvider):
+    key, layer, source, default_schedule_min, kind = "open_meteo_forecast", "weather", "Open-Meteo Forecast", 60, "weather"
+
+
 REGISTRY: dict[str, DataProvider] = {p.key: p for p in [
     KazhydrometHydrologyProvider(), GloFASForecastProvider(), Sentinel1CatalogueProvider(), ImergRainfallProvider(),
-    WeatherProvider(), OsmRoadsProvider(),
+    WeatherProvider(), OsmRoadsProvider(), TasqynForecastProvider(), OpenMeteoGlofasProvider(), OpenMeteoForecastProvider(),
 ]}

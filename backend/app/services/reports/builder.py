@@ -55,6 +55,16 @@ def build_report(db: Session, area: OperationalArea) -> dict:
                                               "robustness": a.get("robustness"), "status": a["evaluation"]["status"]}
                                              for a in opt.result.get("alternatives", [])]}
     ov = area_overview(db, area, include_health=False)
+    historical = None
+    if (area.config or {}).get("data_profile") == "historical":
+        from app.models import ValidationRun
+
+        vr = db.scalars(select(ValidationRun).where(ValidationRun.area_id == area.id, ValidationRun.kind == "REAL")
+                        .order_by(ValidationRun.created_at.desc())).first()
+        historical = {"role": (area.config or {}).get("role"), "limitations": (sc.provenance or {}).get("limitations", []),
+                      "assumptions": (area.config or {}).get("assumptions", []),
+                      "validation": None if vr is None else {**{k: vr.metrics.get(k) for k in ("iou", "precision", "recall", "f1")},
+                                                             "label": (vr.result or {}).get("label")}}
     return {
         "generated_at": datetime.now(UTC).isoformat(), "op_time": now.isoformat(), "clock_mode": area.clock_mode,
         "area": {"id": area.id, "names": {"kk": area.name_kk, "ru": area.name_ru, "en": area.name_en},
@@ -78,9 +88,12 @@ def build_report(db: Session, area: OperationalArea) -> dict:
         "stress_test": stress, "alternatives": alternatives,
         "data_sources": area_freshness(db, area), "external_offline": outage_enabled(),
         "assumptions": {"impact": A.as_dict(), "demo": area.is_demo,
-                        "notes": ["All DEMO fixtures are synthetic.", "Economic values are ranges based on stated assumptions.",
-                                  "Flood surfaces come from precomputed scenario members (no hydrodynamic simulation in ARGUS)."]},
+                        "notes": (["All DEMO fixtures are synthetic.", "Economic values are ranges based on stated assumptions.",
+                                   "Flood surfaces come from precomputed scenario members (no hydrodynamic simulation in ARGUS)."]
+                                  if area.is_demo else
+                                  [a["note"] for a in (area.config or {}).get("assumptions", [])] +
+                                  ["Flood surfaces come from precomputed scenario members (no hydrodynamic simulation in ARGUS)."])},
         "model_versions": [{"component": mv.component, "version": mv.version} for mv in
                            db.scalars(select(ModelVersion).where(ModelVersion.active.is_(True)).order_by(ModelVersion.component))],
-        "data_version": area.data_version,
+        "data_version": area.data_version, "historical": historical,
     }

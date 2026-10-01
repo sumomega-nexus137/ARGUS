@@ -62,7 +62,7 @@ class PopulationZone(Base):
     sector_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     geom: Mapped[Any] = mapped_column(GeometryType("POLYGON"))
     population: Mapped[int] = mapped_column(Integer)
-    vulnerable_share: Mapped[float | None] = mapped_column(Float, nullable=True, default=0.0)
+    vulnerable_share: Mapped[float | None] = mapped_column(Float, nullable=True)
     source: Mapped[str] = mapped_column(String(255))
     mode: Mapped[str] = mapped_column(String(16), default="SIMULATION")
 

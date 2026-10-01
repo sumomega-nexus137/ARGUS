@@ -193,3 +193,21 @@ def history(area: OperationalArea = Depends(area_or_404), _: User = Depends(curr
         return {"available": False, "mode": "DEMO" if area.is_demo else None}
     return clean({"available": True, **data, "scenario_note": (_bundle_file(area, "scenario.json") or {}).get("note"),
                   "scenario_limitations": (_bundle_file(area, "scenario.json") or {}).get("limitations", [])})
+
+
+@router.get("/{area_id}/context/live")
+def live_context(refresh: bool = False, area: OperationalArea = Depends(area_or_404), db: Session = Depends(get_db),
+                 _: User = Depends(current_user)) -> dict:
+    """Current GLOBAL_MODEL context (Open-Meteo GloFAS v4 + weather) — server-side fetch, cached, degraded-mode safe.
+    Not part of a historical replay; never overrides local observations."""
+    from app.providers.open_meteo import live_context as fetch_ctx
+    from app.services.ingest.providers import update_live_status
+
+    lat, lon = area.center.y, area.center.x
+    out = {}
+    for kind, layer in (("glofas", "glofas"), ("weather", "weather")):
+        res = fetch_ctx(area.id, lat, lon, kind, refresh=refresh, offline=outage_enabled())
+        update_live_status(db, area, layer, res)
+        out[kind] = res
+    db.commit()
+    return clean({"area_id": area.id, "authority": "GLOBAL_MODEL", "replay_clock": area.clock_mode != "LIVE", **out})

@@ -19,7 +19,7 @@ LABELS = {
            "alternatives": "Баламалар", "sources": "Деректер көздері", "assumptions": "Болжамдар", "models": "Модель нұсқалары",
            "none": "жоқ", "conflicts": "Ресурс қайшылықтары", "generated": "Құрастырылды", "range": "диапазон",
            "status_NORMAL": "ҚАЛЫПТЫ", "status_WATCH": "БАҚЫЛАУ", "status_WARNING": "ЕСКЕРТУ", "status_CRITICAL": "СЫНИ",
-           "PLAN_VALID": "ЖОСПАР ЖАРАМДЫ", "PLAN_AT_RISK": "ЖОСПАР ҚАУІПТЕ"},
+           "PLAN_VALID": "ЖОСПАР ЖАРАМДЫ", "PLAN_AT_RISK": "ЖОСПАР ҚАУІПТЕ", "floor_area": "Су басқан еден ауданы, м²", "valuation_na": "Ақшалай бағалау жоқ — бекітілген өңірлік құн кестесі жоқ", "hist": "ТАРИХИ 2024 ҚАЙТА ҚҰРУ — жаттығу сағаты; жоспарлар мен ресурстар — СИМУЛЯЦИЯ", "limits": "Ғылыми шектеулер", "validation": "Валидация — ТАРИХИ БІР ОҚИҒА ІШІНДЕГІ КЕҢІСТІКТІК HOLDOUT (болашақ болжам дәлдігі емес)", "qc": "Бақыланған маска: автоматты, сапа бақылауын талап етеді (Sentinel-2 балама көзі)"},
     "ru": {"title": "Оперативный брифинг", "area": "Операционный район", "status": "Обстановка", "scenario": "Сценарий",
            "time": "Операционное время", "demo": "ДЕМО-ДАННЫЕ / МОДЕЛИРОВАНИЕ — не реальные измерения", "impact": "Текущее воздействие",
            "peak": "Прогнозный пик", "buildings": "Затронутые здания", "population": "Население в зоне воздействия (агрегировано)",
@@ -31,7 +31,7 @@ LABELS = {
            "alternatives": "Альтернативы", "sources": "Источники данных", "assumptions": "Допущения", "models": "Версии моделей",
            "none": "нет", "conflicts": "Конфликты ресурсов", "generated": "Сформировано", "range": "диапазон",
            "status_NORMAL": "НОРМА", "status_WATCH": "НАБЛЮДЕНИЕ", "status_WARNING": "ПРЕДУПРЕЖДЕНИЕ", "status_CRITICAL": "КРИТИЧНО",
-           "PLAN_VALID": "ПЛАН ВЫПОЛНИМ", "PLAN_AT_RISK": "ПЛАН ПОД УГРОЗОЙ"},
+           "PLAN_VALID": "ПЛАН ВЫПОЛНИМ", "PLAN_AT_RISK": "ПЛАН ПОД УГРОЗОЙ", "floor_area": "Затопленная площадь этажей, м²", "valuation_na": "Денежная оценка недоступна — нет утверждённой региональной таблицы стоимости", "hist": "ИСТОРИЧЕСКАЯ РЕКОНСТРУКЦИЯ 2024 — учебные часы; планы и ресурсы — МОДЕЛИРОВАНИЕ", "limits": "Научные ограничения", "validation": "Валидация — ИСТОРИЧЕСКИЙ ПРОСТРАНСТВЕННЫЙ HOLDOUT ТОГО ЖЕ СОБЫТИЯ (не точность будущего прогноза)", "qc": "Наблюдаемая маска: автоматическая, требует контроля качества (резервный источник Sentinel-2)"},
     "en": {"title": "Operational briefing", "area": "Operational area", "status": "Situation", "scenario": "Scenario",
            "time": "Operational time", "demo": "DEMO DATA / SIMULATION — not real measurements", "impact": "Current impact",
            "peak": "Forecast peak", "buildings": "Buildings affected", "population": "Population exposed (aggregated)",
@@ -43,7 +43,7 @@ LABELS = {
            "alternatives": "Alternatives", "sources": "Data sources", "assumptions": "Assumptions", "models": "Model versions",
            "none": "none", "conflicts": "Resource conflicts", "generated": "Generated", "range": "range",
            "status_NORMAL": "NORMAL", "status_WATCH": "WATCH", "status_WARNING": "WARNING", "status_CRITICAL": "CRITICAL",
-           "PLAN_VALID": "PLAN VALID", "PLAN_AT_RISK": "PLAN AT RISK"},
+           "PLAN_VALID": "PLAN VALID", "PLAN_AT_RISK": "PLAN AT RISK", "floor_area": "Exposed floor area, m²", "valuation_na": "Monetary valuation not available — no approved regional unit-value table", "hist": "HISTORICAL 2024 RECONSTRUCTION — exercise clock; plans and resources are SIMULATION", "limits": "Scientific limitations", "validation": "Validation — HISTORICAL SAME-EVENT SPATIAL HOLDOUT (not future forecast accuracy)", "qc": "Observed mask: automated, requires QC (Sentinel-2 fallback source)"},
 }
 
 ROAD_STATE = {
@@ -86,14 +86,17 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:3p
 <h1>ARGUS FloodOps — {{ L.title }}</h1>
 <div class="muted">{{ L.area }}: <b>{{ area_name }}</b> · {{ L.time }}: {{ fmt(r.op_time) }} ({{ r.clock_mode }}) · {{ L.generated }}: {{ fmt(r.generated_at) }}</div>
 {% if r.area.is_demo %}<p class="demo">{{ L.demo }}</p>{% endif %}
+{% if r.historical %}<p class="demo">{{ L.hist }}</p>{% endif %}
 <p>{{ L.status }}: <span class="badge">{{ L['status_' + r.status] }}</span> · {{ L.scenario }}: {{ r.scenario.name }} ({{ r.scenario.mode }}, {{ r.scenario.member }}, {{ r.scenario.model_version }})</p>
 <h2>{{ L.impact }} / {{ L.peak }}</h2>
 <table><tr><th></th><th>{{ L.impact }}</th><th>{{ L.peak }} ({{ rel(r.impact_peak.t_min) }})</th></tr>
 <tr><td>{{ L.buildings }}</td><td>{{ r.impact_now.buildings.affected }}</td><td>{{ r.impact_peak.buildings.affected }}</td></tr>
 <tr><td>{{ L.population }}</td><td>{{ r.impact_now.population.exposed }}</td><td>{{ r.impact_peak.population.exposed }}</td></tr>
 <tr><td>{{ L.facilities }}</td><td>{{ r.impact_now.facilities_exposed }}</td><td>{{ r.impact_peak.facilities_exposed }}</td></tr>
-<tr><td>{{ L.exposure }} ({{ L.range }}, KZT)</td><td>{{ money(r.impact_now.economic.asset_exposure) }}</td><td>{{ money(r.impact_peak.economic.asset_exposure) }}</td></tr>
-<tr><td>{{ L.damage }} ({{ L.range }}, KZT)</td><td>{{ money(r.impact_now.economic.expected_damage) }}</td><td>{{ money(r.impact_peak.economic.expected_damage) }}</td></tr></table>
+{% if r.impact_now.economic.asset_exposure %}<tr><td>{{ L.exposure }} ({{ L.range }}, KZT)</td><td>{{ money(r.impact_now.economic.asset_exposure) }}</td><td>{{ money(r.impact_peak.economic.asset_exposure) }}</td></tr>
+<tr><td>{{ L.damage }} ({{ L.range }}, KZT)</td><td>{{ money(r.impact_now.economic.expected_damage) }}</td><td>{{ money(r.impact_peak.economic.expected_damage) }}</td></tr>
+{% else %}<tr><td>{{ L.floor_area }}</td><td>{{ r.impact_now.economic.floor_area_exposed_m2 }}</td><td>{{ r.impact_peak.economic.floor_area_exposed_m2 }}</td></tr>
+<tr><td colspan="3"><i>{{ L.valuation_na }}</i></td></tr>{% endif %}</table>
 <h2>{{ L.roads }}</h2><table>{% for x in r.critical_roads %}<tr><td>{{ x.road_id }}</td><td>{{ name(x.names) }}</td><td>{{ state(x.state) }}</td><td>{% if x.closes_at is not none %}{{ L.closes }} {{ rel(x.closes_at) }}{% endif %}</td></tr>{% else %}<tr><td>{{ L.none }}</td></tr>{% endfor %}</table>
 <h2>{{ L.sectors }}</h2><table>{% for s in r.sectors %}<tr><td>{{ name(s.names) }}</td><td>{% if s.isolated_now %}{{ L.isolated }}{% elif s.access_lost_at is not none %}{{ L.access_lost }} {{ rel(s.access_lost_at) }}{% else %}—{% endif %}</td><td>{{ s.population }}</td></tr>{% endfor %}</table>
 {% if r.plan %}<h2>{{ L.plan }}: {{ r.plan.name }} v{{ r.plan.version }} — {{ L[r.plan.health] if r.plan.health else '' }}</h2>
@@ -104,6 +107,8 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:3p
 {% if r.alternatives %}<h2>{{ L.alternatives }} ({{ r.alternatives.policy }})</h2><table>{% for a in r.alternatives.alternatives %}<tr><td>{{ a.id }} {{ a.label }}</td><td>{{ a.status }}</td><td>{{ a.metrics.tasks_selected }}</td><td>{% if a.robustness %}{{ a.robustness.n_feasible }}/{{ a.robustness.n_scenarios }}{% endif %}</td></tr>{% endfor %}</table>{% endif %}
 <h2>{{ L.sources }}</h2><table>{% for s in r.data_sources %}<tr><td>{{ s.layer }}</td><td>{{ s.source }}</td><td>{{ s.mode }}</td><td>{{ s.freshness }}</td><td>{{ fmt(s.last_success_at) if s.last_success_at else '—' }}</td></tr>{% endfor %}</table>
 <h2>{{ L.assumptions }}</h2><ul>{% for n in r.assumptions.notes %}<li>{{ n }}</li>{% endfor %}</ul>
+{% if r.historical and r.historical.validation %}<h2>{{ L.validation }}</h2><p>IoU {{ r.historical.validation.iou }} · Precision {{ r.historical.validation.precision }} · Recall {{ r.historical.validation.recall }} · F1 {{ r.historical.validation.f1 }}</p><p><i>{{ L.qc }}</i></p>{% endif %}
+{% if r.historical and r.historical.limitations %}<h2>{{ L.limits }}</h2><ul>{% for n in r.historical.limitations %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
 <h2>{{ L.models }}</h2><p>{% for m in r.model_versions %}{{ m.component }} {{ m.version }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
 </body></html>"""
 

@@ -97,11 +97,39 @@ class RasterManifestProvider(FloodScenarioProvider):
         return lvl.astype(np.float32)
 
     def relative_level_points(self, member: str, xs: np.ndarray, ys: np.ndarray, t_mins: np.ndarray) -> np.ndarray:
+        """Point queries sample only the requested cells of each native frame, then interpolate in time — identical
+        to sampling ``relative_level_grid`` but O(points × frames) instead of O(grid × times)."""
         rows, cols, inside = self._grid.rowcol(xs, ys)
-        out = np.full((len(rows), len(t_mins)), np.nan, dtype=np.float32)
-        for j, t in enumerate(np.asarray(t_mins, dtype=float)):
-            g = self.relative_level_grid(member, float(t))
-            out[:, j] = g[rows, cols]
+        frames = self._members[member]["frames"]
+        fts = np.array([float(f["offset_min"]) for f in frames])
+        D = np.stack([_read(str(self.root / f["depth_path"]))[0][rows, cols] for f in frames], axis=1)
+        hand = self._hand[rows, cols] if self._hand is not None else None
+        ts = np.asarray(t_mins, dtype=float)
+        out = np.full((len(rows), len(ts)), np.nan, dtype=np.float32)
+        rl = self.river_level(member, ts) if hand is not None else None
+        for j, t in enumerate(ts):
+            if t <= fts[0]:
+                ia = ib = 0
+                w = 0.0
+            elif t >= fts[-1]:
+                ia = ib = len(fts) - 1
+                w = 0.0
+            else:
+                ib = int(np.searchsorted(fts, t, side="left"))
+                ia = ib - 1 if fts[ib] != t else ib
+                span = fts[ib] - fts[ia]
+                w = float((t - fts[ia]) / span) if span else 0.0
+            da, db = D[:, ia], D[:, ib]
+            if ia == ib:
+                d = da
+            else:
+                d = np.where(np.isnan(da) & np.isnan(db), np.nan,
+                             np.where(np.isnan(da), 0.0, da) * (1 - w) + np.where(np.isnan(db), 0.0, db) * w)
+            lvl = np.where(d > 0, d, np.nan)
+            if hand is not None:
+                below = float(rl[j]) - hand
+                lvl = np.where(np.isnan(lvl) & (below > -1.5) & (below <= 0), below, lvl)
+            out[:, j] = lvl
         out[~inside, :] = np.nan
         return out
 

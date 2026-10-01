@@ -30,6 +30,10 @@ def freshness(ps: ProviderStatus, now: datetime) -> dict:
         cls = "NOT_CONFIGURED"
     elif ps.status == "OFFLINE":
         cls = "OFFLINE"
+    elif ps.status == "NOT_POLLED":
+        cls = "NOT_POLLED"
+    elif ps.status == "DEGRADED":
+        cls = "STALE" if age is not None and age > (get_settings().open_meteo_stale_after_min) else "CACHED"
     elif ps.mode == "STATIC":
         cls = "STATIC"
     elif ps.mode == "SIMULATION":
@@ -55,9 +59,14 @@ def freshness(ps: ProviderStatus, now: datetime) -> dict:
 
 
 def area_freshness(db: Session, area: OperationalArea) -> list[dict]:
+    """Freshness per source. External live feeds are aged against the WALL CLOCK (they describe current conditions);
+    local / historical layers against the area's operational clock."""
+    from datetime import UTC
+
     now = area_now(area)
+    wall = datetime.now(UTC)
     rows = db.scalars(select(ProviderStatus).where(ProviderStatus.area_id == area.id).order_by(ProviderStatus.layer))
-    return [freshness(r, now) for r in rows]
+    return [freshness(r, wall if (r.is_external and r.mode == "LIVE") else now) for r in rows]
 
 
 def set_outage(db: Session, enabled: bool, actor: Actor) -> int:
@@ -72,9 +81,9 @@ def set_outage(db: Session, enabled: bool, actor: Actor) -> int:
         else:
             p = REGISTRY.get(ps.provider)
             configured = bool(p and p.configured())
-            ps.status = "OK" if configured else "NOT_CONFIGURED"
+            ps.status = ("NOT_POLLED" if ps.provider.startswith("open_meteo") else "OK") if configured else "NOT_CONFIGURED"
             ps.message = None if configured else "Adapter contract available; credentials / endpoint not configured"
-            ps.quality = None
+            ps.quality = "GLOBAL_MODEL" if ps.provider.startswith("open_meteo") else None
         n += 1
     record(db, actor, "PROVIDER_OUTAGE_SIMULATION", "providers", None,
            f"External provider outage simulation {'ENABLED' if enabled else 'DISABLED'}", details={"providers": n})
@@ -84,8 +93,10 @@ def set_outage(db: Session, enabled: bool, actor: Actor) -> int:
 def poll_once(db: Session) -> list[dict]:
     """Run every configured external adapter once; failures never propagate."""
     out = []
+    from datetime import UTC
+
     for area in db.scalars(select(OperationalArea)):
-        now = area_now(area)
+        now = datetime.now(UTC)
         stations = db.scalars(select(HydroStation.id).where(HydroStation.area_id == area.id)).all()
         info = {"id": area.id, "bbox": area.bbox, "center": [area.center.x, area.center.y],
                 "stations": [{"id": sid} for sid in stations]}
@@ -140,3 +151,23 @@ class ProviderScheduler:
                     poll_once(db)
             except Exception:
                 log.exception("provider worker iteration failed")
+
+
+def update_live_status(db: Session, area: OperationalArea, layer: str, res: dict) -> None:
+    """Mirror a live-context result into the provider status row (honest mode; wall-clock timestamps)."""
+    ps = db.get(ProviderStatus, f"{area.id}:{layer}")
+    if ps is None:
+        return
+    from datetime import UTC
+
+    ps.last_attempt_at = datetime.now(UTC)
+    if res["mode"] == "LIVE":
+        ps.status, ps.message = "OK", res.get("message")
+        ps.last_success_at = datetime.fromisoformat(res["fetched_at"])
+    elif res["mode"] in ("CACHED", "STALE"):
+        ps.status, ps.message = "DEGRADED", res.get("message")
+        ps.last_success_at = datetime.fromisoformat(res["fetched_at"])
+    elif res["mode"] == "NOT_CONFIGURED":
+        ps.status, ps.message = "NOT_CONFIGURED", res.get("message")
+    else:
+        ps.status, ps.message = "OFFLINE", res.get("message")
