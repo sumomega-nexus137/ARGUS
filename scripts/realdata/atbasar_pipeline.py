@@ -48,7 +48,9 @@ CFG_PATH = ROOT / "data" / "realdata" / "atbasar" / "config.json"
 CURATED = ROOT / "data" / "realdata" / "atbasar"
 
 STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
+EARTH_SEARCH_URL = "https://earth-search.aws.element84.com/v1"
 S1_COLLECTION = "sentinel-1-rtc"
+S2_COLLECTION = "sentinel-2-l2a"
 JRC_COLLECTION = "jrc-gsw"
 DEM_BASE = "https://copernicus-dem-30m.s3.amazonaws.com"
 WORLDPOP_URL = (
@@ -86,6 +88,7 @@ def sha256(path: Path) -> str:
 def preflight(out: Path) -> dict:
     urls = {
         "planetary_computer": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/sentinel-1-rtc",
+        "earth_search_sentinel2": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
         "copernicus_dem": DEM_BASE,
         "openstreetmap_overpass": "https://overpass-api.de/api/status",
         "worldpop": WORLDPOP_URL,
@@ -412,6 +415,104 @@ def fetch_sentinel1(cfg: dict, out: Path) -> None:
                           "relative_orbit": c[2], "orbit_state": c[3]})
 
 
+def fetch_sentinel2(cfg: dict, out: Path) -> None:
+    """Fetch a clear pre-flood/flood-period Sentinel-2 L2A pair.
+
+    This is the documented optical fallback when no Sentinel-1 acquisition is
+    available for the 2024 Atbasar event. Cloud/snow masking is applied later
+    from the Scene Classification Layer (SCL).
+    """
+    cat = pystac_client.Client.open(EARTH_SEARCH_URL)
+    ev = cfg["event"]
+    items = list(cat.search(
+        collections=[S2_COLLECTION],
+        bbox=cfg["analysis_bbox_wgs84"],
+        datetime=f"{ev['search_start']}T00:00:00Z/{ev['search_end']}T23:59:59Z",
+        max_items=200,
+    ).items())
+    pre_target = datetime.fromisoformat(ev["pre_flood_target_date"]).replace(tzinfo=timezone.utc)
+    flood_target = datetime.fromisoformat(ev["flood_target_date"]).replace(tzinfo=timezone.utc)
+    flood_start = datetime.fromisoformat(ev["flood_window_start"]).replace(tzinfo=timezone.utc)
+    flood_end = datetime.fromisoformat(ev["flood_window_end"] + "T23:59:59").replace(tzinfo=timezone.utc)
+
+    required_assets = {"green", "nir", "swir16", "scl"}
+    candidates = []
+    diagnostics = []
+    for item in items:
+        dt = item.datetime if item.datetime and item.datetime.tzinfo else (
+            item.datetime.replace(tzinfo=timezone.utc) if item.datetime else None
+        )
+        cov = _coverage(item, cfg["analysis_bbox_wgs84"])
+        cloud = float(item.properties.get("eo:cloud_cover") or 100.0)
+        ok_assets = required_assets.issubset(item.assets)
+        diagnostics.append({
+            "id": item.id,
+            "datetime": dt.isoformat() if dt else None,
+            "coverage": cov,
+            "cloud_cover_percent": cloud,
+            "required_assets_present": ok_assets,
+            "assets": sorted(item.assets.keys()),
+        })
+        if dt and cov >= 0.9 and ok_assets:
+            candidates.append((item, dt, cov, cloud))
+
+    write_json(out / "metadata" / "sentinel2_candidates.json", {
+        "catalogue": EARTH_SEARCH_URL,
+        "collection": S2_COLLECTION,
+        "item_count": len(items),
+        "items": diagnostics,
+    })
+
+    pre = [x for x in candidates if x[1] < flood_start]
+    flood = [x for x in candidates if flood_start <= x[1] <= flood_end]
+    if not pre or not flood:
+        raise RuntimeError(
+            f"No suitable Sentinel-2 pair: pre={len(pre)} flood={len(flood)} "
+            f"from {len(items)} catalogue items"
+        )
+
+    # Date proximity matters, but avoid selecting an almost fully cloudy scene.
+    # 0.15 means 20% cloud cover costs about three days in the score.
+    p = min(pre, key=lambda x: abs((x[1] - pre_target).total_seconds()) / 86400 + 0.15 * x[3])
+    f = min(flood, key=lambda x: abs((x[1] - flood_target).total_seconds()) / 86400 + 0.15 * x[3])
+
+    selection = {
+        "source": "Sentinel-2 L2A via Element84 Earth Search",
+        "reason": "Optical fallback because Sentinel-1 catalogue probes returned zero acquisitions for the Atbasar 2024 search window.",
+        "pre_item": p[0].id,
+        "pre_datetime": p[1].isoformat(),
+        "pre_coverage": p[2],
+        "pre_cloud_cover_percent": p[3],
+        "flood_item": f[0].id,
+        "flood_datetime": f[1].isoformat(),
+        "flood_coverage": f[2],
+        "flood_cloud_cover_percent": f[3],
+        "selection_rule": ">=90% AOI coverage, required spectral/SCL assets, nearest target dates with cloud penalty",
+    }
+    write_json(out / "metadata" / "sentinel2_selection.json", selection)
+
+    for label, chosen in (("pre", p), ("flood", f)):
+        item = chosen[0]
+        for asset, nearest in (("green", False), ("nir", False), ("swir16", False), ("scl", True)):
+            dst = out / "processed" / f"sentinel2_{label}_{asset}.tif"
+            _clip_remote(
+                item.assets[asset].href,
+                cfg["analysis_bbox_wgs84"],
+                dst,
+                cfg["projected_crs"],
+                20.0,
+                resampling=Resampling.nearest if nearest else Resampling.bilinear,
+            )
+            sidecar(dst, {
+                "source": "Sentinel-2 L2A via Element84 Earth Search",
+                "item_id": item.id,
+                "datetime": chosen[1].isoformat(),
+                "asset": asset,
+                "cloud_cover_percent_scene": chosen[3],
+                "working_resolution_m": 20,
+            })
+
+
 def fetch_jrc(cfg: dict, out: Path) -> None:
     cat = pystac_client.Client.open(STAC_URL, modifier=planetary_computer.sign_inplace)
     items = list(cat.search(collections=[JRC_COLLECTION], bbox=cfg["analysis_bbox_wgs84"], max_items=20).items())
@@ -472,7 +573,7 @@ def aligned(reference: Path, moving: Path, nearest=False, nodata=np.nan):
         return dst
 
 
-def build_observed_mask(out: Path) -> None:
+def build_observed_mask_s1(out: Path) -> None:
     pre = out / "processed" / "sentinel1_pre_vv.tif"
     flood = out / "processed" / "sentinel1_flood_vv.tif"
     slope_p = out / "processed" / "slope_atbasar_deg.tif"
@@ -533,6 +634,147 @@ def build_observed_mask(out: Path) -> None:
         ]
     }
     sidecar(dst, meta)
+    write_json(out / "metadata" / "flood_mask_method.json", meta)
+
+
+def _safe_index(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    den = a + b
+    out = np.full(a.shape, np.nan, dtype="float32")
+    good = np.isfinite(a) & np.isfinite(b) & (np.abs(den) > 1e-6)
+    out[good] = (a[good] - b[good]) / den[good]
+    return out
+
+
+def _s2_clear(scl: np.ndarray) -> np.ndarray:
+    """Sentinel-2 SCL clear land/water mask.
+
+    Excludes no-data, saturated pixels, cloud shadow, medium/high cloud,
+    cirrus, and snow/ice. Low-probability cloud class 7 is retained and is
+    still subject to the spectral water tests.
+    """
+    bad = np.isin(np.rint(scl).astype("int16"), [0, 1, 3, 8, 9, 10, 11])
+    return np.isfinite(scl) & ~bad
+
+
+def build_observed_mask_s2(out: Path) -> None:
+    """Derive a conservative 2024 observed-inundation baseline from Sentinel-2.
+
+    The mask represents newly detected open water between a clear pre-flood
+    scene and a flood-period scene. It is deliberately labelled REQUIRES_QC;
+    snow/ice, cloud gaps and turbid/shallow water remain limitations.
+    """
+    pre_green_p = out / "processed" / "sentinel2_pre_green.tif"
+    flood_green_p = out / "processed" / "sentinel2_flood_green.tif"
+    with rasterio.open(pre_green_p) as ref:
+        pre_green = ref.read(1).astype("float32")
+        profile = ref.profile.copy()
+        tr = ref.transform
+        crs = ref.crs
+
+    pre_nir = aligned(pre_green_p, out / "processed" / "sentinel2_pre_nir.tif")
+    pre_swir = aligned(pre_green_p, out / "processed" / "sentinel2_pre_swir16.tif")
+    pre_scl = aligned(pre_green_p, out / "processed" / "sentinel2_pre_scl.tif", nearest=True)
+
+    flood_green = aligned(pre_green_p, flood_green_p)
+    flood_nir = aligned(pre_green_p, out / "processed" / "sentinel2_flood_nir.tif")
+    flood_swir = aligned(pre_green_p, out / "processed" / "sentinel2_flood_swir16.tif")
+    flood_scl = aligned(pre_green_p, out / "processed" / "sentinel2_flood_scl.tif", nearest=True)
+
+    slope = aligned(pre_green_p, out / "processed" / "slope_atbasar_deg.tif")
+    jrc_p = out / "processed" / "jrc_water_occurrence_utm42n.tif"
+    occurrence = aligned(pre_green_p, jrc_p, nearest=True, nodata=255) if jrc_p.exists() else None
+
+    pre_mndwi = _safe_index(pre_green, pre_swir)
+    pre_ndwi = _safe_index(pre_green, pre_nir)
+    flood_mndwi = _safe_index(flood_green, flood_swir)
+    flood_ndwi = _safe_index(flood_green, flood_nir)
+    pre_clear = _s2_clear(pre_scl)
+    flood_clear = _s2_clear(flood_scl)
+    common_clear = pre_clear & flood_clear
+
+    fthr = float(np.clip(robust_otsu(flood_mndwi[common_clear], 0.05), -0.05, 0.30))
+    pthr = float(np.clip(robust_otsu(pre_mndwi[common_clear], 0.05), -0.05, 0.30))
+    flood_water = flood_clear & (flood_mndwi > fthr) & (flood_ndwi > -0.10)
+    pre_water = pre_clear & (pre_mndwi > pthr) & (pre_ndwi > -0.10)
+    delta = flood_mndwi - pre_mndwi
+
+    candidate = (
+        common_clear
+        & flood_water
+        & ~pre_water
+        & np.isfinite(delta)
+        & (delta > 0.10)
+        & np.isfinite(slope)
+        & (slope <= 7)
+    )
+    if occurrence is not None:
+        candidate &= ~((occurrence != 255) & (occurrence >= 90))
+
+    candidate = binary_closing(candidate, footprint=disk(1))
+    candidate = remove_small_objects(candidate, min_size=12)
+    candidate = remove_small_holes(candidate, area_threshold=12)
+    candidate = binary_fill_holes(candidate)
+
+    dst = out / "processed" / "observed_flood_mask_2024.tif"
+    profile.update(dtype="uint8", count=1, nodata=0, compress="deflate", tiled=True)
+    with rasterio.open(dst, "w", **profile) as fh:
+        fh.write(candidate.astype("uint8"), 1)
+
+    geoms = [
+        shape(g) for g, val in shapes(candidate.astype("uint8"), mask=candidate, transform=tr)
+        if int(val) == 1
+    ]
+    gdf = gpd.GeoDataFrame({"class": ["observed_flood"] * len(geoms)}, geometry=geoms, crs=crs)
+    if len(gdf):
+        gdf = gdf[gdf.geometry.area >= 1000].copy()
+        gdf["area_m2"] = gdf.geometry.area
+    gdf.to_crs("EPSG:4326").to_file(
+        out / "processed" / "observed_flood_mask_2024.geojson", driver="GeoJSON"
+    )
+
+    qc_valid = common_clear.astype("uint8")
+    qc_valid_path = out / "processed" / "sentinel2_common_clear_mask.tif"
+    qc_profile = profile.copy()
+    qc_profile.update(dtype="uint8", nodata=0)
+    with rasterio.open(qc_valid_path, "w", **qc_profile) as fh:
+        fh.write(qc_valid, 1)
+
+    fig, axes = plt.subplots(1, 4, figsize=(18, 6))
+    axes[0].imshow(pre_mndwi, cmap="gray", vmin=-1, vmax=1); axes[0].set_title("Pre-flood MNDWI")
+    axes[1].imshow(flood_mndwi, cmap="gray", vmin=-1, vmax=1); axes[1].set_title("Flood-period MNDWI")
+    axes[2].imshow(common_clear, cmap="gray"); axes[2].set_title("Clear in both scenes")
+    axes[3].imshow(candidate, cmap="Blues"); axes[3].set_title("Observed flood baseline — REQUIRES QC")
+    for a in axes:
+        a.axis("off")
+    plt.tight_layout()
+    fig.savefig(out / "processed" / "flood_mask_qc.png", dpi=160)
+    plt.close(fig)
+
+    clear_fraction = float(common_clear.mean())
+    flooded_pixels = int(candidate.sum())
+    pixel_area_m2 = abs(float(tr.a * tr.e))
+    meta = {
+        "source": "Sentinel-2 L2A change detection via Element84 Earth Search",
+        "fallback_reason": "No Sentinel-1 acquisitions were returned for the Atbasar 2024 window by Planetary Computer, Copernicus Data Space STAC, or Element84 Earth Search probes.",
+        "method": "SCL cloud/shadow/snow masking; MNDWI + NDWI open-water test; flood-minus-pre change > 0.10; slope<=7 degrees; JRC >=90% permanent-water exclusion where available; morphology.",
+        "pre_mndwi_threshold": pthr,
+        "flood_mndwi_threshold": fthr,
+        "common_clear_fraction": clear_fraction,
+        "observed_flood_pixels": flooded_pixels,
+        "observed_flood_area_m2_raw_pixel_count": flooded_pixels * pixel_area_m2,
+        "status": "AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC",
+        "caveats": [
+            "Optical imagery cannot observe through cloud and can miss turbid, shallow, vegetated or ice-covered floodwater.",
+            "The mask is conservative and only evaluates pixels clear in both selected scenes.",
+            "This is observational evidence, not a hydrodynamic model.",
+            "Visual QC is mandatory before using this mask as validation evidence."
+        ],
+    }
+    sidecar(dst, meta)
+    sidecar(qc_valid_path, {
+        "source": "Sentinel-2 SCL",
+        "meaning": "1 = clear in both selected pre-flood and flood-period scenes",
+    })
     write_json(out / "metadata" / "flood_mask_method.json", meta)
 
 
@@ -603,10 +845,12 @@ def validation_layout(cfg: dict, out: Path) -> None:
     aoi = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Atbasar analysis AOI"},
            "geometry":{"type":"Polygon","coordinates":[[[west,south],[east,south],[east,north],[west,north],[west,south]]]}}]}
     write_json(d / "aoi.geojson", aoi)
+    method_path = out / "metadata" / "flood_mask_method.json"
+    method = json.loads(method_path.read_text(encoding="utf-8")) if method_path.exists() else {}
     write_json(d / "metadata.json", {
         "name":"Atbasar 2024 flood",
         "event_date":"2024-04",
-        "observed_source":"Sentinel-1 SAR-derived automatic baseline",
+        "observed_source":method.get("source", "satellite-derived automatic baseline"),
         "observed_status":"REQUIRES_QC",
         "modelled_status":"NOT_LOADED",
         "scientific_note":"Validation metrics must not be computed/presented until modelled.tif exists and the observed mask passes visual QC."
@@ -657,9 +901,19 @@ def main():
     statuses = {}
     run_step("terrain", lambda: fetch_dem(cfg,out), statuses, required=True)
     run_step("osm", lambda: fetch_osm(cfg,out), statuses, required=True)
-    run_step("sentinel1", lambda: fetch_sentinel1(cfg,out), statuses, required=True)
+    run_step("sentinel1", lambda: fetch_sentinel1(cfg,out), statuses, required=False)
     run_step("jrc_water", lambda: fetch_jrc(cfg,out), statuses, required=False)
-    run_step("observed_flood_mask", lambda: build_observed_mask(out), statuses, required=True)
+    if statuses["sentinel1"]["status"] == "OK":
+        statuses["satellite_observation_source"] = {"status": "OK", "source": "Sentinel-1 RTC"}
+        run_step("observed_flood_mask", lambda: build_observed_mask_s1(out), statuses, required=True)
+    else:
+        run_step("sentinel2_fallback", lambda: fetch_sentinel2(cfg,out), statuses, required=True)
+        statuses["satellite_observation_source"] = {
+            "status": "OK",
+            "source": "Sentinel-2 L2A",
+            "reason": "Sentinel-1 unavailable for the historical event window",
+        }
+        run_step("observed_flood_mask", lambda: build_observed_mask_s2(out), statuses, required=True)
     if not args.skip_population:
         run_step("population", lambda: fetch_population(cfg,out), statuses, required=False)
     else:
