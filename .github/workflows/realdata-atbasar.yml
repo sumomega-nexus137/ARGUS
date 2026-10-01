@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/realdata-atbasar.yml"
       - "scripts/realdata/atbasar_pipeline.py"
+      - "scripts/realdata/build_atbasar_scenarios.py"
       - "scripts/realdata/validate_pack.py"
       - "scripts/realdata/requirements.txt"
       - "data/realdata/atbasar/**"
@@ -33,6 +34,10 @@ jobs:
       - name: Build Atbasar real-data pack
         run: |
           python scripts/realdata/atbasar_pipeline.py --output data/realdata/atbasar/generated
+
+      - name: Build Atbasar flood scenarios
+        run: |
+          python scripts/realdata/build_atbasar_scenarios.py --pack data/realdata/atbasar/generated
 
       - name: Validate Atbasar data pack
         run: |
