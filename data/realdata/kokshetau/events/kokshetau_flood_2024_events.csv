@@ -1,0 +1,6 @@
+event_time,event_type,location,description,source_url,verification
+2024-03-28T00:00:00+05:00,ROAD_ACCESS,Bridge near School No. 12,"Overflow/temporary access restriction reported near the bridge.",https://www.gov.kz/memleket/entities/aqmola/press/news/details/738254?lang=ru,OFFICIAL_REPORT
+2024-03-29T05:25:00+05:00,IMPACT,Kokshetau,"16 private houses, 29 private yards, 12 apartment courtyards and the first floor of Ertostik kindergarten were reported affected.",https://www.gov.kz/memleket/entities/aqmola/press/news/details/738254?lang=ru,OFFICIAL_REPORT
+2024-03-29T05:25:00+05:00,EVACUATION,Kokshetau,"113 people evacuated, including 30 children.",https://www.gov.kz/memleket/entities/aqmola/press/news/details/738254?lang=ru,OFFICIAL_REPORT
+2024-03-29T00:00:00+05:00,EMERGENCY_STATUS,Kokshetau,"Local emergency status reported.",https://www.gov.kz/memleket/entities/aqmola/press/news/details/738254?lang=ru,OFFICIAL_REPORT
+2024-03-30T00:00:00+05:00,RESPONSE,Kylshakty,"Protective berm/bypass works and blockage clearing near the bridge were reported; river level decreased by about 70 cm.",https://www.gov.kz/memleket/entities/aqmola/press/news/details/738254?lang=ru,OFFICIAL_REPORT
