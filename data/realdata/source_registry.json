@@ -3,6 +3,28 @@
   "principle": "OBSERVATION > FORECAST > MODEL > ASSUMPTION",
   "sources": [
     {
+      "key": "open_meteo_glofas",
+      "provider": "Open-Meteo Flood API using GloFAS v4",
+      "access": "PUBLIC_JSON_API",
+      "endpoint": "https://flood-api.open-meteo.com/v1/flood",
+      "role": "river-discharge forecast and historical/global-model context",
+      "fallback": "cached response; omit with degraded status if unavailable",
+      "credentials": "none for ordinary non-commercial access",
+      "quality": "GLOBAL_MODEL",
+      "caveat": "~5 km GloFAS grid; selected river cell may not exactly represent Zhabai/Kylshakty and never overrides local official observations"
+    },
+    {
+      "key": "open_meteo_weather",
+      "provider": "Open-Meteo Forecast/Historical Weather APIs",
+      "access": "PUBLIC_JSON_API",
+      "endpoint": "https://api.open-meteo.com/v1/forecast",
+      "historical_endpoint": "https://archive-api.open-meteo.com/v1/archive",
+      "role": "temperature, precipitation, snowfall, snow depth and soil-moisture context",
+      "fallback": "cached response; omit with degraded status if unavailable",
+      "credentials": "none for ordinary non-commercial access",
+      "quality": "GLOBAL_MODEL_OR_REANALYSIS"
+    },
+    {
       "key": "sentinel1_rtc",
       "provider": "Microsoft Planetary Computer / Copernicus Sentinel-1",
       "access": "PUBLIC_STAC",
@@ -100,9 +122,9 @@
     {
       "key": "glofas",
       "provider": "Copernicus GloFAS",
-      "access": "CDS_EWDS_OR_PROXY",
-      "role": "global discharge/runoff forecast context",
-      "fallback": "cached forecast or omitted",
+      "access": "OPTIONAL_DIRECT_CDS_EWDS",
+      "role": "optional direct Copernicus GloFAS integration; public Open-Meteo GloFAS is the ready default global-model feed",
+      "fallback": "Open-Meteo Flood API",
       "credentials": "depends on chosen service/API",
       "quality": "GLOBAL_MODEL"
     },
