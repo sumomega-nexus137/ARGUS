@@ -7,7 +7,9 @@ on:
       - claude/festive-faraday-90f1gh
     paths:
       - ".github/workflows/realdata-atbasar.yml"
-      - "scripts/realdata/**"
+      - "scripts/realdata/atbasar_pipeline.py"
+      - "scripts/realdata/validate_pack.py"
+      - "scripts/realdata/requirements.txt"
       - "data/realdata/atbasar/**"
 
 jobs:
