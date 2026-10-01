@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
@@ -35,7 +35,18 @@ from app.services.scenario.runtime import current_scenario
 
 router = APIRouter(prefix="/api/areas", tags=["areas"])
 LAYERS = ("roads", "buildings", "facilities", "sectors", "population_zones", "bridges", "bottlenecks", "task_sites",
-          "bases", "stations", "river", "road_nodes")
+          "bases", "stations", "river", "road_nodes", "waterways")
+
+
+def _bundle_file(area: OperationalArea, name: str) -> dict | None:
+    import json
+    from pathlib import Path
+
+    d = (area.config or {}).get("bundle_dir")
+    if not d or not (Path(d) / name).exists():
+        return None
+    with open(Path(d) / name, encoding="utf-8") as f:
+        return json.load(f)
 
 
 @router.get("")
@@ -55,7 +66,12 @@ def get_area(area: OperationalArea = Depends(area_or_404), db: Session = Depends
         "now": area_now(area).isoformat(), "is_demo": area.is_demo, "data_version": area.data_version,
         "static_version": (area.config or {}).get("static_version", 1),
         "reference_time": sc.reference_time.isoformat(), "demo_note": (area.config or {}).get("demo_note"),
-        "has_terrain": True,
+        "has_terrain": True, "data_profile": (area.config or {}).get("data_profile", "demo"),
+        "role": (area.config or {}).get("role"), "assumptions": (area.config or {}).get("assumptions", []),
+        "pack": (area.config or {}).get("pack"), "clock_start": (area.config or {}).get("clock_start"),
+        "population_meta": (area.config or {}).get("population_meta"), "road_meta": (area.config or {}).get("road_meta"),
+        "economic_model": (area.config or {}).get("economic_model", "demo_unit_values"),
+        "scenario_station_id": (sc.parameters or {}).get("station_id"),
     })
 
 
@@ -105,9 +121,16 @@ def _layer(db: Session, area: OperationalArea, layer: str) -> dict:
                                     "bankfull": s.bankfull_stage_cm})
                    for s in db.scalars(select(HydroStation).where(HydroStation.area_id == aid))])
     if layer == "river":
+        lines = (area.config or {}).get("river_lines")
+        if lines:
+            return fc([{"type": "Feature", "geometry": {"type": "MultiLineString", "coordinates": lines},
+                        "properties": {"names": area.river_names, "source": "OpenStreetMap (ODbL)"}}])
         coords = (area.config or {}).get("river_centerline", [])
         return fc([{"type": "Feature", "geometry": {"type": "LineString", "coordinates": coords},
                     "properties": {"names": area.river_names}}] if coords else [])
+    if layer == "waterways":
+        data = _bundle_file(area, "waterways.geojson")
+        return fc(data["features"] if data else [])
     raise ArgusError("unknown_layer", f"Layer must be one of {LAYERS}")
 
 
@@ -136,7 +159,8 @@ def update_clock(body: ClockUpdate, area: OperationalArea = Depends(area_or_404)
     old = area_now(area)
     sc = current_scenario(db, area.id)
     if body.reset:
-        area.sim_now = sc.reference_time
+        start = (area.config or {}).get("clock_start")
+        area.sim_now = datetime.fromisoformat(start) if start else sc.reference_time
     elif body.set_to is not None:
         area.sim_now = body.set_to
     elif body.advance_min is not None:
@@ -158,3 +182,14 @@ def changes(since_version: int = 0, area: OperationalArea = Depends(area_or_404)
         {"id": r.id, "ts": r.ts, "op_time": r.op_time, "username": r.username, "role": r.role, "action": r.action,
          "entity_type": r.entity_type, "entity_id": r.entity_id, "summary": r.summary, "data_version": r.data_version,
          "details": r.details} for r in rows]})
+
+
+@router.get("/{area_id}/history")
+def history(area: OperationalArea = Depends(area_or_404), _: User = Depends(current_user)) -> dict:
+    """HISTORICAL context: official chronology, curated hydrology, satellite evidence and GloFAS/weather
+    event-period context bundled with the real-data pack (no network access)."""
+    data = _bundle_file(area, "history.json")
+    if data is None:
+        return {"available": False, "mode": "DEMO" if area.is_demo else None}
+    return clean({"available": True, **data, "scenario_note": (_bundle_file(area, "scenario.json") or {}).get("note"),
+                  "scenario_limitations": (_bundle_file(area, "scenario.json") or {}).get("limitations", [])})

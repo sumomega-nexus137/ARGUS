@@ -32,9 +32,15 @@ from app.providers.flood.base import GridInfo
 REAL_DATASETS = {
     "atbasar": [{"id": "atbasar-2024", "name": {"kk": "Атбасар, 2024 жылғы су тасқыны", "ru": "Атбасар, паводок 2024 г.",
                                               "en": "Atbasar 2024 flood"},
-                 "event": "2024-04", "observed_source": "Sentinel-1 SAR flood mask (to be supplied)"}],
+                 "event": "2024-04", "observed_source": "Satellite flood mask (Sentinel-1 preferred; optical fallback)"}],
     "kokshetau": [],
 }
+# Area-specific dataset locations (installed real-data packs). Registered from area config at request time.
+_DATASET_DIRS: dict[tuple[str, str], Path] = {}
+
+
+def register_dataset_dir(area_id: str, dataset_id: str, path: Path) -> None:
+    _DATASET_DIRS[(area_id, dataset_id)] = path
 MODEL_DEPTH_THRESHOLD_M = 0.05
 
 
@@ -47,7 +53,7 @@ class MaskPair:
 
 
 def dataset_dir(area_id: str, dataset_id: str) -> Path:
-    return get_settings().imports_dir / "validation" / area_id / dataset_id
+    return _DATASET_DIRS.get((area_id, dataset_id)) or get_settings().imports_dir / "validation" / area_id / dataset_id
 
 
 def _find(d: Path, stem: str) -> Path | None:
@@ -70,9 +76,14 @@ def dataset_status(area_id: str) -> list[dict]:
             except (ValueError, OSError):
                 meta = {"error": "invalid metadata.json"}
         status = "READY" if obs and mod else ("PARTIAL" if obs or mod else "NOT_LOADED")
-        out.append({**ds, "status": status, "observed_file": obs.name if obs else None,
-                    "modelled_file": mod.name if mod else None, "path": str(d.relative_to(get_settings().data_dir)),
-                    "metadata": meta, "kind": "REAL"})
+        try:
+            rel = str(d.relative_to(get_settings().data_dir))
+        except ValueError:
+            rel = str(d)
+        src = meta.get("observed_source") or ds["observed_source"]
+        out.append({**ds, "observed_source": src, "status": status, "observed_file": obs.name if obs else None,
+                    "modelled_file": mod.name if mod else None, "path": rel, "metadata": meta, "kind": "REAL",
+                    "has_aoi": (d / "aoi.geojson").exists()})
     return out
 
 
@@ -185,3 +196,74 @@ def comparison_png(pair: MaskPair, layer: str) -> bytes:
     buf = io.BytesIO()
     Image.fromarray(rgba, "RGBA").save(buf, format="PNG", optimize=True)
     return buf.getvalue()
+
+
+# --------------------------------------------------------------------------- historical holdout protocol
+def _ratio(n: int, d: int) -> float | None:
+    return round(n / d, 4) if d > 0 else None
+
+
+def _conf(obs: np.ndarray, mod: np.ndarray, valid: np.ndarray, cell_km2: float) -> dict:
+    o, m = obs & valid, mod & valid
+    tp, fp, fn = int((o & m).sum()), int((~o & m & valid).sum()), int((o & ~m).sum())
+    tn = int((~o & ~m & valid).sum())
+    p, r = _ratio(tp, tp + fp), _ratio(tp, tp + fn)
+    return {"tp_cells": tp, "fp_cells": fp, "fn_cells": fn, "tn_cells": tn, "evaluated_cells": int(valid.sum()),
+            "iou": _ratio(tp, tp + fp + fn), "precision": p, "recall": r,
+            "f1": round(2 * p * r / (p + r), 4) if p and r else None,
+            "true_overlap_km2": round(tp * cell_km2, 3), "false_positive_km2": round(fp * cell_km2, 3),
+            "false_negative_km2": round(fn * cell_km2, 3), "observed_km2": round(int(o.sum()) * cell_km2, 3),
+            "modelled_km2": round(int(m.sum()) * cell_km2, 3)}
+
+
+def protocol_metrics(ds_dir: Path, pack_root: Path, protocol: dict) -> dict:
+    """Recompute the pack's documented evaluation protocol from the supplied files.
+
+    observed.tif / modelled.tif are resampled (nearest) to the protocol grid (the 30 m DEM), the evaluation domain
+    excludes pixels unusable in either optical scene, long-term permanent water (JRC ≥ threshold), slope above the
+    limit and terrain farther than ``distance_max_m`` from the river; alternating square blocks of ``block_m`` split
+    calibration (parity 0) from the same-event spatial holdout (parity 1). Nothing is copied from the pack's metric
+    file — the numbers are recalculated here."""
+    import rasterio
+    from rasterio.enums import Resampling
+    from rasterio.warp import reproject
+
+    with rasterio.open(pack_root / protocol["grid"]) as src:
+        dem = src.read(1, masked=True).filled(np.nan).astype(np.float32)
+        tr, crs = src.transform, src.crs
+    h, w = dem.shape
+
+    def align(rel: str, nearest: bool = True, nodata: float = np.nan) -> np.ndarray:
+        with rasterio.open(rel if isinstance(rel, Path) else pack_root / rel) as s:
+            out = np.full((h, w), nodata, dtype=np.float32)
+            reproject(s.read(1).astype(np.float32), out, src_transform=s.transform, src_crs=s.crs, src_nodata=s.nodata,
+                      dst_transform=tr, dst_crs=crs, dst_nodata=nodata,
+                      resampling=Resampling.nearest if nearest else Resampling.bilinear)
+            return out
+
+    def read_same(rel: str) -> np.ndarray:
+        with rasterio.open(pack_root / rel) as s:
+            return s.read(1, masked=True).filled(np.nan).astype(np.float32)
+
+    slope = align(protocol["slope"], nearest=False)
+    rel = read_same(protocol["relative"])
+    dist = read_same(protocol["distance"])
+    obs = align(_find(ds_dir, "observed"), nodata=0) >= 0.5
+    mod = align(_find(ds_dir, "modelled"), nodata=0) >= 0.5
+    clear = align(protocol["clear"], nodata=0) >= 0.5
+    jrc = align(protocol["jrc"], nodata=255)
+    perm = (jrc != 255) & (jrc >= float(protocol["jrc_permanent_min"]))
+    domain = np.isfinite(dem) & np.isfinite(rel) & np.isfinite(dist) & np.isfinite(slope) & (slope <= protocol["slope_max_deg"])
+    ev = domain & clear & ~perm & (dist <= protocol["distance_max_m"])
+    rr, cc = np.indices(ev.shape)
+    res = max(abs(tr.a), abs(tr.e))
+    b = max(8, int(round(protocol["block_m"] / res)))
+    checker = ((rr // b) + (cc // b)) % 2
+    cell_km2 = abs(tr.a * tr.e) / 1e6
+    return {
+        "holdout": _conf(obs, mod, ev & (checker == 1), cell_km2),
+        "calibration": _conf(obs, mod, ev & (checker == 0), cell_km2),
+        "all_usable": _conf(obs, mod, ev, cell_km2),
+        "grid_m": res, "block_px": b,
+        "protocol": {k: protocol[k] for k in ("slope_max_deg", "distance_max_m", "jrc_permanent_min", "block_m")},
+    }

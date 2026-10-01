@@ -35,7 +35,7 @@ from app.realdata import common as C
 from app.realdata.install import pack_dir, status
 
 log = get_logger("argus.realdata.build")
-BUILDER_VERSION = 11
+BUILDER_VERSION = 12
 CURATED = REPO_ROOT / "data" / "realdata"
 SIM = "SIMULATION"
 
@@ -343,7 +343,26 @@ def build_atbasar(out: Path) -> dict:
         "pack": {"archive_sha256": status(area_id).archive_sha256, "run_id": 36886595533, "artifact_id": 11174673127},
         "assumptions": _assumptions(bridge_clearance=3.0),
         "population_meta": pop_meta, "road_meta": roads["_meta"],
-        "validation": {"dataset_id": "atbasar-2024", "path": f"<realdata>/{area_id}/generated/validation/{area_id}/atbasar-2024"},
+        "validation": {
+            "dataset_id": "atbasar-2024", "path": f"<realdata>/{area_id}/generated/validation/{area_id}/atbasar-2024",
+            "pack_root": f"<realdata>/{area_id}/generated",
+            "label": "HISTORICAL_SAME_EVENT_SPATIAL_HOLDOUT",
+            "protocol": {"grid": "processed/dem_atbasar_utm42n.tif", "slope": "processed/slope_atbasar_deg.tif",
+                         "relative": "scenarios/atbasar/relative_elevation_to_zhabai.tif",
+                         "distance": "scenarios/atbasar/distance_to_zhabai_m.tif",
+                         "clear": "processed/sentinel2_common_clear_mask.tif", "jrc": "processed/jrc_water_occurrence_utm42n.tif",
+                         "slope_max_deg": 7.0, "distance_max_m": 8000.0, "jrc_permanent_min": 90.0, "block_m": 1200.0,
+                         "documented_in": "scenarios/atbasar/calibration_metrics.json"},
+            "observed_qc": {"status": "AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC",
+                            "technical_visual_review": _final_status("atbasar", "satellite", "technical_visual_review"),
+                            "certification": "NOT_CERTIFIED (no hydrologist / agency certification)"},
+            "satellite": history.get("satellite"), "mask_method": history.get("mask_method"),
+            "model": {"kind": calib.get("model_kind"), "not_a_hydrodynamic_model": calib.get("not_a_hydrodynamic_model"),
+                      "uses_raw_xy_coordinates": (calib.get("susceptibility_model") or {}).get("uses_raw_xy_coordinates"),
+                      "algorithm": (calib.get("susceptibility_model") or {}).get("algorithm")},
+            "limitations": calib.get("scientific_limitations", []),
+            "qc_png": "processed/flood_mask_qc.png",
+        },
         "role": "PRIMARY_HISTORICAL_VALIDATION_PILOT",
     }
     return _write_bundle(out, area, roads, bridges, bottlenecks, bfeats, sectors, pz, facilities, sites, _resources(bases),
@@ -594,6 +613,16 @@ def build_kokshetau(out: Path) -> dict:
 
 
 # ===================================================================================== shared
+def _final_status(area: str, *keys: str):  # type: ignore[no-untyped-def]
+    p = CURATED / "final_status.json"
+    if not p.exists():
+        return None
+    d = C.load_json(p).get(area, {})
+    for k in keys:
+        d = d.get(k, {}) if isinstance(d, dict) else {}
+    return d or None
+
+
 def _assumptions(bridge_clearance: float) -> list[dict]:
     return [
         {"key": "speed_caps", "value": C.SPEED_CAP_KMH, "note": "Operational speed caps by OSM class (km/h); OSMnx-imputed speeds are capped."},

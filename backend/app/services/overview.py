@@ -20,7 +20,11 @@ LEVELS = ["NORMAL", "WATCH", "WARNING", "CRITICAL"]
 def _lvl(stage: float | None, st: dict, forecast: bool) -> int:
     if stage is None:
         return 0
-    lvl = 3 if stage >= st["critical"] else 2 if stage >= st["warning"] else 1 if stage >= st["watch"] else 0
+    lvl = 0
+    for k, v in (("watch", 1), ("warning", 2), ("critical", 3)):
+        thr = st.get(k)
+        if thr is not None and stage >= thr:
+            lvl = v
     return max(0, lvl - 1) if forecast else lvl
 
 
@@ -41,7 +45,9 @@ def area_overview(db: Session, area: OperationalArea, include_health: bool = Tru
         if last and prev:
             hours = (last.observed_at - prev.observed_at).total_seconds() / 3600
             trend = round((last.water_level_cm - prev.water_level_cm) / hours, 1) if hours > 0 else None
-        series = rt.provider.gauge_series(rt.member)
+        # forecast series only for the scenario's own stage station (official gauges may use other datums)
+        is_proxy = sid == (sc.parameters or {}).get("station_id")
+        series = rt.provider.gauge_series(rt.member) if is_proxy else []
         fut = [s for t, s in series if t >= now_min]
         peak = max(fut) if fut else None
         peak_t = next((t for t, s in series if t >= now_min and s == peak), None) if peak is not None else None
@@ -63,7 +69,8 @@ def area_overview(db: Session, area: OperationalArea, include_health: bool = Tru
             "verification": last.verification if last else None, "mode": last.mode if last else None,
             "trend_cm_h": trend, "forecast_peak_cm": None if peak is None else round(peak, 1), "forecast_peak_at_min": peak_t,
             "thresholds": {"bankfull": st["bankfull"], "watch": st["watch"], "warning": st["warning"], "critical": st["critical"]},
-            "open_conflict": any(e.conflict_status == "OPEN" for e in eff),
+            "open_conflict": any(e.conflict_status == "OPEN" for e in eff), "scenario_station": is_proxy,
+            "provider": st.get("provider"),
         })
     health = None
     pv = active_version(db, area.id)
