@@ -10,6 +10,7 @@ on:
       - "scripts/realdata/kokshetau_pipeline.py"
       - "scripts/realdata/atbasar_pipeline.py"
       - "scripts/realdata/requirements.txt"
+      - "scripts/realdata/fetch_open_meteo_context.py"
       - "data/realdata/kokshetau/**"
 
 jobs:
@@ -33,6 +34,10 @@ jobs:
       - name: Build Kokshetau real-data pack
         run: |
           python scripts/realdata/kokshetau_pipeline.py --output data/realdata/kokshetau/generated
+
+      - name: Fetch public GloFAS/weather context
+        run: |
+          python scripts/realdata/fetch_open_meteo_context.py --area kokshetau --output data/realdata/kokshetau/generated
 
       - name: Validate Kokshetau data pack
         run: |
