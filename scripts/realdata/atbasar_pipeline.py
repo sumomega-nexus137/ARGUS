@@ -48,7 +48,7 @@ CFG_PATH = ROOT / "data" / "realdata" / "atbasar" / "config.json"
 CURATED = ROOT / "data" / "realdata" / "atbasar"
 
 STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
-S1_COLLECTION = "sentinel-1-grd"
+S1_COLLECTION = "sentinel-1-rtc"
 JRC_COLLECTION = "jrc-gsw"
 DEM_BASE = "https://copernicus-dem-30m.s3.amazonaws.com"
 WORLDPOP_URL = (
@@ -85,7 +85,7 @@ def sha256(path: Path) -> str:
 
 def preflight(out: Path) -> dict:
     urls = {
-        "planetary_computer": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/sentinel-1-grd",
+        "planetary_computer": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/sentinel-1-rtc",
         "copernicus_dem": DEM_BASE,
         "openstreetmap_overpass": "https://overpass-api.de/api/status",
         "worldpop": WORLDPOP_URL,
@@ -339,7 +339,25 @@ def fetch_sentinel1(cfg: dict, out: Path) -> None:
     ev = cfg["event"]
     items = list(cat.search(collections=[S1_COLLECTION], bbox=cfg["analysis_bbox_wgs84"],
                             datetime=f"{ev['search_start']}T00:00:00Z/{ev['search_end']}T23:59:59Z",
-                            max_items=200).items())
+                            max_items=500).items())
+    diagnostics = []
+    for item in items:
+        dt = item.datetime if item.datetime and item.datetime.tzinfo else (
+            item.datetime.replace(tzinfo=timezone.utc) if item.datetime else None
+        )
+        diagnostics.append({
+            "id": item.id,
+            "datetime": dt.isoformat() if dt else None,
+            "coverage": _coverage(item, cfg["analysis_bbox_wgs84"]),
+            "assets": sorted(item.assets.keys()),
+            "relative_orbit": item.properties.get("sat:relative_orbit"),
+            "orbit_state": item.properties.get("sat:orbit_state"),
+        })
+    write_json(out / "metadata" / "sentinel1_candidates.json", {
+        "collection": S1_COLLECTION,
+        "item_count": len(items),
+        "items": diagnostics,
+    })
     pre_target = datetime.fromisoformat(ev["pre_flood_target_date"]).replace(tzinfo=timezone.utc)
     flood_target = datetime.fromisoformat(ev["flood_target_date"]).replace(tzinfo=timezone.utc)
     flood_start = datetime.fromisoformat(ev["flood_window_start"]).replace(tzinfo=timezone.utc)
@@ -358,7 +376,11 @@ def fetch_sentinel1(cfg: dict, out: Path) -> None:
     pre = [c for c in candidates if c[1] < flood_start]
     flood = [c for c in candidates if flood_start <= c[1] <= flood_end]
     if not pre or not flood:
-        raise RuntimeError(f"No suitable Sentinel-1 pair: pre={len(pre)} flood={len(flood)}")
+        top = sorted(diagnostics, key=lambda x: x["coverage"], reverse=True)[:10]
+        raise RuntimeError(
+            f"No suitable Sentinel-1 RTC pair: pre={len(pre)} flood={len(flood)} "
+            f"from {len(items)} items. Top candidates={top}"
+        )
 
     best = None
     score_best = float("inf")
@@ -385,7 +407,7 @@ def fetch_sentinel1(cfg: dict, out: Path) -> None:
                 continue
             dst = out / "processed" / f"sentinel1_{label}_{pol}.tif"
             _clip_remote(signed.assets[pol].href, cfg["analysis_bbox_wgs84"], dst, cfg["projected_crs"], 20.0)
-            sidecar(dst, {"source":"Sentinel-1 GRD via Microsoft Planetary Computer",
+            sidecar(dst, {"source":"Sentinel-1 RTC via Microsoft Planetary Computer",
                           "item_id": c[0].id, "datetime": c[1].isoformat(), "polarization": pol.upper(),
                           "relative_orbit": c[2], "orbit_state": c[3]})
 
@@ -423,10 +445,11 @@ def fetch_jrc(cfg: dict, out: Path) -> None:
                   "note":"Long-term water occurrence baseline, not a 2024 observation."})
 
 
-def amplitude_to_db(a):
+def power_to_db(a):
+    """Convert Sentinel-1 RTC linear gamma0 power to decibels."""
     x = np.full(a.shape, np.nan, dtype="float32")
     good = np.isfinite(a) & (a > 0)
-    x[good] = 20.0 * np.log10(a[good])
+    x[good] = 10.0 * np.log10(a[good])
     return x
 
 
@@ -463,8 +486,8 @@ def build_observed_mask(out: Path) -> None:
     slope = aligned(pre, slope_p)
     occurrence = aligned(pre, jrc_p, nearest=True, nodata=255) if jrc_p.exists() else None
 
-    pre_db = amplitude_to_db(pre_amp)
-    flood_db = amplitude_to_db(flood_amp)
+    pre_db = power_to_db(pre_amp)
+    flood_db = power_to_db(flood_amp)
     delta = flood_db - pre_db
     finite = np.isfinite(pre_db) & np.isfinite(flood_db)
     fthr = float(np.clip(robust_otsu(flood_db[finite], -16.0), -28, -8))
@@ -500,7 +523,7 @@ def build_observed_mask(out: Path) -> None:
 
     meta = {
         "source":"Sentinel-1 VV change",
-        "method":"amplitude->dB; Otsu dark-water; delta<-2.5 dB; exclude pre-existing dark water; slope<=7°; morphology; JRC>=90% permanent water exclusion where available",
+        "method":"Sentinel-1 RTC gamma0 linear power -> dB using 10*log10; Otsu dark-water; delta<-2.5 dB; exclude pre-existing dark water; slope<=7°; morphology; JRC>=90% permanent water exclusion where available",
         "flood_threshold_db":fthr,"pre_threshold_db":pthr,
         "status":"AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC",
         "caveats":[
