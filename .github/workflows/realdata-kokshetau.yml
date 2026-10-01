@@ -1,0 +1,51 @@
+name: ARGUS real data — Kokshetau 2024
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/festive-faraday-90f1gh
+    paths:
+      - ".github/workflows/realdata-kokshetau.yml"
+      - "scripts/realdata/kokshetau_pipeline.py"
+      - "scripts/realdata/atbasar_pipeline.py"
+      - "scripts/realdata/requirements.txt"
+      - "data/realdata/kokshetau/**"
+
+jobs:
+  build-kokshetau-realdata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: scripts/realdata/requirements.txt
+
+      - name: Install geospatial dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/realdata/requirements.txt
+
+      - name: Build Kokshetau real-data pack
+        run: |
+          python scripts/realdata/kokshetau_pipeline.py --output data/realdata/kokshetau/generated
+
+      - name: Show manifest
+        if: always()
+        run: |
+          test -f data/realdata/kokshetau/generated/metadata/dataset_manifest.json && cat data/realdata/kokshetau/generated/metadata/dataset_manifest.json || true
+          du -sh data/realdata/kokshetau/generated || true
+
+      - name: Upload real-data artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: argus-kokshetau-realdata
+          path: data/realdata/kokshetau/generated
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
