@@ -2,9 +2,13 @@
 
 > Read this first when resuming work. Single source of truth for what exists and what remains.
 
-_Status: all six modules and all screens implemented end-to-end on DEMO / SIMULATION data.
-Real datasets (terrain, roads, buildings, 2024 validation masks) are pending delivery and plug in via
-`docs/DATA_CONTRACTS.md`._
+_Status: all six modules and all screens are implemented end-to-end on DEMO / SIMULATION data.
+The real-data preparation work is now complete for the Atbasar and Kokshetau pilot packs: terrain,
+roads/buildings, population/water baselines, official curated event/hydrology records, public
+GloFAS/weather context, and the Atbasar 2024 satellite/validation/scenario package have all passed
+their data-pipeline integrity gates. Application mounting/import/provider wiring and the full
+backend/frontend/demo test pass are still pending and are the next integration step. See
+`docs/REAL_DATA_FINAL_STATUS.md` and `docs/REAL_DATA_HANDOFF.md`._
 
 ## Done
 
@@ -34,9 +38,12 @@ T8 MISSES WINDOW. MINIMAL_CHANGE retimes T8 to ~12:21.
 
 ## Not yet done / next steps
 
-* Real data ingestion for both areas (terrain, roads, buildings) and the 2024 Sentinel-1 validation masks.
+* Mount/import the completed real-data artifacts into the application data volume and wire the
+  existing provider/import contracts. Atbasar historical evidence uses a documented Sentinel-2
+  fallback because no suitable Sentinel-1 acquisition was found for the event window.
 * Docker images were written but could not be built in the development sandbox (no Docker daemon);
   run `docker compose up --build` to verify.
-* External provider adapters are integration stubs (report NOT_CONFIGURED) until endpoints/credentials exist.
+* Wire the ready public Open-Meteo GloFAS/weather profiles into runtime providers if desired.
+  Kazhydromet/Tasqyn remain NOT_CONFIGURED until authorized endpoints are supplied; do not fake LIVE data.
 * Headless PDF rendering (the HTML briefing is print-ready; browser print → PDF works).
 * Map-based click-to-place for new facilities (coordinates are entered manually today).
