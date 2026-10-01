@@ -13,6 +13,8 @@ import requests
 ROOT = Path(__file__).resolve().parents[2]
 
 PUBLIC = {
+    "open_meteo_flood": "https://flood-api.open-meteo.com/v1/flood?latitude=51.80854&longitude=68.35823&daily=river_discharge&forecast_days=3",
+    "open_meteo_weather": "https://api.open-meteo.com/v1/forecast?latitude=51.80854&longitude=68.35823&hourly=temperature_2m,precipitation,snowfall,snow_depth&forecast_days=2&timezone=Asia%2FAlmaty",
     "earth_search_sentinel2": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a",
     "earth_search_landsat": "https://earth-search.aws.element84.com/v1/collections/landsat-c2-l2",
     "planetary_computer_jrc": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/jrc-gsw",
@@ -35,10 +37,10 @@ CONFIGURED_LATER = {
         "fallback": "official forecast/manual import; future agency integration",
         "env": None,
     },
-    "glofas": {
-        "state": "CREDENTIAL_OR_PROXY_CONFIGURATION_REQUIRED",
-        "reason": "Operational GloFAS access depends on the selected Copernicus CDS/EWDS delivery route.",
-        "fallback": "cached forecast or omit with explicit degraded status",
+    "direct_copernicus_glofas": {
+        "state": "OPTIONAL_DIRECT_INTEGRATION",
+        "reason": "ARGUS can use Open-Meteo's public GloFAS v4 API immediately; direct CDS/EWDS integration is optional.",
+        "fallback": "Open-Meteo Flood API or cached forecast",
         "env": "ARGUS_GLOFAS_URL",
     },
     "nasa_imerg": {
