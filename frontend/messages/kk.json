@@ -579,7 +579,9 @@
     "constraintKind": "Шектеу",
     "sector": "Сектор",
     "availableOf": "Қолжетімді: {type}",
-    "why": "НЕГЕ?"
+    "why": "НЕГЕ?",
+    "exerciseHigh": "ЖАТТЫҒУ: HIGH СЦЕНАРИЙІ",
+    "exerciseBase": "ЖАТТЫҒУДЫ BASE-КЕ ҚАЙТАРУ"
   },
   "policy": {
     "LIFE_SAFETY": "Адамдар қауіпсіздігі",
