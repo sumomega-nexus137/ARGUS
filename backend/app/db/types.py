@@ -1,6 +1,7 @@
 """Portable geometry column.
 
-* PostgreSQL → PostGIS ``geometry(…, 4326)`` with a GiST spatial index (GeoAlchemy2).
+* PostgreSQL → PostGIS ``geometry(…, 4326)`` (GeoAlchemy2). GeoAlchemy2 is imported at module
+  load time so its DDL event hooks are registered before Alembic starts creating tables.
 * SQLite (demo / development) → WKT text.
 
 Python-side values are always Shapely geometries in EPSG:4326 (lon/lat).
@@ -49,8 +50,6 @@ class GeometryType(TypeDecorator):
 
     def load_dialect_impl(self, dialect: Any) -> Any:
         if dialect.name == "postgresql":
-            from geoalchemy2 import Geometry
-
             return dialect.type_descriptor(Geometry(geometry_type=self.geometry_type, srid=self.srid))
         return dialect.type_descriptor(Text())
 
