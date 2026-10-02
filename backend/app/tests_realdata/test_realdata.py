@@ -93,6 +93,14 @@ def test_stress_alternatives_pumps_and_recompute(client, auth):
     print("ARGUS_STRESS_PLAN_A", json.dumps({
         "n_scenarios": st["n_scenarios"], "n_feasible": st["n_feasible"],
         "robustness": st["robustness"], "baseline_status": st["baseline_status"],
+        "baseline_tasks": [
+            {"code": t["code"], "status": t["status"], "departure": t["departure"],
+             "arrival": t["arrival"], "end": t["end"], "deadline": t["deadline"],
+             "latest_departure": t["latest_departure"], "slack_min": t["slack_min"],
+             "issues": [{"type": i["type"], "params": i["params"]} for i in t["issues"]],
+             "roads": t["route_roads"]}
+            for t in st["baseline"]["tasks"]
+        ],
         "scenarios": [{"id": s["id"], "kind": s["kind"], "status": s["status"], "failed": s["failed_tasks"]}
                       for s in st["scenarios"]]
     }))
