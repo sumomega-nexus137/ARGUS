@@ -35,7 +35,7 @@ def _load_terrain(terrain_dir: str) -> dict:
 
 class SyntheticStageHandProvider(FloodScenarioProvider):
     kind = "synthetic_stage_hand"
-    mode_note = "SIMULATION — static stage–HAND approximation on synthetic DEMO terrain"
+    mode_note = "SIMULATION — static stage–HAND approximation; terrain provenance is supplied by the active scenario"
 
     def __init__(self, terrain_dir: Path, members: list[dict], bankfull_cm: float):
         self._t = _load_terrain(str(terrain_dir))
