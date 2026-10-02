@@ -579,7 +579,9 @@
     "constraintKind": "Constraint",
     "sector": "Sector",
     "availableOf": "Available: {type}",
-    "why": "WHY?"
+    "why": "WHY?",
+    "exerciseHigh": "EXERCISE: ESCALATE TO HIGH",
+    "exerciseBase": "RETURN EXERCISE TO BASE"
   },
   "policy": {
     "LIFE_SAFETY": "Life safety",
