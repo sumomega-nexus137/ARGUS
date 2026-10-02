@@ -1,0 +1,94 @@
+name: ARGUS competition browser demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/festive-faraday-90f1gh
+    paths:
+      - ".github/workflows/competition-e2e.yml"
+      - "scripts/e2e/**"
+
+jobs:
+  demo26:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ARGUS_DATA_PROFILE: historical
+      ARGUS_INSTALL_REALDATA: "true"
+      ARGUS_OPEN_METEO_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Start complete ARGUS stack
+        run: |
+          cp .env.example .env
+          docker compose up -d --build
+
+      - name: Wait for API and console
+        run: |
+          set -e
+          for i in $(seq 1 180); do
+            if curl -fsS http://localhost:8000/api/system/health >/tmp/health.json 2>/dev/null; then
+              python - <<'PY'
+          import json
+          h=json.load(open("/tmp/health.json"))
+          assert h["status"]=="ok" and h["database"]=="ok", h
+          PY
+              break
+            fi
+            sleep 3
+          done
+          test -s /tmp/health.json
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3000/login >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Install browser driver
+        working-directory: scripts/e2e
+        run: |
+          npm init -y
+          npm install --no-save playwright
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo "CHROME=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          elif command -v chromium >/dev/null 2>&1; then
+            echo "CHROME=$(command -v chromium)" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Run full 26-step competition demo
+        run: |
+          node scripts/e2e/demo26.mjs /tmp/argus-demo26
+          python - <<'PY'
+          import json
+          p="/tmp/argus-demo26/results.json"
+          d=json.load(open(p))
+          rows=d if isinstance(d,list) else d.get("results",[])
+          failed=[x for x in rows if not x.get("ok", x.get("pass", False))]
+          print("steps",len(rows),"failed",len(failed))
+          assert len(rows)==26 and not failed, failed
+          PY
+
+      - name: Upload demo evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: argus-competition-demo26
+          path: /tmp/argus-demo26
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=300
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down
