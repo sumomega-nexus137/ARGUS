@@ -104,6 +104,24 @@ def test_stress_alternatives_pumps_and_recompute(client, auth):
         "scenarios": [{"id": s["id"], "kind": s["kind"], "status": s["status"], "failed": s["failed_tasks"]}
                       for s in st["scenarios"]]
     }))
+    # Diagnostic: also evaluate the same human exercise plan from its approved BASE member.
+    # This lets the competition setup be tuned without changing evaluator logic.
+    sel_base = client.post("/api/areas/atbasar/scenario/select-member",
+                           json={"member_id": "BASE", "note": "CI exercise robustness diagnostic", "lock": False},
+                           headers=P)
+    assert sel_base.status_code == 200
+    st_base = client.post(f"/api/plan-versions/{vid}/stress-test", headers=P).json()
+    print("ARGUS_STRESS_PLAN_A_BASE", json.dumps({
+        "n_scenarios": st_base["n_scenarios"], "n_feasible": st_base["n_feasible"],
+        "robustness": st_base["robustness"], "baseline_status": st_base["baseline_status"],
+        "scenarios": [{"id": s["id"], "kind": s["kind"], "member": s["member"],
+                       "status": s["status"], "failed": s["failed_tasks"]} for s in st_base["scenarios"]]
+    }))
+    sel_high = client.post("/api/areas/atbasar/scenario/select-member",
+                           json={"member_id": "HIGH", "note": "Restore competition HIGH inject", "lock": False},
+                           headers=P)
+    assert sel_high.status_code == 200
+
     kinds = {s["kind"] for s in st["scenarios"]}
     # HIGH is the top precomputed member after the exercise inject → no higher member exists (honestly absent)
     assert {"EARLIER_PEAK", "ROUTE_UNAVAILABLE", "CREW_DELAYED", "VEHICLE_UNAVAILABLE", "PUMP_UNAVAILABLE"} <= kinds
