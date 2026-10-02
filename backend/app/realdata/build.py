@@ -35,7 +35,7 @@ from app.realdata import common as C
 from app.realdata.install import pack_dir, status
 
 log = get_logger("argus.realdata.build")
-BUILDER_VERSION = 13
+BUILDER_VERSION = 14
 CURATED = REPO_ROOT / "data" / "realdata"
 SIM = "SIMULATION"
 
@@ -592,7 +592,9 @@ def build_kokshetau(out: Path) -> dict:
     b_x = np.array([proj.xy(*shape(f["geometry"]).centroid.coords[0])[0] for f in bfeats])
     b_y = np.array([proj.xy(*shape(f["geometry"]).centroid.coords[0])[1] for f in bfeats])
     lvb = P.relative_level_points("BASE", b_x, b_y, np.array([360.0]))[:, 0]
+    lvh = P.relative_level_points("HIGH", b_x, b_y, np.array([360.0]))[:, 0]
     fl = np.flatnonzero(np.where(np.isfinite(lvb), lvb, -9) >= 0.10)
+    fl_high = np.flatnonzero(np.where(np.isfinite(lvh), lvh, -9) >= 0.10)
     bsec = [f["properties"]["sector_id"] for f in bfeats]
     for k, g in enumerate(_cluster(np.c_[b_x[fl], b_y[fl]], 250.0)[:3] if len(fl) else []):
         idx = fl[g]
@@ -718,6 +720,10 @@ def build_kokshetau(out: Path) -> dict:
                               "stage_peaks_m": KOK_STAGE_PEAKS_M,
                               "official_2024_reported_impact_scale": KOK_REPORTED_IMPACT_SCALE,
                               "modelled_base_building_centroids_depth_ge_0_10m": int(len(fl)),
+                              "modelled_high_building_centroids_depth_ge_0_10m": int(len(fl_high)),
+                              "base_to_reported_aggregate_ratio": round(
+                                  float(len(fl)) / max(1, KOK_REPORTED_IMPACT_SCALE["aggregate_reported_impact_units"]), 3
+                              ),
                               "historical_anchor_checks": historical_anchor_checks,
                               "note": (
                                   "Reported houses/yards/courtyards/kindergarten are heterogeneous impact units, "
