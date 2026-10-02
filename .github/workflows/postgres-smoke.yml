@@ -1,4 +1,5 @@
 name: ARGUS PostgreSQL migration smoke
+# Verifies the production PostGIS schema path independently of SQLite tests.
 
 on:
   workflow_dispatch:
