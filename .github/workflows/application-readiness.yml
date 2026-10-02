@@ -80,17 +80,50 @@ jobs:
 
   live-provider:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install requests
-      - name: Verify real public Open-Meteo endpoints
+      - name: Install provider dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Verify public upstream endpoints
         run: |
           python scripts/realdata/api_preflight.py --output /tmp/api_readiness.json
           cat /tmp/api_readiness.json
+      - name: Verify ARGUS live provider and cache fallback with real internet
+        working-directory: backend
+        env:
+          ARGUS_OPEN_METEO_ENABLED: "true"
+          ARGUS_OPEN_METEO_TIMEOUT_S: "15"
+          ARGUS_OPEN_METEO_RETRIES: "1"
+        run: |
+          python - <<'PY'
+          import json
+          from app.providers.open_meteo import live_context
+
+          out = {}
+          for area, lat, lon in (
+              ("ci-atbasar", 51.80854, 68.35823),
+              ("ci-kokshetau", 53.2836, 69.4049),
+          ):
+              out[area] = {}
+              for kind in ("glofas", "weather"):
+                  live = live_context(area, lat, lon, kind, refresh=True, offline=False)
+                  assert live["mode"] == "LIVE" and live["status"] == "OK", live
+                  assert live["data"] and live["data"].get("rows"), live
+                  cached = live_context(area, lat, lon, kind, refresh=True, offline=True)
+                  assert cached["mode"] in ("CACHED", "STALE") and cached["data"], cached
+                  out[area][kind] = {
+                      "live_mode": live["mode"],
+                      "source": live["source"],
+                      "returned_coordinate": live.get("returned_coordinate"),
+                      "rows": len(live["data"]["rows"]),
+                      "offline_fallback": cached["mode"],
+                  }
+          print("ARGUS_REAL_LIVE_PROVIDER", json.dumps(out, indent=2))
+          PY
 
   docker-stack:
     runs-on: ubuntu-latest
