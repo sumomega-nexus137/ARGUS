@@ -80,6 +80,45 @@ TR: dict[str, tuple[str, str]] = {
         "Бақыланған спутниктік маска әлі де қолмен/сала маманының сапа бақылауын қажет етеді.",
         "Наблюдённая спутниковая маска по-прежнему требует ручного/экспертного контроля качества."),
     # Kokshetau scenario note / limitations
+    "Kokshetau — Kylshakty historically bounded operational exercise (SIMULATION)": (
+        "Көкшетау — Қылшақты: тарихи әсер ауқымымен шектелген операциялық жаттығу (СИМУЛЯЦИЯ)",
+        "Кокшетау — Кылшакты: оперативные учения, ограниченные историческим масштабом последствий (СИМУЛЯЦИЯ)"),
+    ("SIMULATION exercise on real Kokshetau terrain. The earlier broad stage-HAND envelope was replaced by a "
+     "conservative 100 m river-connected corridor and LOW/BASE/HIGH excess stages of 0.10/0.20/0.40 m. "
+     "The BASE exercise is bounded only to the order of magnitude of the officially reported 2024 impacts "
+     "(16 private houses, 29 private yards, 12 apartment courtyards and the first floor of Ertostik kindergarten). "
+     "Those reported categories are NOT equivalent to modelled building footprints, so this is not a historical "
+     "inundation reconstruction or forecast validation. Use it to exercise access/bottleneck consequences on real geography. "
+     "Lake Kopa remains downstream receiving water, not the assumed flood cause."): (
+        "Көкшетаудың нақты жер бедеріндегі СИМУЛЯЦИЯ жаттығуы. Бұрынғы кең stage-HAND аумағы өзенмен байланысқан "
+        "консервативті 100 м дәлізге және LOW/BASE/HIGH үшін 0,10/0,20/0,40 м артық деңгейлерге ауыстырылды. "
+        "BASE жаттығуы 2024 жылғы ресми хабарланған әсердің тек шамалық ауқымымен шектелген "
+        "(16 жеке үй, 29 жеке аула, 12 көпқабатты үй ауласы және «Ертөстік» балабақшасының бірінші қабаты). "
+        "Бұл санаттар модельдегі ғимарат іздерімен тең емес, сондықтан бұл тарихи су басуды қалпына келтіру де, "
+        "болжамды валидациялау да емес. Нақты географияда қолжетімділік пен тар орындардың салдарын жаттықтыру үшін қолданылады. "
+        "Қопа көлі төменгі ағыстағы қабылдаушы су болып қалады, болжамды су басу себебі емес.",
+        "СИМУЛЯЦИОННЫЕ учения на реальном рельефе Кокшетау. Прежняя широкая область stage-HAND заменена "
+        "консервативным 100-метровым коридором, связанным с рекой, и превышениями уровня LOW/BASE/HIGH "
+        "0,10/0,20/0,40 м. BASE ограничен только порядком масштаба официально сообщённых последствий 2024 года "
+        "(16 частных домов, 29 частных дворов, 12 дворов многоквартирных домов и первый этаж детсада «Ертөстік»). "
+        "Эти категории не эквивалентны модельным контурам зданий, поэтому это не реконструкция исторического затопления "
+        "и не валидация прогноза. Сценарий предназначен для отработки доступа и узких мест на реальной географии. "
+        "Озеро Копа остаётся водоприёмником ниже по течению, а не предполагаемой причиной паводка."),
+    "Historically impact-bounded SIMULATION, not a spatially calibrated flood extent and not a prediction of which property will flood.": (
+        "Тарихи әсер ауқымымен шектелген СИМУЛЯЦИЯ; кеңістіктік калибрленген су басу аумағы емес және қай нысанды су басатыны туралы болжам емес.",
+        "СИМУЛЯЦИЯ, ограниченная историческим масштабом последствий; это не пространственно откалиброванная зона затопления и не прогноз конкретных затапливаемых объектов."),
+    "Static stage–HAND approximation, not a hydraulic model; no surveyed culvert/bridge/channel hydraulics.": (
+        "Статикалық stage–HAND жуықтауы, гидравликалық модель емес; су өткізгіштер, көпірлер мен арнаның өлшенген гидравликасы жоқ.",
+        "Статическое приближение stage–HAND, не гидравлическая модель; нет обследованной гидравлики водопропусков, мостов и русла."),
+    "The 100 m Kylshakty corridor is a conservative ARGUS exercise envelope, not an official flood-zone boundary.": (
+        "Қылшақты бойындағы 100 м дәліз — ARGUS-тың консервативті жаттығу шекарасы, ресми су басу аймағының шекарасы емес.",
+        "100-метровый коридор вдоль Кылшакты — консервативная граница учений ARGUS, а не официальная граница зоны затопления."),
+    "30 m DSM: buildings/trees bias terrain; urban drainage, frozen-ground runoff and snowmelt ponding are not explicitly resolved.": (
+        "30 м DSM: ғимараттар мен ағаштар жер бедерін бұрмалайды; қалалық дренаж, тоң топырақтағы ағын және еріген қар суының жиналуы нақты есептелмейді.",
+        "ЦМП 30 м: здания и деревья искажают рельеф; городской дренаж, сток по промёрзшему грунту и накопление талых вод явно не разрешаются."),
+    "Official Kylshakty levels use an unestablished gauge datum and are not used as a direct model stage.": (
+        "Қылшақтының ресми деңгейлері белгіленбеген пост нөліне қатысты берілген және модель деңгейі ретінде тікелей қолданылмайды.",
+        "Официальные уровни Кылшакты относятся к неустановленному нулю поста и не используются напрямую как уровень модели."),
     ("SIMULATION exercise: water level above the Kylshakty channel (m) applied to real terrain with river connectivity. "
      "NOT calibrated — no observed flood extent exists for Kokshetau in the packs. On the 30 m DSM the proxy "
      "OVERESTIMATES exposure compared with the officially reported 2024 impact (16 private houses, 29 yards, "
