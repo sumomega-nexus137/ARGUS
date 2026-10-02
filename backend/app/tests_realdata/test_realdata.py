@@ -161,6 +161,10 @@ def test_kokshetau_bottlenecks_real_candidates(client, auth):
     assert cal["status"] == "HISTORICALLY_IMPACT_BOUNDED_NOT_SPATIALLY_CALIBRATED"
     assert cal["channel_corridor_m"] <= 150
     assert 20 <= cal["modelled_base_building_centroids_depth_ge_0_10m"] <= 150
+    anchors = cal.get("historical_anchor_checks", [])
+    ertostik = next((x for x in anchors if "ЕРТОСТИК" in x.get("name", "").upper()
+                     or "ERTOSTIK" in x.get("name", "").upper()), None)
+    assert ertostik and ertostik["matched"] and ertostik["base_exercise_depth_m"] >= 0.05
 
     H = auth("planner")
     lay = client.get("/api/areas/kokshetau/layers/bottlenecks", headers=H).json()["features"]
