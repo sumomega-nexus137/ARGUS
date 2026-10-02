@@ -8,22 +8,26 @@ response plan: *will it still work, where does it break, why, and what are the a
 
 | Module | What it computes |
 |---|---|
-| 1. Scenario Engine | Ensemble flood scenarios (observed → now → forecast), conditioned on authoritative observations; every change is a new scenario version |
-| 2. Impact Engine | Buildings, aggregated population, critical facilities, roads and economic ranges per time step |
+| 1. Scenario Engine | Flood scenario model — hybrid terrain-conditioned susceptibility and stage proxy (LOW / BASE / HIGH members), calibrated against historical observations; every change is a new scenario version |
+| 2. Impact Engine | Buildings, aggregated population, critical facilities, roads; exposure (floor area) — money only where an approved valuation table exists |
 | 3. Access & Action Window Engine | Time-dependent road graph, road closure countdowns, sector isolation, **latest safe action time** per task |
 | 4. Plan Stress Tester & Optimizer | Deterministic plan evaluation, STRESS TEST (≈30 perturbations), CP-SAT alternatives under human-set policy weights, WHY explanations, resource-gap analysis |
 | 5. Operations Board | DRAFT → REVIEWED → APPROVED → ACTIVE, task status, PLAN AT RISK, RECOMPUTE → new version for approval |
-| 6. Validation & After-Action | IoU / precision / recall computed only from supplied masks, curtain comparison, after-action analysis |
+| 6. Validation & After-Action | IoU / precision / recall / F1 recomputed from the observed and modelled masks (historical same-event spatial holdout), curtain comparison, after-action analysis |
 
 Two operational areas: **Atbasar / Zhabai** (primary; historical 2024 validation slot) and
 **Kokshetau / Kylshakty** (portability and bottleneck analysis). Interface languages: **Kazakh
 (default)**, Russian, English — switch with **ҚАЗ | РУС | ENG** (persisted).
 
-> ⚠️ **All bundled data is synthetic DEMO / SIMULATION data** generated deterministically for the
-> two areas. It is labelled as such everywhere in the UI, API and reports. It is not a measurement,
-> a hydrodynamic model or a validation result. Real datasets plug in through the contracts in
-> [`docs/DATA_CONTRACTS.md`](docs/DATA_CONTRACTS.md). No real 2024 validation metric is included:
-> the validation screen shows **VALIDATION DATA NOT LOADED** until real masks are supplied.
+> **Real data.** With the real-data packs installed (one command, below) both pilots run on real
+> geography and the 2024 event: Copernicus DEM, OpenStreetMap roads/buildings/facilities/waterways,
+> WorldPop, JRC surface water, Sentinel-2 L2A flood evidence (no Sentinel-1 acquisition existed) and
+> curated official reports — in **HISTORICAL** replay mode. Plans, resources and exercise injects are
+> **SIMULATION** (no verified DChS/MChS inventory). Atbasar validation metrics are computed by ARGUS from
+> the masks and labelled **HISTORICAL SAME-EVENT SPATIAL HOLDOUT** (not forecast accuracy). Kazhydromet
+> and Tasqyn have no public API and stay **NOT CONFIGURED**. Without the packs ARGUS falls back to a
+> clearly labelled synthetic DEMO. Details: [`docs/REAL_DATA_INSTALL.md`](docs/REAL_DATA_INSTALL.md),
+> test record: [`docs/FINAL_SYSTEM_TEST.md`](docs/FINAL_SYSTEM_TEST.md).
 
 ---
 
@@ -36,7 +40,8 @@ Requirements: Python 3.11+, Node.js 20+ (22 recommended).
 cd backend
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m app.cli install-realdata        # once: download, SHA-256 verify, install both packs (~150 MB)
+uvicorn app.main:app --host 127.0.0.1 --port 8000   # ARGUS_DATA_PROFILE=auto → HISTORICAL pilots
 #   → http://127.0.0.1:8000/docs  (OpenAPI)
 
 # 2. Console (new terminal)
@@ -65,39 +70,37 @@ cp .env.example .env          # set ARGUS_JWT_SECRET, POSTGRES_PASSWORD
 docker compose up --build     # db (PostGIS 16) + backend (:8000) + frontend (:3000)
 ```
 
-The backend container runs `alembic upgrade head` against PostgreSQL before starting. Set
-`ARGUS_DEMO_MODE=false` for an empty production database (no demo seeding, no demo accounts).
+On first start the backend container installs the pinned real-data packs into the `packs` volume
+(verified; later starts reuse them without downloading), then runs `alembic upgrade head` against
+PostgreSQL. Set `ARGUS_DEMO_MODE=false` for an empty production database (no seeding, no demo accounts).
 
-## The competition demo flow (≈6 minutes)
+## The competition demo flow (26 steps, real data)
 
-Log in as **planner**, area **Atbasar — Zhabai**.
+Start from an empty database. Automated end-to-end: `node scripts/e2e/demo26.mjs` (see
+[`docs/FINAL_SYSTEM_TEST.md`](docs/FINAL_SYSTEM_TEST.md) for the recorded run).
 
-1. **Overview / Situation** — a verified field reading (613 cm) conflicts with the hydropost (598 cm);
-   ARGUS applies the authority hierarchy, marks the **DATA CONFLICT**, and the scenario moves from
-   member M3 to M4 (scenario v2). Timeline: OBSERVED ━● NOW ┄ FORECAST.
-2. **Plan** — *Plan A v1* shows **PLAN AT RISK**. Click **WHY?**:
-   `FLOOD SCENARIO CHANGED → ROAD R7 CLOSES EARLIER → C3 LOSES ACCESS → TASK T8 MISSES ACTION WINDOW`.
-3. **STRESS TEST PLAN** — robustness across ≈30 perturbations, task-criticality bars and the
-   perturbation × task matrix (click a row for its causal chain).
-4. **GENERATE ALTERNATIVES** — CP-SAT returns *policy optimum*, *robust (max slack)* and *minimal
-   change*. Every alternative is re-simulated by the evaluator. Open a task for **WHY THIS TASK /
-   RESOURCE / NOW / IF DELAYED**. Change the policy or weights (a human choice) and re-run.
-5. **Available pumps 16 → 8** (Alternatives tab) → re-run: the solver drops lower-value work;
-   **RESOURCE GAP** shows what one more unit of each type would buy (each row is a full re-run).
-6. **Operations** — report *Road closed* (e.g. R2) → pipeline STORE → SCENARIO → ROAD GRAPH →
-   IMPACT → ACCESS → ACTION WINDOWS → PLAN CHECK → **PLAN AT RISK** → **RECOMPUTE** creates a new
-   DRAFT version; the commander reviews/approves/activates it. The approved plan is never replaced silently.
-7. **Validation** — the 2024 dataset reports **NOT LOADED**; the clearly labelled synthetic
-   self-test verifies the metric pipeline and the curtain comparison.
-8. **Report** — operational briefing in any language, independent of the UI language; print/PDF.
-9. **Audit trail** — *why did ARGUS change its result?* Every result-affecting change bumps the
-   area's data version with who/what/when.
+1–2. Launch; the console opens in **Kazakh**. 3–4. **Atbasar — Zhabai**, **HISTORICAL REPLAY** clock
+10.04.2024 23:43 with the *2024 historical reconstruction* banner. 5–6. Real map layers; step the timeline.
+7. **Impact** — 6,036 OSM buildings, WorldPop zones, exposed floor area; *monetary valuation not available*.
+8. **Action windows** — latest safe action time per task (next critical decision T2).
+9–11. **Plan A** → **PLAN AT RISK**; **WHY**: `SCENARIO CHANGED BASE → HIGH → ROAD R37 CLOSES EARLIER →
+C5 LOSES ACCESS → T1 MISSES ACTION WINDOW` (the HIGH member was selected by an audited exercise inject).
+12–14. **STRESS TEST**, **GENERATE ALTERNATIVES** (CP-SAT), pumps 16 → 8 and re-run.
+15–17. **Operations** — report *road closed* (R29) → pipeline → **RECOMPUTE** → DRAFT v2 → commander
+reviews / approves / activates. 18. Operations board.
+19–21. **Validation** — real Sentinel-2 evidence, ARGUS-computed holdout metrics with the QC caveat;
+provenance and assumptions; sources table (Kazhydromet / Tasqyn NOT CONFIGURED).
+22. **Kokshetau — Kylshakty bottlenecks** — real OSM bridges / culverts / low roads; select one for the
+plan impact (tasks at risk, closed and detour roads). Network consequences only — no hydraulic claims.
+23–24. ҚАЗ → РУС → ENG. 25. Report in kk / ru / en. 26. External providers offline — ARGUS keeps working.
 
 ## Quality checks
 
 ```bash
 cd backend && . .venv/bin/activate
-ruff check app && pytest -q                 # engines, API, RBAC, imports, full demo flow
+ruff check app && pytest -q                 # engines, API, RBAC, imports, full demo flow (DEMO profile)
+pytest -q app/tests_realdata                # real-data packs: historical areas, validation, plan, offline
+python -m app.cli realdata-status --verify  # re-hash every installed pack file
 
 cd frontend
 npm run typecheck && npm run lint && npm run i18n:check && npm test && npm run build
@@ -116,6 +119,8 @@ backend/            FastAPI app (app/), Alembic migrations, tests (app/tests)
   app/demo/         deterministic DEMO generator + seed (both areas)
 frontend/           Next.js console (app/, components/, lib/, messages/{kk,ru,en}.json)
 data/demo/          generated DEMO fixtures (committed, reproducible: python -m app.cli generate-demo)
+data/realdata/      pack lock file, curated exercise plans / events (packs install into */generated, gitignored)
+scripts/            realdata/ (pack pipelines + validator), e2e/demo26.mjs (26-step demo flow)
 data/imports/       drop-in location for real data (validation masks, imports) — see README there
 docs/               ARCHITECTURE, METHODOLOGY, DATA_CONTRACTS, GLOSSARY, IMPLEMENTATION_STATUS
 ```

@@ -1,49 +1,42 @@
 # ARGUS FloodOps — Implementation Status
 
 > Read this first when resuming work. Single source of truth for what exists and what remains.
+> Test evidence: [`FINAL_SYSTEM_TEST.md`](FINAL_SYSTEM_TEST.md).
 
-_Status: all six modules and all screens are implemented end-to-end on DEMO / SIMULATION data.
-The real-data preparation work is now complete for the Atbasar and Kokshetau pilot packs: terrain,
-roads/buildings, population/water baselines, official curated event/hydrology records, public
-GloFAS/weather context, and the Atbasar 2024 satellite/validation/scenario package have all passed
-their data-pipeline integrity gates. Application mounting/import/provider wiring and the full
-backend/frontend/demo test pass are still pending and are the next integration step. See
-`docs/REAL_DATA_FINAL_STATUS.md` and `docs/REAL_DATA_HANDOFF.md`._
+_Status (2 Oct 2026): all six modules and all screens run end-to-end on the **installed real-data packs**
+(Atbasar — HISTORICAL 2024 validation pilot; Kokshetau — portability / bottleneck pilot). The 26-step
+competition flow passes 26/26 in the browser on a fresh database; backend, real-data and frontend suites,
+production build and the backend Docker image were run. The synthetic DEMO profile remains as fallback
+(and for the unit suite)._
 
 ## Done
 
 | Area | State |
 |---|---|
-| Backend foundation | FastAPI, Pydantic settings (`ARGUS_*`), SQLAlchemy 2, SQLite demo / PostGIS prod, Alembic baseline (`backend/alembic`), JWT auth, RBAC (VIEWER/OPERATOR/PLANNER/COMMANDER/ADMIN), audit trail with `data_version` |
-| Demo data | Deterministic generator for Atbasar/Zhabai and Kokshetau/Kylshakty (`python -m app.cli generate-demo`), seeded on first start; everything labelled DEMO / SIMULATION |
-| Module 1 Scenario | Ensemble M1–M6, stage–HAND surrogate, observation conditioning (weighted RMSE), scenario versions, manual member selection, depth PNG frames, raster-manifest provider for real surfaces |
-| Module 2 Impact | Buildings, aggregated population, facilities, roads, economic ranges, calculation transparency |
-| Module 3 Access | Closure intervals, road-event overrides, earliest-arrival / latest-departure searches, sector & facility windows, bottleneck what-if + structural candidates |
-| Module 4 Plan | Evaluator, causal chains, plan health, stress test (≈30 perturbations), CP-SAT alternatives (VALUE / ROBUST / MINIMAL_CHANGE) with verify loop and WHY, resource gap, human constraints, resource pool, policy presets (`/api/policies`) |
-| Module 5 Operations | Lifecycle, task status, event injection, pipeline with 7 steps, recompute → new DRAFT |
-| Module 6 Validation | Metrics from supplied masks only, NOT LOADED state, synthetic self-test, curtain + difference layers, after-action |
-| Data & input | Observations + verification, DATA CONFLICT resolution, resources, road events, facilities, imports wizard, sources/freshness, approved action library |
-| Degraded mode | Provider statuses, outage simulation, offline banners |
-| Reports | Server HTML briefing in kk/ru/en (independent of UI language), print/PDF |
-| Frontend | Next.js 16 console, kk default + ru + en with persisted switcher, MapLibre 2D/3D, timeline OBSERVED ━● NOW ┄ FORECAST, screens A–H + data, audit, admin |
-| Ops | `docker-compose.yml` (PostGIS + backend + frontend), Dockerfiles, `.env.example`, admin demo reset |
-| Quality | Backend: ruff + pytest (engines, API, RBAC, imports, full demo flow, reset). Frontend: tsc, eslint, i18n checker, vitest, production build |
+| Real-data packs | Release assets `realdata-2026-10-01` (workflow `realdata-release.yml`), pinned in `data/realdata/packs.lock.json`; `python -m app.cli install-realdata` downloads once, verifies archive SHA-256 + every file against the pack manifest, installs to `<realdata>/<area>/generated`; startup never downloads. `ARGUS_DATA_PROFILE=auto/historical/demo`. Docs: `REAL_DATA_INSTALL.md` |
+| Area build | `app/realdata/build.py`: OSMnx road graph (largest component), OSM buildings / facilities / waterways / bridges, WorldPop dasymetric zones, analysis-grid sectors, bottleneck candidates (bridges, culverts / channel crossings, low roads), stations + curated official observations, exercise plans; runtime bundle rebuilt only on pack / exercise / builder change |
+| Module 1 Scenario | Atbasar: raster-manifest provider, LOW / BASE / HIGH real rasters (HISTORICAL), exercise inject BASE → HIGH (audited). Kokshetau: stage–HAND on the real DEM (SIMULATION, uncalibrated, documented overestimate). Conditioning only against the scenario's own stage station |
+| Module 2 Impact | Real buildings / population / facilities / roads; exposure as floor area — no money without an approved valuation table (`NOT_AVAILABLE_NO_APPROVED_VALUATION`); vulnerable share "not available" |
+| Module 3 Access | Time-dependent graph on real roads, ACCESS_LOST windows, latest safe action time; bottleneck analysis on real candidates with on-demand plan re-evaluation (tasks at risk, closed / detour roads); cached structural betweenness |
+| Module 4 Plan | Plan A / Plan K-1 exercise plans, evaluator, WHY chains, stress test, CP-SAT alternatives (4 policies), resource pool, resource gap; resources labelled SIMULATION |
+| Module 5 Operations | Lifecycle with commander approval, road events → pipeline → RECOMPUTE → DRAFT, task board |
+| Module 6 Validation | Atbasar metrics recomputed from observed / modelled masks: holdout IoU 0.5881 · P 0.8155 · R 0.6783 · F1 0.7406, plus calibration / all-usable / direct-AOI rows; label HISTORICAL SAME-EVENT SPATIAL HOLDOUT; caveat AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC; Sentinel-2 fallback documented; after-action compares only same-datum stations |
+| Providers | Open-Meteo GloFAS v4 / forecast: GLOBAL_MODEL, timeout, retry, cache, LIVE / CACHED / STALE / OFFLINE with data age; Kazhydromet / Tasqyn NOT_CONFIGURED (no endpoint invented) |
+| Provenance / labels | Modes LIVE / CACHED / HISTORICAL / SIMULATION / NOT POLLED; pack layers aged on the wall clock, historical layers show data time; assumptions, limitations, chronology, bottleneck notes localized kk / ru / en (English pack text as source) |
+| Frontend | Historical clock + banners, waterways, local rivers on the region map (offline), per-area attribution, history / live-context / assumptions panels, validation evidence + protocol table, bottleneck plan impact, Data screen with full date-time and post-replay flags |
+| Performance | Encoded static layers cached per static version, single-builder lock for area contexts, background warm-up (`ARGUS_WARMUP`), bottleneck analysis cache |
+| Ops | Docker entrypoint installs packs into the `packs` volume, `runtime` volume, `libexpat1` for rasterio, `.dockerignore`, `.env.example` with all new settings |
+| Quality | Backend ruff + 27 DEMO tests + 10 real-data tests (network blocked); frontend tsc, eslint (0 errors), i18n checker (1038 keys × 3), vitest, `next build`; pack validators; `scripts/e2e/demo26.mjs` |
 
-## Verified demo story (computed, not scripted)
+## Not done / limitations
 
-Scenario v2 (M4, conditioned on a verified field reading 613 cm vs hydropost 598 cm → OPEN conflict):
-Plan A v1 → PLAN AT RISK; R7 closes ~13:55 instead of ~16:32; T8 loses egress (deadline ~14:12),
-planned 14:30 → NO_ROUTE. Chain: SCENARIO_CHANGED → ROAD_CLOSES_EARLIER R7 → C3 LOSES ACCESS →
-T8 MISSES WINDOW. MINIMAL_CHANGE retimes T8 to ~12:21.
-
-## Not yet done / next steps
-
-* Mount/import the completed real-data artifacts into the application data volume and wire the
-  existing provider/import contracts. Atbasar historical evidence uses a documented Sentinel-2
-  fallback because no suitable Sentinel-1 acquisition was found for the event window.
-* Docker images were written but could not be built in the development sandbox (no Docker daemon);
-  run `docker compose up --build` to verify.
-* Wire the ready public Open-Meteo GloFAS/weather profiles into runtime providers if desired.
-  Kazhydromet/Tasqyn remain NOT_CONFIGURED until authorized endpoints are supplied; do not fake LIVE data.
-* Headless PDF rendering (the HTML briefing is print-ready; browser print → PDF works).
-* Map-based click-to-place for new facilities (coordinates are entered manually today).
+* Full `docker compose up` (PostGIS + frontend image) was not run in the sandbox (Docker Hub rate limit,
+  Debian mirrors blocked). The backend image was built and run: first start installed and verified both
+  packs, restart reused them, seeded the historical profile and served the API.
+* Atbasar model reproduces the NE floodplain; officially recorded town-interior flooding (embankment
+  overtopping) is not reproduced (30 m DSM). Kokshetau scenario is uncalibrated and overestimates exposure.
+* Stress test on Plan A under the HIGH member: feasible in 0 of 19 perturbations (honest result of the
+  exercise setup, not a defect).
+* The optional external CARTO basemap is unreachable offline; operational layers and local rivers still render.
+* Headless PDF (browser print → PDF works); map click-to-place for new facilities.
+* 16 pre-existing eslint warnings (react-hooks style rules), 0 errors.

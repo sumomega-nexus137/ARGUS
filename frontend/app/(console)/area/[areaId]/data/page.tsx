@@ -367,7 +367,7 @@ function Sources({ areaId }: { areaId: string }) {
           <tr key={s.id} className="border-t border-line/60">
             <td className="py-1"><div className="font-semibold">{s.source}</div><div className="text-[10.5px] text-muted">{s.layer} · {s.provider}{s.message ? ` · ${s.message}` : ""}</div></td>
             <td><StatusBadge ns="mode" code={s.mode} icon={false} /></td>
-            <td><StatusBadge ns="freshness" code={s.freshness} icon={false} /></td>
+            <td><StatusBadge ns="mode" code={s.freshness} icon={false} /></td>
             <td>{s.quality || "—"}</td>
             <td className="tabular">{s.last_success_at ? dateTime(s.last_success_at, area.utc_offset_min) : "—"}</td>
           </tr>
