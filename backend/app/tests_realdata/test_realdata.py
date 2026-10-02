@@ -75,68 +75,69 @@ def test_impact_exposure_only_no_money(client, auth):
     assert f["buildings"]["total"] > 5000
 
 
-def test_plan_a_at_risk_with_real_causal_chain(client, auth):
+def test_plan_a_baseline_then_high_real_causal_chain(client, auth):
     H = auth("planner")
     plans = client.get("/api/areas/atbasar/plans", headers=H).json()
     vid = plans[0]["versions"][-1]["id"]
+
+    # Competition starts on the plan's approved BASE member: a meaningful plan must work before stress is applied.
+    h0 = client.get(f"/api/plan-versions/{vid}/health", headers=H).json()
+    assert h0["status"] == "PLAN_VALID"
+    assert h0["scenario"]["member"] == "BASE" and h0["basis_scenario"]["member"] == "BASE"
+
+    # Deliberate exercise escalation: the exact same human plan becomes at risk under HIGH and ARGUS explains why.
+    r = client.post("/api/areas/atbasar/scenario/select-member",
+                    json={"member_id": "HIGH", "note": "Competition exercise escalation BASE → HIGH", "lock": False},
+                    headers=H)
+    assert r.status_code == 200
     h = client.get(f"/api/plan-versions/{vid}/health", headers=H).json()
-    assert h["status"] == "PLAN_AT_RISK" and h["scenario"]["member"] == "HIGH" and h["basis_scenario"]["member"] == "BASE"
-    types = [[n["type"] for n in c["nodes"]] for c in h["chains"]]
-    assert any(t[:4] == ["SCENARIO_CHANGED", "ROAD_CLOSES_EARLIER", "RESOURCE_LOSES_ACCESS", "TASK_MISSES_WINDOW"] for t in types)
+    assert h["status"] == "PLAN_AT_RISK" and h["scenario"]["member"] == "HIGH"
+    types = [[n["type"] for n in chain["nodes"]] for chain in h["chains"]]
+    assert any(t[:4] == ["SCENARIO_CHANGED", "ROAD_CLOSES_EARLIER", "RESOURCE_LOSES_ACCESS", "TASK_MISSES_WINDOW"]
+               for t in types)
     assert h["next_critical_decision"] is not None
+
+    # Restore BASE so the stress-test test measures robustness from the approved plan state.
+    r = client.post("/api/areas/atbasar/scenario/select-member",
+                    json={"member_id": "BASE", "note": "Restore approved BASE after causal-chain test", "lock": False},
+                    headers=H)
+    assert r.status_code == 200
 
 
 def test_stress_alternatives_pumps_and_recompute(client, auth):
     P, C, OP = auth("planner"), auth("commander"), auth("operator")
     vid = client.get("/api/areas/atbasar/plans", headers=P).json()[0]["versions"][-1]["id"]
+
     st = client.post(f"/api/plan-versions/{vid}/stress-test", headers=P).json()
     print("ARGUS_STRESS_PLAN_A", json.dumps({
         "n_scenarios": st["n_scenarios"], "n_feasible": st["n_feasible"],
         "robustness": st["robustness"], "baseline_status": st["baseline_status"],
-        "baseline_tasks": [
-            {"code": t["code"], "status": t["status"], "departure": t["departure"],
-             "arrival": t["arrival"], "end": t["end"], "deadline": t["deadline"],
-             "latest_departure": t["latest_departure"], "slack_min": t["slack_min"],
-             "issues": [{"type": i["type"], "params": i["params"]} for i in t["issues"]],
-             "roads": t["route_roads"]}
-            for t in st["baseline"]["tasks"]
-        ],
-        "scenarios": [{"id": s["id"], "kind": s["kind"], "status": s["status"], "failed": s["failed_tasks"]}
-                      for s in st["scenarios"]]
-    }))
-    # Diagnostic: also evaluate the same human exercise plan from its approved BASE member.
-    # This lets the competition setup be tuned without changing evaluator logic.
-    sel_base = client.post("/api/areas/atbasar/scenario/select-member",
-                           json={"member_id": "BASE", "note": "CI exercise robustness diagnostic", "lock": False},
-                           headers=P)
-    assert sel_base.status_code == 200
-    st_base = client.post(f"/api/plan-versions/{vid}/stress-test", headers=P).json()
-    print("ARGUS_STRESS_PLAN_A_BASE", json.dumps({
-        "n_scenarios": st_base["n_scenarios"], "n_feasible": st_base["n_feasible"],
-        "robustness": st_base["robustness"], "baseline_status": st_base["baseline_status"],
         "scenarios": [{"id": s["id"], "kind": s["kind"], "member": s["member"],
-                       "status": s["status"], "failed": s["failed_tasks"]} for s in st_base["scenarios"]]
+                       "status": s["status"], "failed": s["failed_tasks"]} for s in st["scenarios"]]
     }))
-    sel_high = client.post("/api/areas/atbasar/scenario/select-member",
-                           json={"member_id": "HIGH", "note": "Restore competition HIGH inject", "lock": False},
-                           headers=P)
-    assert sel_high.status_code == 200
-
     kinds = {s["kind"] for s in st["scenarios"]}
-    # HIGH is the top precomputed member after the exercise inject → no higher member exists (honestly absent)
-    assert {"EARLIER_PEAK", "ROUTE_UNAVAILABLE", "CREW_DELAYED", "VEHICLE_UNAVAILABLE", "PUMP_UNAVAILABLE"} <= kinds
-    assert st["member"] == "HIGH" and "HIGHER_WATER" not in kinds
+    assert st["member"] == "BASE"
+    assert st["baseline_status"] == "FEASIBLE"
+    assert 0 < st["n_feasible"] < st["n_scenarios"]  # mixed, calculated result — not a hard-coded percentage
+    assert {"HIGHER_WATER", "EARLIER_PEAK", "ROUTE_UNAVAILABLE", "CREW_DELAYED",
+            "VEHICLE_UNAVAILABLE", "PUMP_UNAVAILABLE"} <= kinds
+
     alts = client.post(f"/api/plan-versions/{vid}/alternatives", json={"policy": "LIFE_SAFETY"}, headers=P).json()
     assert alts["feasible"] and alts["alternatives"]
     print("ARGUS_ALT_ROBUSTNESS", json.dumps([
         {"id": a["id"], "label": a["label"], "evaluation": a["evaluation"]["status"], "robustness": a.get("robustness")}
         for a in alts["alternatives"]
     ]))
+    robust = [a for a in alts["alternatives"] if a.get("robustness") and a["robustness"].get("robustness") is not None]
+    assert robust
+    assert max(a["robustness"]["robustness"] for a in robust) > st["robustness"]
     assert all(t.get("why") for a in alts["alternatives"] for t in a["tasks"])
+
     r = client.post("/api/areas/atbasar/resources/pool", json={"resource_type": "PUMP", "count": 8}, headers=P)
     assert r.status_code == 200
     alts8 = client.post(f"/api/plan-versions/{vid}/alternatives", json={"policy": "BALANCED"}, headers=P).json()
     assert all(a["metrics"]["pumps_used"] <= 8 for a in alts8["alternatives"])
+
     roads = client.get("/api/areas/atbasar/access", headers=OP).json()["roads"]
     target = next(r["road_id"] for r in roads if r["road_class"] in ("trunk", "primary", "secondary"))
     ev = client.post("/api/areas/atbasar/road-events", json={"road_id": target, "state": "CLOSED"}, headers=OP).json()
@@ -147,7 +148,6 @@ def test_stress_alternatives_pumps_and_recompute(client, auth):
     for target_status, who in (("REVIEWED", P), ("APPROVED", C), ("ACTIVE", C)):
         assert client.post(f"/api/plan-versions/{new_vid}/transition", json={"target": target_status}, headers=who).status_code == 200
     assert client.post(f"/api/plan-versions/{new_vid}/transition", json={"target": "REVIEWED"}, headers=OP).status_code in (403, 409)
-
 
 def test_kokshetau_bottlenecks_real_candidates(client, auth):
     from app.realdata.build import ensure_built
