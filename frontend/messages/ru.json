@@ -579,7 +579,9 @@
     "constraintKind": "Ограничение",
     "sector": "Сектор",
     "availableOf": "Доступно: {type}",
-    "why": "ПОЧЕМУ?"
+    "why": "ПОЧЕМУ?",
+    "exerciseHigh": "УЧЕНИЯ: СЦЕНАРИЙ HIGH",
+    "exerciseBase": "ВЕРНУТЬ УЧЕНИЯ К BASE"
   },
   "policy": {
     "LIFE_SAFETY": "Безопасность людей",
