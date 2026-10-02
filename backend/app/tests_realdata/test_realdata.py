@@ -90,12 +90,22 @@ def test_stress_alternatives_pumps_and_recompute(client, auth):
     P, C, OP = auth("planner"), auth("commander"), auth("operator")
     vid = client.get("/api/areas/atbasar/plans", headers=P).json()[0]["versions"][-1]["id"]
     st = client.post(f"/api/plan-versions/{vid}/stress-test", headers=P).json()
+    print("ARGUS_STRESS_PLAN_A", json.dumps({
+        "n_scenarios": st["n_scenarios"], "n_feasible": st["n_feasible"],
+        "robustness": st["robustness"], "baseline_status": st["baseline_status"],
+        "scenarios": [{"id": s["id"], "kind": s["kind"], "status": s["status"], "failed": s["failed_tasks"]}
+                      for s in st["scenarios"]]
+    }))
     kinds = {s["kind"] for s in st["scenarios"]}
     # HIGH is the top precomputed member after the exercise inject → no higher member exists (honestly absent)
     assert {"EARLIER_PEAK", "ROUTE_UNAVAILABLE", "CREW_DELAYED", "VEHICLE_UNAVAILABLE", "PUMP_UNAVAILABLE"} <= kinds
     assert st["member"] == "HIGH" and "HIGHER_WATER" not in kinds
     alts = client.post(f"/api/plan-versions/{vid}/alternatives", json={"policy": "LIFE_SAFETY"}, headers=P).json()
     assert alts["feasible"] and alts["alternatives"]
+    print("ARGUS_ALT_ROBUSTNESS", json.dumps([
+        {"id": a["id"], "label": a["label"], "evaluation": a["evaluation"]["status"], "robustness": a.get("robustness")}
+        for a in alts["alternatives"]
+    ]))
     assert all(t.get("why") for a in alts["alternatives"] for t in a["tasks"])
     r = client.post("/api/areas/atbasar/resources/pool", json={"resource_type": "PUMP", "count": 8}, headers=P)
     assert r.status_code == 200
@@ -114,6 +124,18 @@ def test_stress_alternatives_pumps_and_recompute(client, auth):
 
 
 def test_kokshetau_bottlenecks_real_candidates(client, auth):
+    from app.realdata.build import ensure_built
+
+    bundle = ensure_built("kokshetau")
+    analysis = json.loads((bundle / "analysis.json").read_text(encoding="utf-8"))
+    cal = analysis["exercise_calibration"]
+    # Official 2024 reports describe localised river-adjacent impacts, not city-wide inundation.
+    # The exercise is intentionally conservative and only order-of-magnitude bounded: reported impact
+    # categories are heterogeneous and are NOT treated as exact building labels.
+    assert cal["status"] == "HISTORICALLY_IMPACT_BOUNDED_NOT_SPATIALLY_CALIBRATED"
+    assert cal["channel_corridor_m"] <= 150
+    assert 20 <= cal["modelled_base_building_centroids_depth_ge_0_10m"] <= 150
+
     H = auth("planner")
     lay = client.get("/api/areas/kokshetau/layers/bottlenecks", headers=H).json()["features"]
     kinds = {f["properties"]["kind"] for f in lay}
