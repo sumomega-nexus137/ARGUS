@@ -619,6 +619,23 @@ def build_kokshetau(out: Path) -> dict:
     fx = np.array([proj.xy(*f["geometry"]["coordinates"])[0] for f in facilities])
     fy = np.array([proj.xy(*f["geometry"]["coordinates"])[1] for f in facilities])
     flv = P.relative_level_points("HIGH", fx, fy, np.array([360.0]))[:, 0]
+    base_flv = P.relative_level_points("BASE", fx, fy, np.array([360.0]))[:, 0]
+    historical_anchor_checks = []
+    for i, fac in enumerate(facilities):
+        original = str(fac["properties"].get("name_original") or "")
+        if "ЕРТОСТИК" in original.upper() or "ERTOSTIK" in original.upper():
+            depth = float(base_flv[i]) if np.isfinite(base_flv[i]) else None
+            historical_anchor_checks.append({
+                "id": fac["properties"]["id"],
+                "name": original,
+                "official_evidence": "First floor flooding reported in 2024 official material.",
+                "base_exercise_depth_m": depth,
+                "matched": depth is not None and depth >= 0.05,
+                "interpretation": (
+                    "Consistency check only: the exercise flags the known affected near-river landmark. "
+                    "This does not spatially validate the full flood extent."
+                ),
+            })
     pick = [int(i) for i in np.argsort(np.where(np.isfinite(flv), -flv, 99.0))[:2]]
     hosp = sorted((river.distance(Point(fx[i], fy[i])), i) for i, f in enumerate(facilities)
                   if f["properties"]["facility_type"] == "HOSPITAL")
@@ -701,6 +718,7 @@ def build_kokshetau(out: Path) -> dict:
                               "stage_peaks_m": KOK_STAGE_PEAKS_M,
                               "official_2024_reported_impact_scale": KOK_REPORTED_IMPACT_SCALE,
                               "modelled_base_building_centroids_depth_ge_0_10m": int(len(fl)),
+                              "historical_anchor_checks": historical_anchor_checks,
                               "note": (
                                   "Reported houses/yards/courtyards/kindergarten are heterogeneous impact units, "
                                   "so ARGUS uses them only to reject obviously city-wide exercise spread, not as exact labels."
