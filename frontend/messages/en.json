@@ -1178,7 +1178,10 @@
       "impact": "impact",
       "evacuation": "evacuation",
       "emergency_status": "emergency status"
-    }
+    },
+    "officialEvidence": "Officially reported impact locations",
+    "reportedNotModelled": "REPORTED · NOT MODELLED",
+    "modelSeparation": "Historical evidence is shown separately from the modelled inundation layer: ARGUS does not hide impacts the model failed to reproduce."
   },
   "live": {
     "title": "Live global-model context (today)",
