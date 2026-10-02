@@ -1,0 +1,27 @@
+{
+  "mode": "HISTORICAL",
+  "status": "OFFICIALLY_REPORTED_IMPACT_NOT_MODELLED_POLYGON",
+  "note": {
+    "kk": "Ресми оқиға дерегі модель немесе Sentinel-2 ашық су маскасы қайта жасамаған қала ішіндегі әсерді бөлек көрсетеді.",
+    "ru": "Официальные сведения о событии отдельно показывают городские последствия, которые модель и маска открытой воды Sentinel-2 не воспроизводят.",
+    "en": "Official event evidence separately records urban impacts that the model and Sentinel-2 open-water mask do not reproduce."
+  },
+  "items": [
+    {
+      "id": "ATB-EVID-OVERTOP",
+      "when": "2024-04-11T04:43:00+05:00",
+      "kind": "OFFICIAL_REPORTED_OVERTOPPING",
+      "name": {
+        "kk": "Атбасар қорғаныс үйінділері",
+        "ru": "защитные насыпи Атбасара",
+        "en": "Atbasar protective embankments"
+      },
+      "description": {
+        "kk": "Ресми хабарламада Жабай деңгейі 5,95 м болғанда қорғаныс үйінділерінің алты учаскесінен су асқаны көрсетілген. Бұл факт модельдік су басу полигоны ретінде қолданылмайды.",
+        "ru": "В официальном сообщении при уровне Жабая 5,95 м отмечен перелив через шесть участков защитной насыпи. Этот факт не используется как выдуманный полигон затопления.",
+        "en": "Official reporting records Zhabai at 5.95 m and overflow across six protective-embankment sections. ARGUS does not convert this fact into an invented inundation polygon."
+      },
+      "source_url": "https://www.gov.kz/memleket/entities/aqmola/press/news/details/747424?lang=ru"
+    }
+  ]
+}
