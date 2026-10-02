@@ -103,29 +103,61 @@ await step(8, "Access & action windows (latest safe action time)", p, async () =
 });
 
 // ---------------------------------------------------------------- 9–14 plan
-await step(9, "Plan A loaded", p, async () => {
+let planVid = null;
+let planARobustness = null;
+await step(9, "Plan A loaded on approved BASE member", p, async () => {
   const b = await go(p, "/area/atbasar/plan", /Plan A v1/);
-  return [!!b, "Plan A v1 (ACTIVE)"];
+  const token = await p.evaluate(() => localStorage.getItem("argus.token"));
+  const plans = await (await p.request.get(BASE + "/api/areas/atbasar/plans", {
+    headers: { Authorization: "Bearer " + token },
+  })).json();
+  planVid = plans[0]?.versions?.at(-1)?.id || null;
+  const health = planVid ? await (await p.request.get(BASE + `/api/plan-versions/${planVid}/health`, {
+    headers: { Authorization: "Bearer " + token },
+  })).json() : null;
+  return [!!b && !!planVid && health?.status === "PLAN_VALID" && health?.scenario?.member === "BASE",
+    `Plan A v1 · BASE · ${health?.status || "?"}`];
 });
-await step(10, "CHECK MY PLAN → PLAN AT RISK", p, async () => {
-  const b = await waitText(p, /ЖОСПАР ҚАУІПТЕ/);
+await step(10, "Exercise escalation BASE → HIGH makes Plan A AT RISK", p, async () => {
+  await p.locator("button:has-text('ЖАТТЫҒУ: HIGH СЦЕНАРИЙІ')").first().click();
+  const b = await waitText(p, /ЖОСПАР ҚАУІПТЕ/, 60000);
   const ev = await waitText(p, /КЕЗІНДЕГІ БАҒАЛАУ/);
-  return [!!b && !!ev, "evaluation table + PLAN AT RISK"];
+  return [!!b && !!ev, "audited BASE→HIGH exercise escalation · PLAN AT RISK"];
 });
 await step(11, "WHY chain", p, async () => {
   const txt = await body(p);
   const ok = /СЦЕНАРИЙІ ӨЗГЕРДІ · BASE → HIGH/.test(txt) && /R37 ЖОЛЫ ЕРТЕРЕК ЖАБЫЛАДЫ/.test(txt) && /C5 ҚОЛЖЕТІМДІЛІКТЕН АЙЫРЫЛАДЫ/.test(txt) && /T1 ТАПСЫРМАСЫ ӘРЕКЕТ ТЕРЕЗЕСІНЕН ТЫС ҚАЛАДЫ/.test(txt);
   return [ok, "BASE→HIGH → R37 closes earlier → C5 loses access → T1 misses window"];
 });
-await step(12, "STRESS TEST", p, async () => {
+await step(12, "Restore BASE → STRESS TEST gives mixed robustness", p, async () => {
+  await p.locator("button:has-text('ЖАТТЫҒУДЫ BASE-КЕ ҚАЙТАРУ')").first().click();
+  await waitText(p, /ЖОСПАР ЖАРАМДЫ|PLAN VALID|ПЛАН ДОПУСТИМ/, 60000).catch(() => null);
   await p.locator("button:has-text('ЖОСПАРДЫ СТРЕСС-ТЕСТІЛЕУ')").click();
   const r = await waitText(p, /Бағаланған \d+ сценарийдің \d+-інде орындалады/, 120000);
-  return [!!r, r || "no result"];
+  const token = await p.evaluate(() => localStorage.getItem("argus.token"));
+  const runs = await (await p.request.get(BASE + `/api/plan-versions/${planVid}/stress-tests`, {
+    headers: { Authorization: "Bearer " + token },
+  })).json();
+  const latest = runs[0];
+  planARobustness = latest?.robustness ?? null;
+  const mixed = latest && latest.n_feasible > 0 && latest.n_feasible < latest.n_scenarios;
+  return [!!r && mixed, `${latest?.n_feasible ?? "?"}/${latest?.n_scenarios ?? "?"} feasible · robustness ${planARobustness?.toFixed?.(3) ?? "?"}`];
 });
-await step(13, "GENERATE ALTERNATIVES (CP-SAT)", p, async () => {
+await step(13, "GENERATE ALTERNATIVES improves measured robustness", p, async () => {
   await p.locator("button:has-text('БАЛАМАЛАРДЫ ҚҰРУ')").click();
   const r = await waitText(p, /ALT-1/, 120000);
-  return [!!r, "ALT-1 … returned"];
+  const token = await p.evaluate(() => localStorage.getItem("argus.token"));
+  const runs = await (await p.request.get(BASE + "/api/areas/atbasar/optimization-runs", {
+    headers: { Authorization: "Bearer " + token },
+  })).json();
+  const run = runs.find((x) => x.kind !== "RESOURCE_GAP");
+  const full = run ? await (await p.request.get(BASE + `/api/optimization-runs/${run.id}`, {
+    headers: { Authorization: "Bearer " + token },
+  })).json() : null;
+  const alts = full?.alternatives || [];
+  const best = Math.max(...alts.map((a) => a.robustness?.robustness ?? -1));
+  const improved = planARobustness != null && Number.isFinite(best) && best > planARobustness + 1e-9;
+  return [!!r && improved, `Plan A robustness ${planARobustness?.toFixed?.(3) ?? "?"} → best alternative ${Number.isFinite(best) ? best.toFixed(3) : "?"}`];
 });
 await step(14, "Fewer pumps (16 → 8) and re-run alternatives", p, async () => {
   const inp = p.locator("input[aria-label='Қолжетімді сорғылар']").first();
