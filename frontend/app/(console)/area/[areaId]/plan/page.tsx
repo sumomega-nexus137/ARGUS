@@ -132,6 +132,21 @@ export default function PlanPage() {
     mutationFn: (tasks: object[]) => put<PlanVersion>(`/api/plan-versions/${vid}/tasks`, { tasks }),
     onSuccess: () => invalidate(areaId),
   });
+  const exerciseScenarioM = useMutation({
+    mutationFn: (member: "BASE" | "HIGH") => post(`/api/areas/${areaId}/scenario/select-member`, {
+      member_id: member,
+      note: member === "HIGH"
+        ? "Competition exercise escalation BASE → HIGH"
+        : "Competition exercise reset HIGH → BASE",
+      lock: false,
+    }),
+    onSuccess: () => {
+      setFresh({});
+      qc.invalidateQueries({ queryKey: ["stressLatest", vid] });
+      qc.invalidateQueries({ queryKey: ["optRuns", areaId] });
+      invalidate(areaId);
+    },
+  });
 
   // map: plan task sites coloured by evaluation; selected task (plan or alternative) route highlighted
   const evalTasks = health.data?.evaluation.tasks;
@@ -170,11 +185,11 @@ export default function PlanPage() {
   if (!versions.length) return <div className="p-3"><ScreenHeader screen="plan" /><Empty>{tp("noPlan")}</Empty></div>;
 
   const canEdit = can("plan_edit");
-  const busy = stressM.isPending || altM.isPending || gapM.isPending;
+  const busy = stressM.isPending || altM.isPending || gapM.isPending || exerciseScenarioM.isPending;
   const lifecycle = version ? LIFECYCLE[version.status] || [] : [];
   const stress = stressQ.data;
   const taskCodes = Array.from(new Set([...(version?.tasks || []).map((t) => t.code), ...(altQ.data?.candidates || []).map((c) => c.code)])).sort();
-  const mutErr = stressM.error || altM.error || gapM.error || adoptM.error || transitionM.error || forkM.error || tasksM.error;
+  const mutErr = stressM.error || altM.error || gapM.error || adoptM.error || transitionM.error || forkM.error || tasksM.error || exerciseScenarioM.error;
 
   return (
     <div className="space-y-3 p-3">
@@ -222,6 +237,14 @@ export default function PlanPage() {
             <Button variant={health.data?.status === "PLAN_AT_RISK" ? "danger" : "default"} icon={Activity} busy={stressM.isPending} disabled={busy || !vid} onClick={() => stressM.mutate()}>{tp("stressTest")}</Button>
             <Button variant="primary" icon={Cpu} busy={altM.isPending} disabled={busy || !vid} onClick={() => altM.mutate()}>{tp("generate")}</Button>
             <Button icon={PackagePlus} busy={gapM.isPending} disabled={busy || !vid} onClick={() => gapM.mutate()}>{tp("gap")}</Button>
+            {areaId === "atbasar" && scenario?.active_member_id === "BASE" && (
+              <Button variant="danger" busy={exerciseScenarioM.isPending} disabled={busy}
+                onClick={() => exerciseScenarioM.mutate("HIGH")}>{tp("exerciseHigh")}</Button>
+            )}
+            {areaId === "atbasar" && scenario?.active_member_id === "HIGH" && (
+              <Button variant="ghost" busy={exerciseScenarioM.isPending} disabled={busy}
+                onClick={() => exerciseScenarioM.mutate("BASE")}>{tp("exerciseBase")}</Button>
+            )}
           </>
         ) : <InlineNote tone="info">{tp("readOnly")}</InlineNote>}
         {busy && <span className="text-[11px] text-muted">{altM.isPending || gapM.isPending ? tp("runningSolver") : tp("running")}</span>}
