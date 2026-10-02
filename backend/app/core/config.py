@@ -52,9 +52,9 @@ class Settings(BaseSettings):
     realdata_release_base: str = (
         "https://github.com/sumomega-nexus137/ARGUS/releases/download/realdata-2026-10-01"
     )
-    # Public global-model providers (Open-Meteo GloFAS / weather). Server-side only.
     # warm static caches (encoded map layers, structural road analysis) in a background thread after startup
     warmup: bool = True
+    # Public global-model providers (Open-Meteo GloFAS / weather). Server-side only.
     open_meteo_enabled: bool = True
     open_meteo_timeout_s: float = 8.0
     open_meteo_retries: int = 1

@@ -20,7 +20,15 @@ services:
       ARGUS_DEMO_MODE: ${ARGUS_DEMO_MODE:-true}
       ARGUS_JWT_SECRET: ${ARGUS_JWT_SECRET:-change-me}
       ARGUS_CORS_ORIGINS: '["http://localhost:3000"]'
-    volumes: [./data/imports:/srv/argus/data/imports]
+      # auto: HISTORICAL real-data pilots when both packs are installed, else DEMO; historical: fail if missing
+      ARGUS_DATA_PROFILE: ${ARGUS_DATA_PROFILE:-auto}
+      # install pinned real-data packs into the "packs" volume on first start (verified; no re-download later)
+      ARGUS_INSTALL_REALDATA: ${ARGUS_INSTALL_REALDATA:-true}
+      ARGUS_OPEN_METEO_ENABLED: ${ARGUS_OPEN_METEO_ENABLED:-true}
+    volumes:
+      - ./data/imports:/srv/argus/data/imports
+      - packs:/srv/argus/packs            # installed real-data packs (~150 MB archives + extracted files)
+      - runtime:/srv/argus/data/runtime   # derived bundles, API caches
     depends_on: { db: { condition: service_healthy } }
     ports: ["8000:8000"]
 
@@ -32,3 +40,5 @@ services:
 
 volumes:
   pgdata:
+  packs:
+  runtime:

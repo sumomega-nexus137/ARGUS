@@ -40,7 +40,7 @@ interface AAR {
   plan_versions: { id: string; plan: string; version: number; status: string; origin: string; approved_by: string | null }[];
   delayed_tasks: { task: string; delay_min?: number }[];
   missed_windows: { task: string; deadline: number | null; deadline_reason: string; issues: string[] }[];
-  route_failures: { task: string }[];
+  route_failures: { event_id: string; road_id: string; tasks_rerouted_or_blocked: string[] }[];
   resource_bottlenecks: { resource?: string; task?: string }[];
   unavailable_resources: { id?: string; resource?: string; status?: string }[];
   forecast_errors: { version: number; station_id: string; member: string; bias_cm: number | null; mae_cm: number | null; n: number }[];
@@ -62,6 +62,10 @@ function useAuthImage(url: string | null) {
 export default function ValidationPage() {
   const { areaId, area, fmt } = useAreaCtx();
   const tv = useTranslations("validation");
+  const ti = useTranslations("issues");
+  const tps = useTranslations("planStatus");
+  const tor = useTranslations("origin");
+  const tr = (ns: typeof ti, k: string) => (ns.has(k) ? ns(k) : k);
   const { locale } = useLocale();
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -132,11 +136,11 @@ export default function ValidationPage() {
       <Panel title={tv("afterAction")}>
         {aar.data ? (
           <div className="grid grid-cols-1 gap-3 text-xs md:grid-cols-2">
-            <AarList title={tv("missed")} items={aar.data.missed_windows.map((m) => `${m.task} · ${fmt(m.deadline)} · ${m.issues.join(", ")}`)} none={tv("none")} tone="crit" />
+            <AarList title={tv("missed")} items={aar.data.missed_windows.map((m) => `${m.task} · ${fmt(m.deadline)} · ${m.issues.map((i) => tr(ti, i)).join(", ")}`)} none={tv("none")} tone="crit" />
             <AarList title={tv("delayed")} items={aar.data.delayed_tasks.map((d) => `${d.task}${d.delay_min ? ` ${tv("delayMin", { n: d.delay_min })}` : ""}`)} none={tv("none")} />
-            <AarList title={tv("routeFailures")} items={aar.data.route_failures.map((r) => r.task)} none={tv("none")} />
+            <AarList title={tv("routeFailures")} items={aar.data.route_failures.map((r) => `${r.road_id} → ${r.tasks_rerouted_or_blocked.join(", ") || "—"}`)} none={tv("none")} />
             <AarList title={tv("unavailableResources")} items={aar.data.unavailable_resources.map((r) => `${r.id || r.resource} ${r.status || ""}`)} none={tv("none")} />
-            <AarList title={tv("versions")} items={aar.data.plan_versions.map((p) => `${p.plan} v${p.version} · ${p.status} · ${p.origin}${p.approved_by ? ` · ${p.approved_by}` : ""}`)} none={tv("none")} />
+            <AarList title={tv("versions")} items={aar.data.plan_versions.map((p) => `${p.plan} v${p.version} · ${tr(tps, p.status)} · ${tr(tor, p.origin)}${p.approved_by ? ` · ${p.approved_by}` : ""}`)} none={tv("none")} />
             <AarList title={tv("modelErrors")} items={aar.data.forecast_errors.map((e) => `${e.station_id} v${e.version} ${e.member}: ${tv("bias")} ${e.bias_cm ?? "—"} · ${tv("mae")} ${e.mae_cm ?? "—"} (n=${e.n})`)} none={tv("none")} />
           </div>
         ) : <Loading />}

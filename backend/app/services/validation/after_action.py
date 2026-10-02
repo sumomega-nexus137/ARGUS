@@ -21,12 +21,15 @@ DELAY_THRESHOLD_MIN = 15
 
 
 def forecast_errors(db: Session, area_id: str) -> list[dict]:
-    ctx = load_context(db, area_id)
+    """Observed minus modelled stage at the scenario's own stage station only: other gauges (e.g. official
+    local posts with their own datum) are not on the scenario's stage scale and are never compared with it."""
     out = []
     scenarios = db.scalars(select(Scenario).where(Scenario.area_id == area_id).order_by(Scenario.version)).all()
-    for sid in ctx.stations:
+    for sid in sorted({(s.parameters or {}).get("station_id") for s in scenarios} - {None}):
         eff, _ = effective_observations(db, sid)
         for s in scenarios:
+            if (s.parameters or {}).get("station_id") != sid:
+                continue
             issued = s.parameters.get("issued_at")
             prov = provider_for(s)
             series = prov.gauge_series(s.active_member_id)
@@ -93,4 +96,5 @@ def after_action(db: Session, area_id: str) -> dict:
     return {"plan_versions": history, "delayed_tasks": delayed, "failed_tasks": failed, "missed_windows": missed,
             "route_failures": route_failures, "resource_bottlenecks": bottlenecks, "unavailable_resources": unavailable,
             "forecast_errors": forecast_errors(db, area_id),
-            "notes": "Forecast errors compare authoritative observations with each scenario version's selected member."}
+            "notes": "Forecast errors compare authoritative observations at the scenario's stage station with each "
+                     "scenario version's selected member (other gauges use other datums and are not compared)."}

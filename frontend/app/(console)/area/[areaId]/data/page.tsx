@@ -49,6 +49,9 @@ function useDone(areaId: string) {
 
 function Observations({ areaId }: { areaId: string }) {
   const td = useTranslations("data");
+  const tm = useTranslations("mode");
+  const tsrc = useTranslations("source");
+  const tsc = useTranslations("scenario");
   const { area, scenario } = useAreaCtx();
   const { can } = useAuth();
   const q = useQuery({ queryKey: ["obs", areaId, area?.data_version], queryFn: () => api<{ observations: Obs[] }>(`/api/areas/${areaId}/observations`) });
@@ -86,11 +89,12 @@ function Observations({ areaId }: { areaId: string }) {
           <tbody>
             {(q.data?.observations || []).map((o) => (
               <tr key={o.id} className={`border-t border-line/60 ${o.effective ? "" : "opacity-60"}`}>
-                <td className="py-1 tabular">{hhmm(o.observed_at, area.utc_offset_min)}</td>
+                <td className="py-1 tabular whitespace-nowrap">{area.is_demo ? hhmm(o.observed_at, area.utc_offset_min) : dateTime(o.observed_at, area.utc_offset_min)}
+                  {area.now && o.observed_at > area.now && <span className="block text-[9.5px] text-muted">{tsc("hindsight")}</span>}</td>
                 <td className="font-mono">{o.station_id}</td>
                 <td className="tabular font-bold">{o.water_level_cm}</td>
-                <td>{o.source} <Badge tone={o.mode === "LIVE" ? "live" : "sim"} icon={false}>{o.mode}</Badge></td>
-                <td>{o.authority}</td>
+                <td className="break-all">{o.source} <Badge tone={o.mode === "LIVE" ? "live" : o.mode === "HISTORICAL" ? "info" : "sim"} icon={false}>{tm.has(o.mode) ? tm(o.mode) : o.mode}</Badge></td>
+                <td>{tsrc.has(o.authority) ? tsrc(o.authority) : o.authority}</td>
                 <td><StatusBadge ns="verification" code={o.verification} icon={false} /> {o.effective ? <Badge tone="ok" icon={false}>{td("effective")}</Badge> : <span className="text-muted">{td("excludedLower")}</span>}</td>
                 <td>{can("data_admin") && o.verification === "UNVERIFIED" && (
                   <span className="flex gap-1"><Button size="sm" onClick={() => verify.mutate({ id: o.id, v: "VERIFIED" })}>{td("verify")}</Button><Button size="sm" variant="ghost" onClick={() => verify.mutate({ id: o.id, v: "REJECTED" })}>{td("reject")}</Button></span>

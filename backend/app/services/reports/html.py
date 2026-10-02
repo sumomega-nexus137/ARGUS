@@ -87,7 +87,7 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:3p
 <div class="muted">{{ L.area }}: <b>{{ area_name }}</b> · {{ L.time }}: {{ fmt(r.op_time) }} ({{ r.clock_mode }}) · {{ L.generated }}: {{ fmt(r.generated_at) }}</div>
 {% if r.area.is_demo %}<p class="demo">{{ L.demo }}</p>{% endif %}
 {% if r.historical %}<p class="demo">{{ L.hist }}</p>{% endif %}
-<p>{{ L.status }}: <span class="badge">{{ L['status_' + r.status] }}</span> · {{ L.scenario }}: {{ r.scenario.name }} ({{ r.scenario.mode }}, {{ r.scenario.member }}, {{ r.scenario.model_version }})</p>
+<p>{{ L.status }}: <span class="badge">{{ L['status_' + r.status] }}</span> · {{ L.scenario }}: {% if r.scenario.name_i18n %}{{ name(r.scenario.name_i18n) }} · v{{ r.scenario.version }}{% else %}{{ r.scenario.name }}{% endif %} ({{ r.scenario.mode }}, {{ r.scenario.member }}, {{ r.scenario.model_version }})</p>
 <h2>{{ L.impact }} / {{ L.peak }}</h2>
 <table><tr><th></th><th>{{ L.impact }}</th><th>{{ L.peak }} ({{ rel(r.impact_peak.t_min) }})</th></tr>
 <tr><td>{{ L.buildings }}</td><td>{{ r.impact_now.buildings.affected }}</td><td>{{ r.impact_peak.buildings.affected }}</td></tr>
