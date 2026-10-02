@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from geoalchemy2 import Geometry
 from shapely import wkb, wkt
 from shapely.geometry.base import BaseGeometry
 from sqlalchemy import DateTime, Text
