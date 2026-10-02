@@ -21,7 +21,7 @@ Two operational areas: **Atbasar / Zhabai** (primary; historical 2024 validation
 
 > **Real data.** With the real-data packs installed (one command, below) both pilots run on real
 > geography and the 2024 event: Copernicus DEM, OpenStreetMap roads/buildings/facilities/waterways,
-> WorldPop, JRC surface water, Sentinel-2 L2A flood evidence (no Sentinel-1 acquisition existed) and
+> WorldPop, JRC surface water, Sentinel-2 L2A flood evidence (no suitable Sentinel-1 acquisition was found in the probed event-window catalogues) and
 > curated official reports — in **HISTORICAL** replay mode. Plans, resources and exercise injects are
 > **SIMULATION** (no verified DChS/MChS inventory). Atbasar validation metrics are computed by ARGUS from
 > the masks and labelled **HISTORICAL SAME-EVENT SPATIAL HOLDOUT** (not forecast accuracy). Kazhydromet
@@ -83,15 +83,23 @@ Start from an empty database. Automated end-to-end: `node scripts/e2e/demo26.mjs
 10.04.2024 23:43 with the *2024 historical reconstruction* banner. 5–6. Real map layers; step the timeline.
 7. **Impact** — 6,036 OSM buildings, WorldPop zones, exposed floor area; *monetary valuation not available*.
 8. **Action windows** — latest safe action time per task (next critical decision T2).
-9–11. **Plan A** → **PLAN AT RISK**; **WHY**: `SCENARIO CHANGED BASE → HIGH → ROAD R37 CLOSES EARLIER →
-C5 LOSES ACCESS → T1 MISSES ACTION WINDOW` (the HIGH member was selected by an audited exercise inject).
-12–14. **STRESS TEST**, **GENERATE ALTERNATIVES** (CP-SAT), pumps 16 → 8 and re-run.
+9. **Plan A** starts on the approved **BASE** exercise member and is **PLAN VALID**.
+10–11. Trigger the explicit audited **EXERCISE: BASE → HIGH** escalation → **PLAN AT RISK**; **WHY** traces
+`SCENARIO CHANGED → ROAD CLOSES EARLIER → RESOURCE LOSES ACCESS → TASK MISSES ACTION WINDOW`.
+12. Restore BASE and run **STRESS TEST**: the recorded real-data test gives **9/23 feasible** scenarios
+(robustness 0.391), so the result is meaningfully mixed rather than all-pass/all-fail.
+13. **GENERATE ALTERNATIVES** (CP-SAT): the recorded run produced an alternative with robustness **11/26 = 0.423**,
+a measured improvement computed by the evaluator, not a hard-coded score.
+14. Reduce pumps 16 → 8 and re-run to demonstrate resource sensitivity.
 15–17. **Operations** — report *road closed* (R29) → pipeline → **RECOMPUTE** → DRAFT v2 → commander
 reviews / approves / activates. 18. Operations board.
 19–21. **Validation** — real Sentinel-2 evidence, ARGUS-computed holdout metrics with the QC caveat;
 provenance and assumptions; sources table (Kazhydromet / Tasqyn NOT CONFIGURED).
-22. **Kokshetau — Kylshakty bottlenecks** — real OSM bridges / culverts / low roads; select one for the
-plan impact (tasks at risk, closed and detour roads). Network consequences only — no hydraulic claims.
+22. **Kokshetau — Kylshakty bottlenecks** — real OSM bridges / culverts / low roads on a conservative,
+historically impact-bounded **SIMULATION**. The default exercise is restricted to a 100 m river-connected
+corridor with LOW/BASE/HIGH excess stages of 0.10/0.20/0.40 m, specifically to prevent the old city-wide
+over-flooding behaviour. Select a bottleneck for plan impact (tasks at risk, closed and detour roads).
+This is an operational exercise, not a property-level flood forecast or surveyed hydraulic model.
 23–24. ҚАЗ → РУС → ENG. 25. Report in kk / ru / en. 26. External providers offline — ARGUS keeps working.
 
 ## Quality checks
