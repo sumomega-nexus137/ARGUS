@@ -553,16 +553,39 @@ def build_kokshetau(out: Path) -> dict:
             "notes": f"Candidate {('culvert' if kind == 'CULVERT' else 'channel crossing')}: {rp['road_class']} road crosses mapped OSM {wtype} without a bridge tag. No surveyed dimensions.",
             "name_kk": f"Су өткізу қиылысы — {rp['name_kk']} × {lab}", "name_ru": f"Водопропускное пересечение — {rp['name_ru']} × {lab}",
             "name_en": f"Water crossing — {rp['name_en']} × {lab}", "name_original": rp["name_original"]}})
-    for sid, _t0 in sorted(closures["BASE"].items(), key=lambda x: (x[1], x[0])):
+    # Candidate low-road bottlenecks should remain visible even after the conservative BASE envelope is
+    # narrowed. Prefer major roads that become affected only in HIGH; if none do, fall back to the
+    # closest major river-adjacent roads. A candidate is NOT a claim that the road flooded in 2024.
+    low_added: set[str] = set()
+    for sid, _t0 in sorted(closures["HIGH"].items(), key=lambda x: (x[1], x[0])):
         rp = seg_props[sid]["properties"]
-        if rp["road_class"] in ("residential", "living_street", "service") or len([b for b in bottlenecks if b["properties"]["kind"] == "LOW_ROAD"]) >= 4:
+        if rp["road_class"] in ("residential", "living_street", "service") or len(low_added) >= 4:
             continue
         mid = LineString(seg_props[sid]["geometry"]["coordinates"]).interpolate(0.5, normalized=True)
         bottlenecks.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [mid.x, mid.y]}, "properties": {
             "id": f"KBN-LOW-{sid}", "kind": "LOW_ROAD", "segment_ids": [sid], "bridge_id": None,
-            "notes": "Candidate low road section: lowest-lying major road segments relative to the Kylshakty (real DEM) — inundated in the BASE exercise member.",
+            "notes": "Candidate low road section on real terrain: affected in the HIGH exercise member. This is a SIMULATION candidate, not a reported 2024 road-flood observation.",
             "name_kk": f"Ойпаң жол учаскесі — {rp['name_kk']}", "name_ru": f"Низкий участок дороги — {rp['name_ru']}",
             "name_en": f"Low road section — {rp['name_en']}", "name_original": rp["name_original"]}})
+        low_added.add(sid)
+    if not low_added:
+        near_major = []
+        for sid, feat in seg_props.items():
+            rp = feat["properties"]
+            if sid in bridged or rp["road_class"] in ("residential", "living_street", "service"):
+                continue
+            ls_xy = LineString([proj.xy(*p) for p in feat["geometry"]["coordinates"]])
+            d = float(ls_xy.distance(river))
+            if d <= 300.0:
+                near_major.append((d, sid))
+        for d, sid in sorted(near_major)[:2]:
+            rp = seg_props[sid]["properties"]
+            mid = LineString(seg_props[sid]["geometry"]["coordinates"]).interpolate(0.5, normalized=True)
+            bottlenecks.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [mid.x, mid.y]}, "properties": {
+                "id": f"KBN-LOW-{sid}", "kind": "LOW_ROAD", "segment_ids": [sid], "bridge_id": None,
+                "notes": f"Candidate low/river-adjacent major road ({d:.0f} m from mapped Kylshakty). Real geography; hydraulic vulnerability is NOT surveyed.",
+                "name_kk": f"Өзен маңындағы жол үміткері — {rp['name_kk']}", "name_ru": f"Кандидат у реки — {rp['name_ru']}",
+                "name_en": f"River-adjacent road candidate — {rp['name_en']}", "name_original": rp["name_original"]}})
 
     # ---------------------------------------------------------------- planning sites
     sites: list[dict] = []
