@@ -22,6 +22,12 @@ interface History {
   satellite?: { flood_item: string; flood_datetime: string; reference_item: string; reference_datetime: string; flood_cloud_cover_percent: number; reason: string };
   scenario_note?: string;
   scenario_limitations?: string[];
+  spatial_evidence?: {
+    mode: string;
+    status: string;
+    note: Names;
+    items: { id: string; when: string; kind: string; name: Names; description: Names; source_url: string }[];
+  };
 }
 
 /** Tiny bar/line chart (SVG) for daily context series; values drawn as-is with their unit. */
@@ -72,6 +78,24 @@ export function HistoryPanel({ areaId }: { areaId: string }) {
         {h.event_peak.length > 0 && (
           <InlineNote tone="info">{h.event_peak.map((p) => `${p.event_period}: ${p.value} ${p.unit} — ${p.notes_i18n ? pickName(p.notes_i18n, locale) : p.notes}`).join(" ")}</InlineNote>
         )}
+        {h.spatial_evidence?.items?.length ? (
+          <div className="rounded-[3px] border border-info/30 bg-info/5 p-2">
+            <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted">
+              <span>{th("officialEvidence")}</span><Badge tone="info">{th("reportedNotModelled")}</Badge>
+            </div>
+            <p className="mb-2 text-[10.5px] text-muted">{pickName(h.spatial_evidence.note, locale)}</p>
+            <ul className="space-y-1.5">
+              {h.spatial_evidence.items.map((e) => (
+                <li key={e.id} className="border-l-2 border-info/50 pl-2">
+                  <div className="font-semibold">{pickName(e.name, locale)} <span className="font-normal text-muted">· {e.when.replace("T", " ").slice(0, 16)}</span></div>
+                  <div className="text-ink-2">{pickName(e.description, locale)}</div>
+                  <a className="text-[10px] text-accent underline" href={e.source_url} target="_blank" rel="noreferrer">{th("source")}</a>
+                </li>
+              ))}
+            </ul>
+            <InlineNote tone="info" className="mt-2">{th("modelSeparation")}</InlineNote>
+          </div>
+        ) : null}
         {h.satellite && (
           <div>
             <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">{th("satellite")}</div>
