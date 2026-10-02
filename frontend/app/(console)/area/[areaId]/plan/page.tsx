@@ -237,11 +237,11 @@ export default function PlanPage() {
             <Button variant={health.data?.status === "PLAN_AT_RISK" ? "danger" : "default"} icon={Activity} busy={stressM.isPending} disabled={busy || !vid} onClick={() => stressM.mutate()}>{tp("stressTest")}</Button>
             <Button variant="primary" icon={Cpu} busy={altM.isPending} disabled={busy || !vid} onClick={() => altM.mutate()}>{tp("generate")}</Button>
             <Button icon={PackagePlus} busy={gapM.isPending} disabled={busy || !vid} onClick={() => gapM.mutate()}>{tp("gap")}</Button>
-            {areaId === "atbasar" && scenario?.active_member_id === "BASE" && (
+            {areaId === "atbasar" && scenario?.active_member === "BASE" && (
               <Button variant="danger" busy={exerciseScenarioM.isPending} disabled={busy}
                 onClick={() => exerciseScenarioM.mutate("HIGH")}>{tp("exerciseHigh")}</Button>
             )}
-            {areaId === "atbasar" && scenario?.active_member_id === "HIGH" && (
+            {areaId === "atbasar" && scenario?.active_member === "HIGH" && (
               <Button variant="ghost" busy={exerciseScenarioM.isPending} disabled={busy}
                 onClick={() => exerciseScenarioM.mutate("BASE")}>{tp("exerciseBase")}</Button>
             )}
