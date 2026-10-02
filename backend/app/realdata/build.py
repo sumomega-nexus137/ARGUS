@@ -35,7 +35,7 @@ from app.realdata import common as C
 from app.realdata.install import pack_dir, status
 
 log = get_logger("argus.realdata.build")
-BUILDER_VERSION = 12
+BUILDER_VERSION = 13
 CURATED = REPO_ROOT / "data" / "realdata"
 SIM = "SIMULATION"
 
@@ -372,15 +372,49 @@ def build_atbasar(out: Path) -> dict:
 
 
 # ===================================================================================== KOKSHETAU
+KOK_TERRAIN_VERSION = 2
+# Conservative exercise envelope.  The official 2024 reports describe localised impacts near the
+# Kylshakty (16 private houses, 29 private yards, 12 apartment courtyards and Ertostik kindergarten),
+# not city-wide inundation.  These parameters bound the uncalibrated stage-HAND exercise to the
+# near-river corridor; they are NOT a surveyed hydraulic calibration.
+KOK_CHANNEL_CORRIDOR_M = 100.0
+KOK_STAGE_PEAKS_M = {"LOW": 0.10, "BASE": 0.20, "HIGH": 0.40}
+KOK_REPORTED_IMPACT_SCALE = {
+    "private_houses": 16,
+    "private_yards": 29,
+    "apartment_courtyards": 12,
+    "kindergarten_floors": 1,
+    "aggregate_reported_impact_units": 58,
+    "note": "Aggregate categories are not equivalent to modelled building footprints; used only as an order-of-magnitude exercise bound.",
+}
+
 KOK_REF = datetime.fromisoformat("2024-03-29T06:00:00+05:00")
 
 
 def _kokshetau_terrain(pack: Path, out: Path, river) -> dict:  # type: ignore[no-untyped-def]
-    """HAND + priority-flood onset relative to the Kylshakty from the real Copernicus DEM (for a SIMULATION exercise)."""
+    """Conservative HAND/onset surface relative to the real Kylshakty / Copernicus DEM.
+
+    This remains a SIMULATION exercise, not a hydraulic model.  Unlike the earlier 2.5 km floodplain
+    envelope, connectivity is deliberately bounded to a near-river corridor because official 2024
+    reports describe localised impacts rather than city-wide inundation.  The corridor is an
+    engineering exercise assumption, not an official flood boundary.
+    """
     tdir = out / "terrain"
-    if (tdir / "hand.tif").exists() and (tdir / "onset.tif").exists():
-        with rasterio.open(tdir / "hand.tif") as s:
-            return {"crs": s.crs.to_string()}
+    meta_path = tdir / "terrain_model.json"
+    expected = {
+        "version": KOK_TERRAIN_VERSION,
+        "max_channel_distance_m": KOK_CHANNEL_CORRIDOR_M,
+        "method": "priority-flood onset over HAND relative to mapped Kylshakty",
+    }
+    if (tdir / "hand.tif").exists() and (tdir / "onset.tif").exists() and meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if all(meta.get(k) == v for k, v in expected.items()):
+                with rasterio.open(tdir / "hand.tif") as s:
+                    return {**expected, "crs": s.crs.to_string()}
+        except (ValueError, OSError):
+            pass
+
     with rasterio.open(pack / "processed" / "dem_kokshetau_utm42n.tif") as src:
         dem = src.read(1, masked=True).filled(np.nan).astype("float32")
         prof = src.profile.copy()
@@ -394,17 +428,31 @@ def _kokshetau_terrain(pack: Path, out: Path, river) -> dict:  # type: ignore[no
     _, (ri, ci) = ndimage.distance_transform_edt(~ch, return_indices=True)
     hand = np.where(valid, np.maximum(sm - sm[ri, ci], 0.0), 50.0).astype("float32")
     hand[ch] = 0.0
-    dist = ndimage.distance_transform_edt(~ch) * abs(tr.a)
-    work = np.where(dist <= 2500, hand, 999.0)
+    dist = (ndimage.distance_transform_edt(~ch) * abs(tr.a)).astype("float32")
+
+    # The older 2.5 km connectivity envelope caused a visually implausible city-wide spread.
+    # Keep only cells hydraulically connected through the conservative near-river exercise corridor.
+    work = np.where(dist <= KOK_CHANNEL_CORRIDOR_M, hand, 999.0)
     onset = priority_flood_onset(work, ch)
     onset = np.where(np.isfinite(onset) & (onset < 900), onset, 999.0).astype("float32")
+
     prof.update(dtype="float32", count=1, nodata=None, compress="deflate")
     tdir.mkdir(parents=True, exist_ok=True)
-    for name, arr in (("hand", hand), ("onset", onset)):
+    for name, arr in (("hand", hand), ("onset", onset), ("distance_to_channel_m", dist)):
         with rasterio.open(tdir / f"{name}.tif", "w", **prof) as dst:
             dst.write(arr, 1)
-    return {"crs": prof["crs"].to_string()}
-
+    meta = {
+        **expected,
+        "source": "Copernicus DEM GLO-30 + OpenStreetMap Kylshakty centreline",
+        "mode": SIM,
+        "status": "HISTORICALLY_IMPACT_BOUNDED_EXERCISE",
+        "caveat": (
+            "The 100 m corridor is a conservative exercise envelope chosen to avoid city-wide over-spread. "
+            "It is not an official flood-zone boundary, surveyed hydraulic capacity, or spatial validation."
+        ),
+    }
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    return {**meta, "crs": prof["crs"].to_string()}
 
 def build_kokshetau(out: Path) -> dict:
     from app.providers.flood.synthetic import SyntheticStageHandProvider
@@ -427,8 +475,10 @@ def build_kokshetau(out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     _kokshetau_terrain(pack, out, river)
 
-    # SIMULATION exercise members: water level above the Kylshakty channel (m). Uncalibrated (no observed extent).
-    stage_peaks = {"LOW": 0.4, "BASE": 0.7, "HIGH": 1.1}
+    # SIMULATION exercise members: conservative water excess above the mapped Kylshakty channel.
+    # The BASE envelope is historically impact-bounded against the *scale* of official 2024 reporting,
+    # but there is no observed inundation polygon, so this is not spatial calibration.
+    stage_peaks = KOK_STAGE_PEAKS_M
     offsets = list(range(-360, 721, 60))
 
     def series(peak_m: float) -> list[list[float]]:
@@ -515,7 +565,7 @@ def build_kokshetau(out: Path) -> dict:
     sites: list[dict] = []
     b_x = np.array([proj.xy(*shape(f["geometry"]).centroid.coords[0])[0] for f in bfeats])
     b_y = np.array([proj.xy(*shape(f["geometry"]).centroid.coords[0])[1] for f in bfeats])
-    lvb = P.relative_level_points("BASE", b_x, b_y, np.array([180.0]))[:, 0]
+    lvb = P.relative_level_points("BASE", b_x, b_y, np.array([360.0]))[:, 0]
     fl = np.flatnonzero(np.where(np.isfinite(lvb), lvb, -9) >= 0.10)
     bsec = [f["properties"]["sector_id"] for f in bfeats]
     for k, g in enumerate(_cluster(np.c_[b_x[fl], b_y[fl]], 250.0)[:3] if len(fl) else []):
@@ -542,7 +592,7 @@ def build_kokshetau(out: Path) -> dict:
                 "source": f"{SIM} planning site at {b['properties']['id']}"}))
     fx = np.array([proj.xy(*f["geometry"]["coordinates"])[0] for f in facilities])
     fy = np.array([proj.xy(*f["geometry"]["coordinates"])[1] for f in facilities])
-    flv = P.relative_level_points("HIGH", fx, fy, np.array([180.0]))[:, 0]
+    flv = P.relative_level_points("HIGH", fx, fy, np.array([360.0]))[:, 0]
     pick = [int(i) for i in np.argsort(np.where(np.isfinite(flv), -flv, 99.0))[:2]]
     hosp = sorted((river.distance(Point(fx[i], fy[i])), i) for i, f in enumerate(facilities)
                   if f["properties"]["facility_type"] == "HOSPITAL")
@@ -579,17 +629,25 @@ def build_kokshetau(out: Path) -> dict:
         "reference_time": KOK_REF.isoformat(), "frame_offsets_min": offsets, "series_step_min": 10, "bankfull_cm": 0,
         "station_id": "KYL-PROXY", "issued_member": "BASE", "members": members, "provider": "synthetic_stage_hand",
         "provider_config": {"terrain_dir": f"runtime/realdata/{area_id}/terrain", "has_ponding": False, "bankfull_cm": 0},
-        "model_version": "stage-HAND exercise on Copernicus DEM (uncalibrated, overestimates)",
-        "name": "Kokshetau — Kylshakty exercise scenario on real terrain (SIMULATION)",
+        "model_version": "conservative stage-HAND exercise on Copernicus DEM (impact-bounded, spatially uncalibrated)",
+        "name": "Kokshetau — Kylshakty historically bounded operational exercise (SIMULATION)",
         "source": "ARGUS stage–HAND approximation on the real Copernicus DEM relative to the OSM Kylshakty",
-        "note": ("SIMULATION exercise: water level above the Kylshakty channel (m) applied to real terrain with river connectivity. "
-                 "NOT calibrated — no observed flood extent exists for Kokshetau in the packs. On the 30 m DSM the proxy "
-                 "OVERESTIMATES exposure compared with the officially reported 2024 impact (16 private houses, 29 yards, "
-                 "12 apartment courtyards, one kindergarten floor); use it for network/bottleneck exercises only. "
-                 "Lake Kopa is treated as downstream receiving water, not as a flood cause."),
-        "limitations": ["Static stage–HAND approximation, not a hydraulic model; no culvert/bridge hydraulics.",
-                        "30 m DSM: buildings/trees bias terrain; urban drainage and snowmelt ponding are not represented.",
-                        "Official Kylshakty levels use an unestablished gauge datum and are not used for conditioning."],
+        "note": (
+            "SIMULATION exercise on real Kokshetau terrain. The earlier broad stage-HAND envelope was replaced by a "
+            "conservative 100 m river-connected corridor and LOW/BASE/HIGH excess stages of 0.10/0.20/0.40 m. "
+            "The BASE exercise is bounded only to the order of magnitude of the officially reported 2024 impacts "
+            "(16 private houses, 29 private yards, 12 apartment courtyards and the first floor of Ertostik kindergarten). "
+            "Those reported categories are NOT equivalent to modelled building footprints, so this is not a historical "
+            "inundation reconstruction or forecast validation. Use it to exercise access/bottleneck consequences on real geography. "
+            "Lake Kopa remains downstream receiving water, not the assumed flood cause."
+        ),
+        "limitations": [
+            "Historically impact-bounded SIMULATION, not a spatially calibrated flood extent and not a prediction of which property will flood.",
+            "Static stage–HAND approximation, not a hydraulic model; no surveyed culvert/bridge/channel hydraulics.",
+            "The 100 m Kylshakty corridor is a conservative ARGUS exercise envelope, not an official flood-zone boundary.",
+            "30 m DSM: buildings/trees bias terrain; urban drainage, frozen-ground runoff and snowmelt ponding are not explicitly resolved.",
+            "Official Kylshakty levels use an unestablished gauge datum and are not used as a direct model stage."
+        ],
     }
     plans = C.load_json(CURATED / area_id / "exercise" / "plans.json") if (CURATED / area_id / "exercise" / "plans.json").exists() else {"plans": [], "extra_candidates": []}
     area = {
@@ -609,7 +667,19 @@ def build_kokshetau(out: Path) -> dict:
     return _write_bundle(out, area, roads, bridges, bottlenecks, bfeats, sectors, pz, facilities, sites, _resources(bases, prefix="K"),
                          scenario, plans, observations, _history(pack, area_id, cfg), water_fc,
                          {"closures": {k: dict(sorted(v.items(), key=lambda x: x[1])) for k, v in closures.items()},
-                          "flooded_buildings_base": int(len(fl))})
+                          "flooded_buildings_base": int(len(fl)),
+                          "flooded_buildings_base_peak": int(len(fl)),
+                          "exercise_calibration": {
+                              "status": "HISTORICALLY_IMPACT_BOUNDED_NOT_SPATIALLY_CALIBRATED",
+                              "channel_corridor_m": KOK_CHANNEL_CORRIDOR_M,
+                              "stage_peaks_m": KOK_STAGE_PEAKS_M,
+                              "official_2024_reported_impact_scale": KOK_REPORTED_IMPACT_SCALE,
+                              "modelled_base_building_centroids_depth_ge_0_10m": int(len(fl)),
+                              "note": (
+                                  "Reported houses/yards/courtyards/kindergarten are heterogeneous impact units, "
+                                  "so ARGUS uses them only to reject obviously city-wide exercise spread, not as exact labels."
+                              ),
+                          }})
 
 
 # ===================================================================================== shared
