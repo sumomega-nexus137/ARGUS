@@ -160,7 +160,13 @@ def test_kokshetau_bottlenecks_real_candidates(client, auth):
     # categories are heterogeneous and are NOT treated as exact building labels.
     assert cal["status"] == "HISTORICALLY_IMPACT_BOUNDED_NOT_SPATIALLY_CALIBRATED"
     assert cal["channel_corridor_m"] <= 150
-    assert 20 <= cal["modelled_base_building_centroids_depth_ge_0_10m"] <= 150
+    base_hits = cal["modelled_base_building_centroids_depth_ge_0_10m"]
+    high_hits = cal["modelled_high_building_centroids_depth_ge_0_10m"]
+    # Current conservative exercise is deliberately near the reported order of magnitude
+    # (58 heterogeneous official impact units) and must never regress to a city-wide flood.
+    assert 40 <= base_hits <= 80, base_hits
+    assert base_hits <= high_hits <= 120, high_hits
+    assert 0.65 <= cal["base_to_reported_aggregate_ratio"] <= 1.35
     anchors = cal.get("historical_anchor_checks", [])
     ertostik = next((x for x in anchors if "ЕРТОСТИК" in x.get("name", "").upper()
                      or "ERTOSTIK" in x.get("name", "").upper()), None)
