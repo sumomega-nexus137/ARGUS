@@ -50,6 +50,9 @@ def _fingerprint(area: str) -> str:
     ex = CURATED / area / "exercise"
     for p in sorted(ex.glob("*.json")) if ex.exists() else []:
         h.update(p.read_bytes())
+    evidence = CURATED / area / "historical_evidence.json"
+    if evidence.exists():
+        h.update(evidence.read_bytes())
     return h.hexdigest()[:16]
 
 
@@ -748,6 +751,9 @@ def _history(pack: Path, area_id: str, cfg: dict) -> dict:
     if area_id == "atbasar":
         out["satellite"] = C.load_json(pack / "metadata" / "sentinel2_selection.json")
         out["mask_method"] = C.load_json(pack / "metadata" / "flood_mask_method.json")
+    evidence_file = CURATED / area_id / "historical_evidence.json"
+    if evidence_file.exists():
+        out["spatial_evidence"] = C.load_json(evidence_file)
     return out
 
 
