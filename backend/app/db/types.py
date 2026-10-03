@@ -12,11 +12,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from geoalchemy2 import Geometry
 from shapely import wkb, wkt
 from shapely.geometry.base import BaseGeometry
 from sqlalchemy import DateTime, Text
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.types import TypeDecorator, UserDefinedType
 
 
 class UTCDateTime(TypeDecorator):
@@ -40,44 +40,66 @@ class UTCDateTime(TypeDecorator):
         return value.replace(tzinfo=UTC)
 
 
-class GeometryType(TypeDecorator):
-    impl = Text
+class GeometryType(UserDefinedType):
+    """Portable Shapely geometry storage without GeoAlchemy DDL hooks.
+
+    PostgreSQL/PostGIS compiles this type directly to geometry(TYPE, SRID).
+    SQLite compiles it to TEXT/WKT. The application does not depend on
+    server-side spatial operators, so this avoids GeoAlchemy table hooks.
+    """
+
     cache_ok = True
 
     def __init__(self, geometry_type: str = "GEOMETRY", srid: int = 4326):
-        super().__init__()
-        self.geometry_type = geometry_type
-        self.srid = srid
+        self.geometry_type = geometry_type.upper()
+        self.srid = int(srid)
 
-    def load_dialect_impl(self, dialect: Any) -> Any:
-        # GeoAlchemy's management probes may call this with dialect=None while
-        # checking unrelated spatial types (for example Raster). In that probe
-        # mode return the portable TEXT impl; the real PostgreSQL DDL call
-        # supplies the dialect and receives a PostGIS Geometry.
-        if dialect is None:
-            return Text()
-        if dialect.name == "postgresql":
-            return dialect.type_descriptor(Geometry(geometry_type=self.geometry_type, srid=self.srid))
-        return dialect.type_descriptor(Text())
+    def bind_processor(self, dialect: Any):
+        def process(value: Any) -> Any:
+            if value is None:
+                return None
+            if not isinstance(value, BaseGeometry):
+                raise TypeError(f"GeometryType expects a shapely geometry, got {type(value)!r}")
+            if dialect.name == "postgresql":
+                return f"SRID={self.srid};{value.wkt}"
+            return value.wkt
+        return process
 
-    def process_bind_param(self, value: Any, dialect: Any) -> Any:
-        if value is None:
-            return None
-        if not isinstance(value, BaseGeometry):
-            raise TypeError(f"GeometryType expects a shapely geometry, got {type(value)!r}")
-        if dialect.name == "postgresql":
-            from geoalchemy2.elements import WKTElement
+    def result_processor(self, dialect: Any, coltype: Any):
+        def process(value: Any) -> BaseGeometry | None:
+            if value is None:
+                return None
+            if isinstance(value, memoryview):
+                value = bytes(value)
+            if isinstance(value, bytes):
+                return wkb.loads(value)
+            if isinstance(value, str):
+                s = value.strip()
+                if s.upper().startswith("SRID=") and ";" in s:
+                    s = s.split(";", 1)[1]
+                try:
+                    if len(s) >= 10 and all(ch in "0123456789abcdefABCDEF" for ch in s):
+                        return wkb.loads(s, hex=True)
+                except (ValueError, TypeError):
+                    pass
+                return wkt.loads(s)
+            raw = getattr(value, "data", None)
+            if raw is not None:
+                if isinstance(raw, memoryview):
+                    raw = bytes(raw)
+                if isinstance(raw, bytes):
+                    return wkb.loads(raw)
+                if isinstance(raw, str):
+                    return wkb.loads(raw, hex=True)
+            raise TypeError(f"Unsupported geometry result {type(value)!r}")
+        return process
 
-            return WKTElement(value.wkt, srid=self.srid)
-        return value.wkt
 
-    def process_result_value(self, value: Any, dialect: Any) -> BaseGeometry | None:
-        if value is None:
-            return None
-        if dialect.name == "postgresql":
-            from geoalchemy2.shape import to_shape
+@compiles(GeometryType)
+def _compile_geometry_default(type_: GeometryType, compiler: Any, **kw: Any) -> str:
+    return "TEXT"
 
-            return to_shape(value)
-        if isinstance(value, bytes | memoryview):
-            return wkb.loads(bytes(value))
-        return wkt.loads(value)
+
+@compiles(GeometryType, "postgresql")
+def _compile_geometry_postgresql(type_: GeometryType, compiler: Any, **kw: Any) -> str:
+    return f"geometry({type_.geometry_type},{type_.srid})"
