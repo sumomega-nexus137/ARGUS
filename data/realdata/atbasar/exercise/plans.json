@@ -1,0 +1,121 @@
+{
+  "mode": "SIMULATION",
+  "note": "EXERCISE plan on real Atbasar geography. Planning sites, resources, departure times and the scenario inject are SIMULATION exercise inputs, not DChS/MChS records. depart_min is relative to the scenario reference time (11 Apr 2024 04:43, official overflow record).",
+  "plans": [
+    {
+      "id": "plan-a",
+      "name": "Plan A",
+      "description": "Exercise response plan approved against the BASE member (SIMULATION)",
+      "note": "Exercise plan approved against scenario v1 (BASE)",
+      "tasks": [
+        {
+          "code": "T1",
+          "template": "ACT-PREPOS",
+          "site": "S-STAGE-1",
+          "resources": [
+            "C5",
+            "V4"
+          ],
+          "depart_min": -255
+        },
+        {
+          "code": "T2",
+          "template": "ACT-PUMP-M",
+          "site": "S-PUMP-2",
+          "resources": [
+            "C1",
+            "V1",
+            "P01",
+            "P02",
+            "P03"
+          ],
+          "depart_min": -205
+        },
+        {
+          "code": "T3",
+          "template": "ACT-SUPPLY",
+          "site": "S-F002",
+          "resources": [
+            "C3",
+            "V6"
+          ],
+          "depart_min": -270
+        },
+        {
+          "code": "T4",
+          "template": "ACT-LEVEE",
+          "site": "S-LEVEE-1",
+          "resources": [
+            "C2",
+            "V3",
+            "EQ3"
+          ],
+          "depart_min": -280
+        },
+        {
+          "code": "T5",
+          "template": "ACT-PUMP-S",
+          "site": "S-PUMP-1",
+          "resources": [
+            "C4",
+            "V2",
+            "P04",
+            "P05"
+          ],
+          "depart_min": -240
+        },
+        {
+          "code": "T6",
+          "template": "ACT-SUPPLY",
+          "site": "S-F027",
+          "resources": [
+            "C3",
+            "V6"
+          ],
+          "depart_min": -150,
+          "depends": [
+            "T3"
+          ]
+        }
+      ]
+    }
+  ],
+  "extra_candidates": [
+    {
+      "code": "T7",
+      "template": "ACT-PUMP-S",
+      "site": "S-PUMP-3"
+    },
+    {
+      "code": "T8",
+      "template": "ACT-LEVEE",
+      "site": "S-LEVEE-3"
+    },
+    {
+      "code": "T9",
+      "template": "ACT-SUPPLY",
+      "site": "S-F033"
+    },
+    {
+      "code": "T10",
+      "template": "ACT-SUPPLY",
+      "site": "S-F009"
+    },
+    {
+      "code": "T11",
+      "template": "ACT-ROADCLOSE",
+      "site": "S-ROAD-2"
+    },
+    {
+      "code": "T12",
+      "template": "ACT-LEVEE",
+      "site": "S-LEVEE-2"
+    }
+  ],
+  "injects": [],
+  "demo_inject": {
+    "kind": "SELECT_MEMBER",
+    "member": "HIGH",
+    "note": "Competition demo escalation: switch BASE → HIGH after baseline stress test to show the causal WHY chain."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "mode": "SIMULATION",
+  "note": "EXERCISE plan on real Kokshetau geography (bottleneck / portability pilot). Sites, resources and times are SIMULATION exercise inputs. depart_min is relative to the exercise reference time (29 Mar 2024 06:00 local).",
+  "plans": [
+    {
+      "id": "plan-k1",
+      "name": "Plan K-1",
+      "description": "Kylshakty bridge-control and pumping exercise plan (SIMULATION)",
+      "note": "Exercise plan approved against scenario v1 (BASE)",
+      "tasks": [
+        {"code": "T1", "template": "ACT-ROADCLOSE", "site": "KS-BRIDGE-1", "resources": ["KC3", "KV6"], "depart_min": 5},
+        {"code": "T2", "template": "ACT-SUPPLY", "site": "KS-KF081", "resources": ["KC5", "KV4"], "depart_min": 8},
+        {"code": "T3", "template": "ACT-PUMP-M", "site": "KS-PUMP-3", "resources": ["KC1", "KV1", "KP01", "KP02", "KP03"], "depart_min": 15},
+        {"code": "T4", "template": "ACT-PUMP-L", "site": "KS-PUMP-2", "resources": ["KC4", "KV2", "KP04", "KP05", "KP06", "KP07"], "depart_min": 60},
+        {"code": "T5", "template": "ACT-CULVERT", "site": "KS-CULVERT-1", "resources": ["KC2", "KV3", "KEQ1"], "depart_min": 30}
+      ]
+    }
+  ],
+  "extra_candidates": [
+    {"code": "T6", "template": "ACT-PUMP-S", "site": "KS-PUMP-1"},
+    {"code": "T7", "template": "ACT-ROADCLOSE", "site": "KS-BRIDGE-2"},
+    {"code": "T8", "template": "ACT-SUPPLY", "site": "KS-KF068"},
+    {"code": "T9", "template": "ACT-SUPPLY", "site": "KS-KF033"}
+  ],
+  "injects": []
+}

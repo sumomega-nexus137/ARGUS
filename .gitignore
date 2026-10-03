@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / Next
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+*.tsbuildinfo
+
+# Data
+data/argus.db*
+data/processed/*
+!data/processed/.gitkeep
+data/imports/*
+!data/imports/.gitkeep
+!data/imports/README.md
+!data/imports/validation/
+data/imports/validation/*
+!data/imports/validation/README.md
+
+# Env
+.env
+.env.local
+*.log
+.DS_Store
+frontend/public/maplibre/
+
+# Real-data packs: installed from release assets (see docs/REAL_DATA_INSTALL.md), never committed
+data/realdata/_cache/
+data/realdata/*/generated/
+data/realdata/*/.*-extract-*/
+data/runtime/

@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-10-01",
+  "scope": "DATA_AND_UPSTREAM_APIS_ONLY",
+  "application_handoff": "Claude Code owns backend/frontend/demo integration and full application tests after mounting these packs.",
+  "branch": "claude/festive-faraday-90f1gh",
+  "readiness": "READY_FOR_APPLICATION_INTEGRATION_WITH_DOCUMENTED_DOMAIN_QC_CAVEAT",
+  "workflows": {
+    "atbasar": {
+      "run_id": 36886595533,
+      "conclusion": "success",
+      "artifact_name": "argus-atbasar-realdata",
+      "artifact_id": 11174673127,
+      "artifact_size_bytes": 98198711,
+      "retention_until": "2026-10-31T15:48:12Z",
+      "digest": "sha256:533bcfecf3898c2ee187777e64b085cbd9b756fe4d81b07fbf51b0f1588b9a34"
+    },
+    "kokshetau": {
+      "run_id": 36886613476,
+      "conclusion": "success",
+      "artifact_name": "argus-kokshetau-realdata",
+      "artifact_id": 11174708363,
+      "artifact_size_bytes": 53519434,
+      "retention_until": "2026-10-31T15:49:26Z",
+      "digest": "sha256:1067bc232a32d342466ac95e86d1f7cfd05064e7c0bb7d76291ff8ee463af2b5"
+    },
+    "upstream_api_readiness": {
+      "run_id": 36884150119,
+      "conclusion": "success"
+    }
+  },
+  "atbasar": {
+    "integrity_required_failures": 0,
+    "integrity_warnings": 0,
+    "integrity_check_count": 36,
+    "satellite": {
+      "source": "Sentinel-2 L2A via Element84 Earth Search",
+      "sentinel1_event_availability": "No suitable Atbasar 2024 acquisition found in probed catalogues; not fabricated.",
+      "flood_item": "S2A_42UVC_20240414_1_L2A",
+      "flood_datetime_utc": "2024-04-14T06:44:53.733Z",
+      "flood_scene_cloud_percent": 14.968926,
+      "reference_item": "S2A_42UVC_20240421_0_L2A",
+      "reference_datetime_utc": "2024-04-21T06:34:57.973Z",
+      "reference_scene_cloud_percent": 0.000308,
+      "reference_role": "POST_RECESSION_OPEN_WATER_BASELINE",
+      "common_usable_fraction": 0.8646339633963397,
+      "observed_flood_area_m2_raw_pixel_count": 30190000,
+      "qc_state": "AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_DOMAIN_QC",
+      "technical_visual_review": "PASS_WITH_LIMITATIONS"
+    },
+    "model": {
+      "kind": "HYBRID_TERRAIN_SUSCEPTIBILITY_AND_STAGE_PROXY",
+      "algorithm": "HistGradientBoostingClassifier + river-relative stage/connectivity proxy",
+      "raw_xy_coordinates_used": false,
+      "training_iou": 0.7842071611253197,
+      "same_event_spatial_holdout_iou": 0.5880589232173119,
+      "same_event_spatial_holdout_precision": 0.8155111633372503,
+      "same_event_spatial_holdout_recall": 0.6782948650477407,
+      "same_event_spatial_holdout_f1": 0.7406008865539321,
+      "all_usable_iou": 0.6761685933797659,
+      "interpretation": "Historical same-event spatial holdout only; NOT out-of-event forecast skill and NOT a full hydrodynamic model."
+    },
+    "context": {
+      "glofas_event_rows": 37,
+      "historical_weather_rows": 37
+    }
+  },
+  "kokshetau": {
+    "integrity_required_failures": 0,
+    "integrity_warnings": 0,
+    "integrity_check_count": 15,
+    "role": "PORTABILITY_AND_BOTTLENECK_PILOT",
+    "context": {
+      "glofas_event_rows": 32,
+      "historical_weather_rows": 32
+    }
+  },
+  "authority_order": [
+    "VERIFIED_FIELD",
+    "OFFICIAL_LOCAL_SENSOR_OR_HYDROPOST",
+    "OFFICIAL_FORECAST",
+    "SATELLITE",
+    "GLOBAL_MODEL",
+    "SIMULATION"
+  ],
+  "blocked_or_not_configured": [
+    "Kazhydromet live API: no authorized stable endpoint supplied; official reports/manual import are prepared.",
+    "Tasqyn live API: no authorized endpoint supplied; adapter/manual integration remains the correct path.",
+    "Independent hydrologist/agency certification of the automatically derived satellite flood mask has not been obtained."
+  ],
+  "rules": [
+    "Normal ARGUS startup must use cached/precomputed packs and must not redownload upstream geodata.",
+    "No unavailable official feed may be presented as LIVE.",
+    "No validation number may be described as independent forecast accuracy unless tested on a separate event."
+  ]
+}
