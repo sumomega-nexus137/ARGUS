@@ -68,13 +68,13 @@ export function OpsMap() {
           dem: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: 14 },
           demhs: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: 14 },
           carto: {
-            type: "raster", tileSize: 256, attribution: "© OpenStreetMap contributors © CARTO",
-            tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png", "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+            type: "raster", tileSize: 256, attribution: "© OpenStreetMap contributors",
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
           },
         },
         layers: [
           { id: "bg", type: "background", paint: { "background-color": "#0c1219" } },
-          { id: "carto", type: "raster", source: "carto", layout: { visibility: "none" }, paint: { "raster-opacity": 0.55 } },
+          { id: "carto", type: "raster", source: "carto", layout: { visibility: "none" }, paint: { "raster-opacity": 0.55, "raster-brightness-max": 0.45, "raster-saturation": -0.6, "raster-contrast": 0.12 } },
           {
             id: "hillshade", type: "hillshade", source: "demhs",
             paint: { "hillshade-exaggeration": 0.55, "hillshade-shadow-color": "#05080c", "hillshade-highlight-color": "#3a4a5c", "hillshade-accent-color": "#1d2835" },
