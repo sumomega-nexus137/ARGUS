@@ -27,14 +27,14 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
         sources: {
           carto: {
             type: "raster",
-            tiles: ["https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png", "https://b.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"],
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
             tileSize: 256,
-            attribution: "© OpenStreetMap contributors © CARTO",
+            attribution: "© OpenStreetMap contributors",
           },
         },
         layers: [
           { id: "bg", type: "background", paint: { "background-color": "#0b1118" } },
-          { id: "carto", type: "raster", source: "carto", paint: { "raster-opacity": 0.75 } },
+          { id: "carto", type: "raster", source: "carto", paint: { "raster-opacity": 0.7, "raster-brightness-max": 0.42, "raster-saturation": -0.65, "raster-contrast": 0.15 } },
         ],
       },
       center: [68.9, 52.6],
