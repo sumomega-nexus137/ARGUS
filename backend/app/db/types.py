@@ -14,7 +14,7 @@ from typing import Any
 
 from shapely import wkb, wkt
 from shapely.geometry.base import BaseGeometry
-from sqlalchemy import DateTime, Text
+from sqlalchemy import DateTime
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import TypeDecorator, UserDefinedType
 
