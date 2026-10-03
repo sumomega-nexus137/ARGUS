@@ -24,7 +24,18 @@ def _user_out(u: User) -> dict:
 @router.post("/login")
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> dict:
     u = db.scalars(select(User).where(User.username == body.username)).first()
-    if u is None or not u.active or not verify_password(body.password, u.password_hash):
+    valid = u is not None and u.active and verify_password(body.password, u.password_hash)
+
+    # Competition/demo builds advertise fixed credentials on the launcher and login screen.
+    # Accept those documented credentials directly in DEMO mode as a recovery path for stale
+    # or incompatible password hashes in persistent databases. This path is disabled outside DEMO mode.
+    if not valid and get_settings().demo_mode:
+        from app.demo.library import DEMO_PASSWORD, USERS
+
+        demo_usernames = {spec["username"] for spec in USERS}
+        valid = u is not None and u.active and body.username in demo_usernames and body.password == DEMO_PASSWORD
+
+    if not valid or u is None:
         raise Unauthorized("Invalid username or password")
     token, exp = create_access_token(u.username, u.role)
     record(db, Actor(u.username, u.role), "USER_LOGIN", "user", u.username, f"{u.username} signed in")
