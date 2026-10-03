@@ -1,6 +1,6 @@
 # ARGUS FloodOps — Final System Test (real-data integration)
 
-Run date: 2 Oct 2026 · branch `claude/festive-faraday-90f1gh` · sandbox: Linux, Python 3.11, Node 22,
+Run date: 3 Oct 2026 · branch `claude/festive-faraday-90f1gh` · sandbox: Linux, Python 3.11, Node 22,
 Chromium (Playwright). Everything below was executed; nothing is reported from expectation.
 
 ## 1. Datasets integrated
@@ -31,7 +31,7 @@ Open-Meteo GloFAS / weather event-period context.
 
 | Provider | Status in test | Notes |
 |---|---|---|
-| Open-Meteo GloFAS v4 / Forecast | OFFLINE in sandbox (egress denied) → correctly labelled; LIVE / CACHED / STALE / OFFLINE / NOT_CONFIGURED paths covered by mocked tests | GLOBAL_MODEL authority, never written as observations |
+| Open-Meteo GloFAS v4 / Forecast | **LIVE verified against the real public endpoints in CI**; cache fallback was then verified with outbound access disabled | GLOBAL_MODEL authority, never overrides local official/verified observations |
 | Kazhydromet | NOT_CONFIGURED | no public API; manual / file import |
 | Tasqyn | NOT_CONFIGURED | no public API; manual / file import |
 
@@ -40,7 +40,7 @@ Open-Meteo GloFAS / weather event-period context.
 * **HISTORICAL**: DEM, WorldPop, JRC, Sentinel-2 evidence, official chronology / levels, Atbasar scenario rasters, event-period GloFAS / weather.
 * **CACHED**: OSM snapshot (roads, buildings, facilities, waterways); Open-Meteo responses when cached.
 * **SIMULATION**: plans, resources (not DChS/MChS inventory), exercise injects, Kokshetau scenario.
-* **LIVE**: none in this sandbox (no outbound access) — never faked.
+* **LIVE**: Open-Meteo weather/GloFAS was verified through the actual ARGUS provider in an internet-enabled CI runner; cached/offline fallback was verified immediately afterward.
 
 ## 4. Commands and results
 
@@ -56,7 +56,7 @@ Open-Meteo GloFAS / weather event-period context.
 | `node scripts/check-i18n.mjs` | 1038 keys × 3 locales, 693 usages, 0 problems |
 | `npx vitest run` | 6 passed |
 | `npm run build` | success, 19 routes |
-| Backend Docker image (`backend/Dockerfile`) | built; first start installed + verified both packs into the volume; restart: "already installed — nothing to do", bundle built, seeded `profile=historical`, API healthy. Found and fixed: missing `libexpat1` (rasterio import failed) |
+| Full Docker stack | **PASS**: PostGIS + backend + frontend built and started, API/DB/frontend health checks passed, packs installed/verified on first start, backend restart reused the same packs without re-downloading |
 | Offline launch (all outbound HTTP refused, empty DB) | no download attempted; seeded historical; live context OFFLINE with message; UI usable |
 | `node scripts/e2e/demo26.mjs` (fresh DB) | **26 / 26 PASS**, no server 5xx / page errors |
 | ru / en screen sweep (production build) | no raw i18n keys, no Kazakh leakage |
@@ -73,10 +73,10 @@ Open-Meteo GloFAS / weather event-period context.
 | 6 | Timeline | 23:43 → 00:43 → back to now |
 | 7 | Impact | floor-area exposure, valuation N/A, 6,036 buildings |
 | 8 | Access | next critical decision T2 at 01:18 |
-| 9–10 | Plan A, CHECK | PLAN AT RISK |
+| 9–10 | Plan A | approved BASE starts FEASIBLE; audited exercise escalation BASE → HIGH changes the same plan to PLAN AT RISK |
 | 11 | WHY | SCENARIO CHANGED BASE→HIGH → R37 closes earlier (02:29→23:43) → C5 loses access → T1 misses window |
-| 12 | Stress test | feasible in 0 of 19 evaluated scenarios |
-| 13–14 | Alternatives; pumps 16 → 8 | ALT-1… returned; pool 8/16, re-run |
+| 12 | Stress test from BASE | **9 / 23 feasible**, robustness **0.3913** — mixed survivals/failures produced by the evaluator |
+| 13–14 | Alternatives; pumps 16 → 8 | CP-SAT alternatives are stress-tested; best current alternative robustness **0.4231** vs Plan A **0.3913**; pool 8/16 re-run works |
 | 15–16 | Road R29 closed; RECOMPUTE | pipeline → PLAN_AT_RISK; DRAFT v2 |
 | 17–18 | Commander review / approve / activate; board | Plan A v2 active; 5 task rows |
 | 19–20 | Validation | holdout label, evidence images, metrics below |
@@ -98,10 +98,11 @@ Not forecast accuracy, not hydrodynamic validation, not certified accuracy; cave
 
 ## 7. Limitations and blockers
 
-* Full `docker compose up` (PostGIS + frontend image) not run here: Docker Hub rate limit and blocked Debian mirrors in the sandbox.
-* Atbasar: town-interior flooding of 11 Apr 2024 (embankment overtopping) not reproduced (30 m DSM). Kokshetau scenario uncalibrated and overestimates exposure.
-* Official gauges use other datums; they are shown but not compared with the scenario stage.
-* Open-Meteo LIVE path verified only with mocks (no outbound access in the sandbox).
+* Full Docker stack is now verified in CI, including PostGIS migrations and cached real-data reuse after restart.
+* Atbasar: documented town-interior flooding associated with local embankment overtopping is not fully reproduced by the ~30 m terrain model.
+* Kokshetau: conservative SIMULATION on real geography; 100 m river-connected corridor and low stage excesses prevent the previous city-wide over-spread. It is historically impact-bounded, not spatially calibrated and not a property-level prediction.
+* Official gauges use other datums; they are shown but not silently equated with the model stage.
+* Open-Meteo LIVE + cache/offline transition is now verified against the real public service.
 * Optional external basemap unavailable offline (local layers still render).
 
 ## 8. Launch
