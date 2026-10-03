@@ -18,7 +18,7 @@ class Building(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     area_id: Mapped[str] = mapped_column(ForeignKey("operational_areas.id", ondelete="CASCADE"), index=True)
-    geom: Mapped[Any] = mapped_column(GeometryType("POLYGON"))
+    geom: Mapped[Any] = mapped_column(GeometryType("GEOMETRY"))
     use: Mapped[str] = mapped_column(String(32))  # residential | commercial | public | industrial
     floors: Mapped[int] = mapped_column(Integer, default=1)
     height_m: Mapped[float] = mapped_column(Float, default=3.0)
