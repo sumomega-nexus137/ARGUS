@@ -72,11 +72,23 @@ def ensure_demo_files() -> None:
 
 
 def seed_users(db: Session) -> None:
-    if db.scalar(select(func.count()).select_from(User)):
-        return
+    """Ensure the fixed competition/demo accounts always exist with the documented password.
+
+    DEMO mode deliberately owns these accounts. Re-applying the password on startup also repairs
+    stale PostgreSQL demo volumes created by older builds, so the printed launcher credentials
+    cannot drift from the database.
+    """
     pw = hash_password(library.DEMO_PASSWORD)
-    for u in library.USERS:
-        db.add(User(username=u["username"], full_name=u["full_name"], role=u["role"], password_hash=pw))
+    existing = {u.username: u for u in db.scalars(select(User)).all()}
+    for spec in library.USERS:
+        user = existing.get(spec["username"])
+        if user is None:
+            db.add(User(username=spec["username"], full_name=spec["full_name"], role=spec["role"], password_hash=pw))
+        else:
+            user.full_name = spec["full_name"]
+            user.role = spec["role"]
+            user.password_hash = pw
+            user.active = True
 
 
 def seed_library(db: Session) -> None:
@@ -325,10 +337,13 @@ def resolve_profile() -> str:
 
 
 def seed_if_empty(db: Session) -> bool:
+    # Repair/ensure demo credentials even when the operational dataset was already seeded.
+    seed_users(db)
+    db.flush()
     if db.scalar(select(func.count()).select_from(OperationalArea)):
+        db.commit()
         return False
     profile = resolve_profile()
-    seed_users(db)
     seed_library(db)
     if profile == "historical":
         from app.realdata.build import ensure_built
