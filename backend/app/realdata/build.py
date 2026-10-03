@@ -35,7 +35,7 @@ from app.realdata import common as C
 from app.realdata.install import pack_dir, status
 
 log = get_logger("argus.realdata.build")
-BUILDER_VERSION = 14
+BUILDER_VERSION = 15
 CURATED = REPO_ROOT / "data" / "realdata"
 SIM = "SIMULATION"
 

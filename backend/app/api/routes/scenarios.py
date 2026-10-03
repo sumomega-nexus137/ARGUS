@@ -11,6 +11,7 @@ from app.core.errors import ArgusError
 from app.core.security import Permission
 from app.db.session import get_db
 from app.models import Observation, OperationalArea, Scenario, User
+from app.realdata.texts import tri
 from app.repositories.context import load_context
 from app.schemas.common import MemberSelect
 from app.services.audit import Actor
@@ -38,10 +39,18 @@ def scenario_payload(s: Scenario, area: OperationalArea) -> dict:
         "created_at": s.created_at, "reference_time": s.reference_time, "source": s.source, "provider": s.provider,
         "provider_note": rt.provider.mode_note, "frame_offsets_min": s.frame_offsets_min, "frames": frames,
         "now_min": now_min, "active_member": s.active_member_id, "members": members, "members_order": rt.members_order,
-        "selection": s.selection, "uncertainty": s.uncertainty, "provenance": s.provenance,
+        "selection": _selection(s.selection), "uncertainty": s.uncertainty, "provenance": s.provenance,
         "model_version": s.model_version, "is_current": s.is_current, "parent_id": s.parent_id, "reason": s.reason,
         "image_corners": grid.corners_lonlat(), "parameters": s.parameters,
     }
+
+
+def _selection(sel: dict | None) -> dict:
+    """Selection with a localized note (kk / ru / en) when the stored note is a known system text."""
+    sel = dict(sel or {})
+    if isinstance(sel.get("note"), str) and not sel.get("note_i18n"):
+        sel["note_i18n"] = tri(sel["note"])
+    return sel
 
 
 @router.get("/api/areas/{area_id}/scenario")

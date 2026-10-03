@@ -336,11 +336,40 @@ def resolve_profile() -> str:
     return "historical" if set(have) == set(AREAS) else "demo"
 
 
+def sync_real_names(db: Session) -> int:
+    """Refresh display names of real-data objects (roads, bridges, facilities) from the current runtime bundle so
+    an already-seeded database picks up naming fixes without a reset. Names only — no geometry or model data."""
+    from app.realdata.build import ensure_built
+
+    n = 0
+    for area in db.scalars(select(OperationalArea)).all():
+        if (area.config or {}).get("data_profile") != "historical":
+            continue
+        try:
+            d = ensure_built(area.id)
+        except Exception as exc:  # packs missing etc. — keep stored names
+            log.warning("name sync skipped for %s: %s", area.id, exc)
+            continue
+        for model, fname in ((RoadSegment, "roads.geojson"), (Bridge, "bridges.geojson"), (CriticalFacility, "facilities.geojson"),
+                             (TaskSite, "task_sites.geojson"), (Bottleneck, "bottlenecks.geojson")):
+            by_id = {f["properties"]["id"]: _names(f["properties"]) for f in _load(d / fname)["features"]}
+            for row in db.scalars(select(model).where(model.area_id == area.id)):
+                new = by_id.get(row.id)
+                if new and any(getattr(row, k) != v for k, v in new.items()):
+                    for k, v in new.items():
+                        setattr(row, k, v)
+                    n += 1
+    if n:
+        log.info("refreshed %d real-data object names from the runtime bundle", n)
+    return n
+
+
 def seed_if_empty(db: Session) -> bool:
     # Repair/ensure demo credentials even when the operational dataset was already seeded.
     seed_users(db)
     db.flush()
     if db.scalar(select(func.count()).select_from(OperationalArea)):
+        sync_real_names(db)
         db.commit()
         return False
     profile = resolve_profile()

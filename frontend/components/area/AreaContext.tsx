@@ -85,7 +85,14 @@ export function AreaProvider({ areaId, children }: { areaId: string; children: R
   const cursor = useUi((s) => s.cursor);
   const nowMin = scenario.data?.now_min ?? null;
   const t = cursor ?? nowMin;
-  const access = useAccess(areaId, cursor);
+  const playing = useUi((s) => s.playing);
+  const framesForAccess = scenario.data?.frame_offsets_min;
+  // during playback the exact access query follows the nearest scenario frame only (avoids a request every tick)
+  const accessT = useMemo(() => {
+    if (!playing || cursor === null || !framesForAccess?.length) return cursor;
+    return framesForAccess.reduce((a, b) => (Math.abs(b - cursor) < Math.abs(a - cursor) ? b : a), framesForAccess[0]);
+  }, [playing, cursor, framesForAccess]);
+  const access = useAccess(areaId, accessT);
   const [overlays, setOv] = useState<MapOverlays>(EMPTY);
 
   const layers = useMemo(() => {

@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { ScreenHelp } from "@/components/help/ScreenHelp";
+
 import { Badge, Button, ErrorState, InlineNote, Loading, Panel } from "@/components/ui/primitives";
 import { api, post } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -27,7 +29,7 @@ export default function AdminPage() {
   const err = outage.error || poll.error || reset.error;
   return (
     <div className="mx-auto max-w-5xl space-y-3 p-3">
-      <h1 className="text-base font-bold tracking-wide">{tn("admin")}</h1>
+      <div className="flex items-start justify-between gap-2"><h1 className="text-base font-bold tracking-wide">{tn("admin")}</h1><ScreenHelp screen="admin" /></div>
       {err && <ErrorState error={err} />}
       {msg && <InlineNote tone="ok">{msg}</InlineNote>}
       <Panel title={ta("providers")}>
@@ -47,7 +49,7 @@ export default function AdminPage() {
         {models.isLoading ? <Loading /> : (
           <table className="w-full text-xs [&_td]:px-1.5">
             <tbody>{(models.data || []).map((m) => (
-              <tr key={m.id} className="border-t border-line/60"><td className="py-1 font-mono">{m.component}</td><td className="font-mono font-bold">{m.version}</td><td className="text-ink-2">{m.description}</td><td>{m.active && <Badge tone="ok" icon={false}>active</Badge>}</td></tr>
+              <tr key={m.id} className="border-t border-line/60"><td className="py-1 font-mono">{m.component}</td><td className="font-mono font-bold">{m.version}</td><td className="text-ink-2">{m.description}</td><td>{m.active && <Badge tone="ok" icon={false}>{ta("active")}</Badge>}</td></tr>
             ))}</tbody>
           </table>
         )}

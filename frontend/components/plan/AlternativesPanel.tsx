@@ -55,7 +55,7 @@ export function OptimizerControls({ policy, weights, onPolicy, onWeights, whatIf
         <span className="font-semibold text-ink-2">{to("whatIfPumps")}:</span>
         {whatIf.map((id) => (
           <button key={id} onClick={() => onWhatIf(whatIf.filter((x) => x !== id))} className="inline-flex items-center gap-0.5 rounded-[3px] border border-warn/50 bg-warn/10 px-1.5 py-[1px] font-mono text-warn">
-            {id}<X className="h-3 w-3" aria-label="remove" />
+            {id}<X className="h-3 w-3" aria-hidden />
           </button>
         ))}
         <select className={clsx(inputCls, "w-40")} value="" aria-label={to("whatIfPumps")} onChange={(e) => e.target.value && onWhatIf([...whatIf, e.target.value])}>

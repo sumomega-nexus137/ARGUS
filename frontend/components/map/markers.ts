@@ -28,27 +28,39 @@ export function iconSvg(kind: string, color: string, size = 14): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}" style="color:${color};flex-shrink:0">${ICONS[kind] || ICONS.DEFAULT}</svg>`;
 }
 
-export function featureMarker(opts: { kind: string; label?: string; tone: Tone; showLabel: boolean; ring?: Tone | null; sub?: string; ariaLabel: string }): HTMLElement {
+/** Label decluttering metadata: higher priority wins a collision; labels below minZoom are hidden (icon stays). */
+export interface LabelMeta { priority?: number; minZoom?: number }
+
+function meta(el: HTMLElement, m?: LabelMeta) {
+  el.dataset.p = String(m?.priority ?? 0);
+  el.dataset.z = String(m?.minZoom ?? 0);
+}
+
+export function featureMarker(opts: { kind: string; label?: string; tone: Tone; showLabel: boolean; ring?: Tone | null; sub?: string; ariaLabel: string } & LabelMeta): HTMLElement {
   const el = document.createElement("div");
   el.className = "argus-marker";
-  el.setAttribute("role", "img");
+  el.setAttribute("role", "button");
+  el.setAttribute("tabindex", "0");
   el.setAttribute("aria-label", opts.ariaLabel);
+  el.style.cursor = "pointer";
+  meta(el, opts);
   const color = TONE_HEX[opts.tone];
   const ring = opts.ring ? `box-shadow:0 0 0 2px ${TONE_HEX[opts.ring]}, 0 0 10px ${TONE_HEX[opts.ring]};` : "";
   el.innerHTML = `<div style="display:flex;align-items:center;gap:4px;pointer-events:auto">
     <div style="display:grid;place-items:center;width:20px;height:20px;border-radius:4px;background:#0e141bf0;border:1px solid ${color};${ring}">${iconSvg(opts.kind, color, 13)}</div>
-    ${opts.showLabel && opts.label ? `<div style="background:#0e141bd9;border:1px solid #2d3e52;border-radius:3px;padding:1px 5px;font:600 10.5px Inter,Segoe UI,sans-serif;color:#dbe4ee;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis">${esc(opts.label)}${opts.sub ? `<span style="color:${opts.ring ? TONE_HEX[opts.ring] : "#a9b6c4"};font-weight:700"> · ${esc(opts.sub)}</span>` : ""}</div>` : ""}
+    ${opts.showLabel && opts.label ? `<div class="argus-label" style="background:#0e141bd9;border:1px solid #2d3e52;border-radius:3px;padding:1px 5px;font:600 10.5px Inter,Segoe UI,sans-serif;color:#dbe4ee;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis">${esc(opts.label)}${opts.sub ? `<span style="color:${opts.ring ? TONE_HEX[opts.ring] : "#a9b6c4"};font-weight:700"> · ${esc(opts.sub)}</span>` : ""}</div>` : ""}
   </div>`;
   return el;
 }
 
-export function roadLabel(opts: { id: string; state: string; stateText: string; countdown?: string; tone: Tone }): HTMLElement {
+export function roadLabel(opts: { id: string; name?: string; state: string; stateText: string; countdown?: string; tone: Tone } & LabelMeta): HTMLElement {
   const el = document.createElement("div");
   el.className = "argus-marker";
+  meta(el, opts);
   const color = TONE_HEX[opts.tone];
   const open = opts.state === "OPEN";
-  el.innerHTML = `<div style="display:flex;align-items:center;gap:0;font:700 10.5px Inter,Segoe UI,sans-serif;white-space:nowrap;border-radius:3px;overflow:hidden;border:1px solid ${open ? "#2d3e52" : color};background:#0e141be6">
-    <span style="padding:1px 5px;color:#dbe4ee;background:#1b2531">${esc(opts.id)}</span>
+  el.innerHTML = `<div class="argus-label" style="display:flex;align-items:center;gap:0;font:700 10.5px Inter,Segoe UI,sans-serif;white-space:nowrap;border-radius:3px;overflow:hidden;border:1px solid ${open ? "#2d3e52" : color};background:#0e141be6">
+    <span style="padding:1px 5px;color:#dbe4ee;background:#1b2531;max-width:170px;overflow:hidden;text-overflow:ellipsis">${esc(opts.name || opts.id)}</span>
     ${open ? "" : `<span style="padding:1px 5px;color:${color}">${esc(opts.stateText)}${opts.countdown ? ` ${esc(opts.countdown)}` : ""}</span>`}
   </div>`;
   return el;
@@ -67,3 +79,27 @@ export function countdownMarker(opts: { label: string; sub?: string; tone: Tone 
   </div>`;
   return el;
 }
+
+/**
+ * Greedy label collision handling for DOM markers (MapLibre symbol layers would need a glyph server, which ARGUS
+ * avoids so labels work offline). Highest priority first; overlapping or below-min-zoom labels are hidden.
+ */
+export function declutter(container: HTMLElement, zoom: number): void {
+  const els = Array.from(container.querySelectorAll<HTMLElement>(".argus-marker[data-p]"));
+  els.sort((a, b) => Number(b.dataset.p) - Number(a.dataset.p));
+  const placed: DOMRect[] = [];
+  const pad = 3;
+  for (const el of els) {
+    const lab = el.querySelector<HTMLElement>(".argus-label");
+    if (!lab) continue;
+    if (zoom < Number(el.dataset.z || 0)) { lab.style.visibility = "hidden"; continue; }
+    lab.style.visibility = "visible";
+    const r = lab.getBoundingClientRect();
+    if (!r.width) continue;
+    const hit = placed.some((q) => r.left < q.right + pad && r.right > q.left - pad && r.top < q.bottom + pad && r.bottom > q.top - pad);
+    if (hit) lab.style.visibility = "hidden";
+    else placed.push(r);
+  }
+}
+
+export { esc };

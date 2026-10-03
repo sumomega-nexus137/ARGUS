@@ -19,6 +19,7 @@ export default function ImpactPage() {
   const tc = useTranslations("common");
   const tf = useTranslations("facilityType");
   const tt = useTranslations("timeline");
+  const tu = useTranslations("units");
   const { locale } = useLocale();
   const cursor = useUi((s) => s.cursor);
   const imp = useImpact(areaId, cursor, false);
@@ -28,7 +29,7 @@ export default function ImpactPage() {
   useEffect(() => clearOverlays(), [clearOverlays]);
   useEffect(() => {
     const exposed = imp.data?.facilities.filter((f) => f.exposed) ?? [];
-    setOverlays({ points: exposed.map((f) => ({ id: f.id, lon: f.lon, lat: f.lat, label: `${num(f.depth_m, 2, locale)} m`, sub: pickName(f.names, locale), tone: "info" as const })) });
+    setOverlays({ points: exposed.map((f) => ({ id: f.id, lon: f.lon, lat: f.lat, label: `${num(f.depth_m, 2, locale)} ${tu("m")}`, sub: pickName(f.names, locale), tone: "info" as const })) });
   }, [imp.data, setOverlays, locale]);
 
   const d = imp.data;
@@ -154,7 +155,7 @@ export default function ImpactPage() {
             </table>
             <div>
               <div className="mb-1 font-semibold">{ti("curve")}</div>
-              <SeriesChart xs={calc.data.calculation.assumptions.damage_curve.map((p) => p[0])} nowX={null} cursorX={null} fmtX={(x) => `${x} m`} height={110}
+              <SeriesChart xs={calc.data.calculation.assumptions.damage_curve.map((p) => p[0])} nowX={null} cursorX={null} fmtX={(x) => `${x} ${tu("m")}`} height={110}
                 series={[{ values: calc.data.calculation.assumptions.damage_curve.map((p) => p[1] * 100), color: "#f59e2b", label: "%", fill: true }]} />
             </div>
           </div>

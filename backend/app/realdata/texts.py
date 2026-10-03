@@ -218,6 +218,9 @@ TR: dict[str, tuple[str, str]] = {
     "Candidate operational bottleneck: OSM bridge. No surveyed hydraulic capacity.": (
         "Жедел тар орын (үміткер): OSM көпірі. Гидравликалық өткізу қабілеті өлшенбеген.",
         "Кандидат — оперативное узкое место: мост OSM. Гидравлическая пропускная способность не обследована."),
+    # scenario selection notes (seed)
+    "BASE member at exercise start": ("Жаттығу басындағы BASE мүшесі", "Член BASE на начало учений"),
+    "Median member selected at forecast issuance": ("Болжам шыққан кездегі медианалық мүше", "Медианный член, выбранный при выпуске прогноза"),
     # report notes
     "All DEMO fixtures are synthetic.": (
         "Барлық DEMO деректері синтетикалық.", "Все DEMO-данные синтетические."),

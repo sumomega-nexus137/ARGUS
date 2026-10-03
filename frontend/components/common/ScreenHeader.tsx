@@ -3,6 +3,7 @@
 import { useTranslations } from "use-intl";
 
 import { useAreaCtx } from "@/components/area/AreaContext";
+import { ScreenHelp } from "@/components/help/ScreenHelp";
 import { pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 
@@ -19,7 +20,10 @@ export function ScreenHeader({ screen, right }: { screen: string; right?: React.
         <h1 className="text-base font-bold tracking-wide">{tn(screen)}</h1>
         <p className="text-[12.5px] text-accent">{tq(screen)}</p>
       </div>
-      {right}
+      <div className="flex shrink-0 items-start gap-2">
+        {right}
+        <ScreenHelp screen={screen} />
+      </div>
     </div>
   );
 }

@@ -149,9 +149,11 @@ def build_roads(pack: Path, epsg: int, prefix: str = "") -> dict:
     for s in segs:
         coords = [[round(float(x), 7), round(float(y), 7)] for x, y in s["geom"].coords]
         nm = s["name"]
-        label_en = nm or f"{s['road_class']} street {s['road_id']}"
-        label_ru = nm or f"{s['road_id']} (без названия, OSM)"
-        label_kk = nm or f"{s['road_id']} (атауы жоқ, OSM)"
+        # unnamed OSM ways get a factual label (road class + ARGUS road id) — never an invented street name
+        cls_kk, cls_ru, cls_en = ROAD_CLASS_LABEL.get(s["road_class"], ROAD_CLASS_LABEL["other"])
+        label_en = nm or f"{cls_en} · {s['road_id']}"
+        label_ru = nm or f"{cls_ru} · {s['road_id']}"
+        label_kk = nm or f"{cls_kk} · {s['road_id']}"
         feats.append({"type": "Feature", "geometry": {"type": "LineString", "coordinates": coords}, "properties": {
             "id": s["id"], "road_id": s["road_id"], "road_class": s["road_class"], "speed_kmh": round(s["speed_kmh"], 1),
             "u": short[s["u"]], "v": short[s["v"]], "length_m": round(s["length_m"], 1), "bridge_id": None,
@@ -287,6 +289,20 @@ def population_zones(pack: Path, buildings: gpd.GeoDataFrame, epsg: int, prefix:
 
 
 # ---------------------------------------------------------------------------------------- facilities
+ROAD_CLASS_LABEL = {  # OSM highway class → kk / ru / en label for unnamed ways
+    "motorway": ("Автомагистраль", "Автомагистраль", "Motorway"),
+    "trunk": ("Республикалық жол", "Магистральная дорога", "Trunk road"),
+    "primary": ("Негізгі жол", "Главная дорога", "Primary road"),
+    "secondary": ("Екінші деңгейлі жол", "Второстепенная дорога", "Secondary road"),
+    "tertiary": ("Жергілікті жол", "Местная дорога", "Tertiary road"),
+    "unclassified": ("Көше", "Улица", "Street"),
+    "residential": ("Тұрғын көше", "Жилая улица", "Residential street"),
+    "living_street": ("Тұрғын аймақ көшесі", "Жилая зона", "Living street"),
+    "service": ("Қызметтік жол", "Служебный проезд", "Service road"),
+    "other": ("Көше", "Улица", "Street"),
+}
+
+
 def build_facilities(pack: Path, sectors: list[dict], prefix: str = "") -> list[dict]:
     g = gpd.read_file(pack / "processed" / "argus_critical_facilities.geojson")
     g = g[g.geometry.notna()].copy()
@@ -298,15 +314,25 @@ def build_facilities(pack: Path, sectors: list[dict], prefix: str = "") -> list[
     type_ru = {"HOSPITAL": "Больница", "CLINIC": "Поликлиника", "SCHOOL": "Школа", "KINDERGARTEN": "Детский сад",
                "POLICE": "Полиция", "FIRE_STATION": "Пожарная часть", "PHARMACY": "Аптека", "DOCTORS": "Врачебный пункт",
                "DENTIST": "Стоматология"}
+    type_en = {"HOSPITAL": "Hospital", "CLINIC": "Clinic", "SCHOOL": "School", "KINDERGARTEN": "Kindergarten",
+               "POLICE": "Police", "FIRE_STATION": "Fire station", "PHARMACY": "Pharmacy", "DOCTORS": "Doctors' office",
+               "DENTIST": "Dentist"}
     out = []
     for i, (row, p, sec) in enumerate(zip(g.itertuples(), pts, secs, strict=True)):
         t = str(row.facility_type)
-        nm = clean_str(row.name_original) or clean_str(row.name_ru) or clean_str(row.name_kk) or clean_str(row.name_en)
+        orig, n_kk, n_ru, n_en = (clean_str(row.name_original), clean_str(row.name_kk), clean_str(row.name_ru),
+                                  clean_str(row.name_en))
+        nm = orig or n_ru or n_kk or n_en
+        fid = f"{prefix}F{i + 1:03d}"
+        # localized OSM name priority: name:<lang> → name → other names; without any OSM name a factual
+        # "type · #id" label (no invented proper name)
         out.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [round(p.x, 7), round(p.y, 7)]}, "properties": {
-            "id": f"{prefix}F{i + 1:03d}", "facility_type": t, "osm_id": str(row.id),
+            "id": fid, "facility_type": t, "osm_id": str(row.id),
             "criticality": FACILITY_CRITICALITY_POLICY.get(t, 40), "population_served": 0, "sector_id": sec,
-            "name_kk": nm or f"{type_kk.get(t, t)} (OSM, атауы жоқ)", "name_ru": nm or f"{type_ru.get(t, t)} (OSM, без названия)",
-            "name_en": nm or f"{t.replace('_', ' ').title()} (OSM, unnamed)", "name_original": nm,
+            "name_kk": (n_kk or orig or n_ru or n_en) or f"{type_kk.get(t, t)} · #{fid}",
+            "name_ru": (n_ru or orig or n_kk or n_en) or f"{type_ru.get(t, t)} · #{fid}",
+            "name_en": (n_en or orig or n_ru or n_kk) or f"{type_en.get(t, t.replace('_', ' ').title())} · #{fid}",
+            "name_original": nm, "named_in_osm": bool(nm),
             "source": "OpenStreetMap candidate (ODbL)", "verification": "UNVERIFIED",
             "criticality_note": "ARGUS default policy by facility type — assumption, requires specialist review",
         }})
@@ -332,8 +358,8 @@ def build_bridges(pack: Path, roads: dict, deck_clearance_m: float, prefix: str 
         seg["properties"]["bridge_id"] = bid
         out.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [round(mid.x, 7), round(mid.y, 7)]}, "properties": {
             "id": bid, "segment_ids": [sid], "deck_clearance_m": deck_clearance_m, "structure_type": "BRIDGE",
-            "name_kk": f"{bid} көпірі" + (f" ({nm})" if nm else " (OSM)"), "name_ru": f"Мост {bid}" + (f" ({nm})" if nm else " (OSM)"),
-            "name_en": f"Bridge {bid}" + (f" ({nm})" if nm else " (OSM)"), "name_original": nm,
+            "name_kk": f"{bid} көпірі" + (f" · {nm}" if nm else ""), "name_ru": f"Мост {bid}" + (f" · {nm}" if nm else ""),
+            "name_en": f"Bridge {bid}" + (f" · {nm}" if nm else ""), "name_original": nm,
             "osm_highway": clean_str(row.highway), "clearance_note": "ASSUMED deck clearance (no survey) — configurable",
         }})
     return out

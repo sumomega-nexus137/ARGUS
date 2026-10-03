@@ -9,6 +9,8 @@ import { useCallback, useMemo } from "react";
 import { useTranslations } from "use-intl";
 
 import { FreshnessSummary } from "@/components/common/Freshness";
+import { ScreenHelp } from "@/components/help/ScreenHelp";
+import { WelcomeCard } from "@/components/help/WelcomeCard";
 import { Badge, ErrorState, Loading, Metric, Panel, StatusBadge } from "@/components/ui/primitives";
 import { ageLabel, countdown, num, pickName, relHHMM } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
@@ -112,10 +114,14 @@ export default function OverviewPage() {
   return (
     <div className="flex h-full flex-col overflow-auto xl:flex-row xl:overflow-hidden">
       <div className="min-w-0 flex-1 space-y-3 overflow-y-auto p-4 xl:max-w-[760px]">
-        <div>
+        <WelcomeCard />
+        <div className="flex items-start justify-between gap-2">
+          <div>
           <h1 className="text-lg font-bold tracking-wide">{t("title")}</h1>
           <p className="text-sm text-accent">{tq("overview")}</p>
           <p className="text-[11.5px] text-muted">{areas.data && areas.data.length > 0 && areas.data.every((a) => !a.is_demo) ? t("regionReal") : t("region")}</p>
+          </div>
+          <ScreenHelp screen="overview" />
         </div>
         {areas.isLoading && <Loading />}
         {areas.isError && <ErrorState error={areas.error} onRetry={() => areas.refetch()} />}

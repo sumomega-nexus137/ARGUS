@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, Crosshair, Pause, Play, RotateCcw, TimerReset } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crosshair, Pause, Play, RotateCcw, SkipBack, TimerReset } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "use-intl";
 
@@ -12,6 +12,16 @@ import { useAuth } from "@/lib/auth";
 import { offsetLabel } from "@/lib/format";
 import { useInvalidateArea } from "@/lib/queries";
 import { useUi } from "@/lib/store";
+
+/** Calendar date (DD.MM.YYYY, area local time) of a timeline offset — historical replay spans several days. */
+function dateAt(ref: string, offsetMin: number, utcOffsetMin: number): string {
+  const d = new Date(new Date(ref).getTime() + (offsetMin + utcOffsetMin) * 60_000);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getUTCDate())}.${p(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`;
+}
+
+const PLAY_STEP_MIN = 10;
+const PLAY_TICK_MS = 420;
 
 export function Timeline() {
   const tt = useTranslations("timeline");
@@ -37,16 +47,23 @@ export function Timeline() {
     setCursor(frames[Math.max(0, Math.min(frames.length - 1, i))]);
   }, [frames, t, setCursor]);
 
+  // continuous playback: 10-minute steps; the map crossfades between the server-interpolated depth frames
+  // (interpolation between scenario frames is a VISUALIZATION of the same members, not an extra prediction)
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
       const cur = useUi.getState().cursor ?? nowMin ?? start;
-      const next = frames.find((f) => f > cur + 0.5);
-      if (next === undefined) { setPlaying(false); return; }
-      setCursor(next);
-    }, 1400 / speed);
+      const next = Math.round((cur + PLAY_STEP_MIN) / 10) * 10;
+      if (next > end + 0.5) { setPlaying(false); return; }
+      setCursor(Math.min(next, end));
+    }, PLAY_TICK_MS / speed);
     return () => clearInterval(id);
-  }, [playing, speed, frames, nowMin, start, setCursor, setPlaying]);
+  }, [playing, speed, end, nowMin, start, setCursor, setPlaying]);
+
+  const togglePlay = () => {
+    if (!playing && t !== null && t >= end - 0.5) setCursor(start);
+    setPlaying(!playing);
+  };
 
   const fromPointer = (clientX: number) => {
     const r = track.current?.getBoundingClientRect();
@@ -79,25 +96,28 @@ export function Timeline() {
     <div className="shrink-0 border-t border-line bg-panel px-3 pb-2 pt-1.5" aria-label={tt("cursor")}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-0.5">
+          <button aria-label={tt("rewind")} title={tt("rewind")} onClick={() => { setPlaying(false); setCursor(start); }} className="rounded p-1 text-ink-2 hover:bg-panel-2"><SkipBack className="h-4 w-4" /></button>
           <button aria-label={tt("prev")} title={tt("prev")} onClick={() => step(-1)} className="rounded p-1 text-ink-2 hover:bg-panel-2"><ChevronLeft className="h-4 w-4" /></button>
-          <button aria-label={playing ? tt("pause") : tt("play")} title={playing ? tt("pause") : tt("play")} onClick={() => setPlaying(!playing)}
-            className="rounded border border-accent/50 bg-accent/15 p-1 text-accent hover:bg-accent/25">{playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button>
+          <button aria-label={playing ? tt("pause") : tt("play")} title={playing ? tt("pause") : tt("play")} onClick={togglePlay}
+            className={clsx("rounded border p-1.5", playing ? "border-warn/60 bg-warn/15 text-warn" : "border-accent/60 bg-accent/20 text-accent hover:bg-accent/30")}>{playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button>
           <button aria-label={tt("next")} title={tt("next")} onClick={() => step(1)} className="rounded p-1 text-ink-2 hover:bg-panel-2"><ChevronRight className="h-4 w-4" /></button>
           <button onClick={() => setCursor(null)} className="ml-1 flex items-center gap-1 rounded border border-line-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-2 hover:bg-panel-2">
             <Crosshair className="h-3.5 w-3.5" />{tt("followNow")}
           </button>
-          <label className="ml-1 flex items-center gap-1 text-[11px] text-muted">
-            {tt("speed")}
-            <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-6 rounded border border-line-2 bg-bg px-1 text-[11px] text-ink">
-              {[0.5, 1, 2, 4].map((s) => <option key={s} value={s}>{s}×</option>)}
-            </select>
-          </label>
+          <div role="group" aria-label={tt("speed")} className="ml-1 flex items-center overflow-hidden rounded border border-line-2 text-[11px]">
+            <span className="px-1.5 text-muted">{tt("speed")}</span>
+            {[0.5, 1, 2, 4].map((s) => (
+              <button key={s} aria-pressed={speed === s} onClick={() => setSpeed(s)}
+                className={clsx("tabular border-l border-line-2 px-1.5 py-0.5 font-semibold", speed === s ? "bg-accent/20 text-accent" : "text-ink-2 hover:bg-panel-2")}>{s}×</button>
+            ))}
+          </div>
         </div>
         <div className="flex items-baseline gap-2">
+          {area?.clock_mode !== "LIVE" && scenario.reference_time && <span className="tabular text-xs font-semibold text-ink-2">{dateAt(scenario.reference_time, t, area?.utc_offset_min ?? 300)}</span>}
           <span className="tabular text-xl font-bold">{fmt(t)}</span>
           <span className="tabular text-xs text-muted">{offsetLabel(t - nowMin)}</span>
           <Badge tone={forecast ? "warn" : "info"}>{forecast ? tt("forecast") : Math.abs(t - nowMin) < 0.5 ? tt("now") : tt("analysis")}</Badge>
-          {forecast && <span className="hidden text-[10.5px] text-muted xl:inline">{tt("forecastNote")}</span>}
+          {forecast && <span className="hidden text-[10.5px] text-muted xl:inline">{scenario.mode === "HISTORICAL" ? tt("forecastNoteHistorical") : tt("forecastNote")}</span>}
         </div>
         {area?.clock_mode !== "LIVE" && can("plan_edit") && (
           <div className="ml-auto flex items-center gap-1" title={tt("clockHint")}>

@@ -95,3 +95,9 @@ export function ageLabel(ageMin: number | null | undefined): string {
   if (ageMin < 48 * 60) return `${Math.floor(ageMin / 60)}h ${Math.round(ageMin % 60)}′`;
   return `${Math.round(ageMin / 1440)}d`;
 }
+
+/** "official_reported · date" → localized tokens via the obsQuality namespace (unknown tokens kept as-is). */
+export function qualityLabel(q: string | null | undefined, t: { has: (k: string) => boolean; (k: string): string }): string {
+  if (!q) return "";
+  return q.split("·").map((x) => x.trim()).map((x) => (t.has(x) ? t(x) : x)).join(" · ");
+}

@@ -12,7 +12,7 @@ import type { Locale } from "./types";
 
 export const LOCALES: Locale[] = ["kk", "ru", "en"];
 export const DEFAULT_LOCALE: Locale = "kk";
-export const LOCALE_LABEL: Record<Locale, string> = { kk: "ҚАЗ", ru: "РУС", en: "ENG" };
+export const LOCALE_LABEL: Record<Locale, string> = { kk: "ҚАЗ", ru: "РУС", en: "ENG" }; // i18n-ignore: language self-names
 const MESSAGES = { kk, ru, en } as const;
 const KEY = "argus.locale";
 

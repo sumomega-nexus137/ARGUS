@@ -7,7 +7,7 @@ import { LOCALE_LABEL, LOCALES, useLocale } from "@/lib/i18n";
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale } = useLocale();
   return (
-    <div role="group" aria-label="Language / Тіл / Язык" className={clsx("flex items-center overflow-hidden rounded-[3px] border border-line-2", className)}>
+    <div role="group" aria-label="Language / Тіл / Язык" /* i18n-ignore: deliberately trilingual */ className={clsx("flex items-center overflow-hidden rounded-[3px] border border-line-2", className)}>
       {LOCALES.map((l, i) => (
         <button
           key={l}

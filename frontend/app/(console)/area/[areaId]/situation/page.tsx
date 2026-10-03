@@ -56,6 +56,11 @@ export default function SituationPage() {
 
   const frame = stats.data?.frames.reduce((a, b) => (t !== null && Math.abs(b.offset_min - t) < Math.abs(a.offset_min - t) ? b : a), stats.data.frames[0]);
   const sel = scenario?.selection;
+  // calibrated member labels only for the HISTORICAL (calibrated) scenario; exercises get exercise labels
+  const memberText = (id: string) => {
+    const key = scenario?.mode === "HISTORICAL" ? `memberLabel.${id}` : `memberLabelSim.${id}`;
+    return ts.has(key) ? ts(key) : `${id} · ${scenario?.members.find((x) => x.id === id)?.label ?? ""}`;
+  };
   const prov = (scenario?.provenance || {}) as { note?: string; limitations?: string[]; name_i18n?: Names; note_i18n?: Names; limitations_i18n?: Names[] };
   const selNote = sel?.note_i18n ? pickName(sel.note_i18n as Names, locale) : typeof sel?.note === "string" ? sel.note : "";
   return (
@@ -67,13 +72,13 @@ export default function SituationPage() {
           <Panel title={ts("title")} right={<Badge tone={scenario.mode === "HISTORICAL" ? "info" : "sim"}>{tm.has(scenario.mode) ? tm(scenario.mode) : scenario.mode}</Badge>}>
             <div className="grid grid-cols-3 gap-3">
               <Metric label={ts("gauge")} value={frame?.gauge_stage_cm != null ? `${num(frame.gauge_stage_cm, 0, locale)} ${tu("cm")}` : "—"} sub={fmt(t)} />
-              <Metric label={ts("flooded")} value={frame ? `${num(frame.flooded_km2, 2, locale)} km²` : "—"} />
-              <Metric label={ts("maxDepth")} value={frame ? `${num(frame.max_depth_m, 1, locale)} m` : "—"} />
+              <Metric label={ts("flooded")} value={frame ? `${num(frame.flooded_km2, 2, locale)} ${tu("km2")}` : "—"} />
+              <Metric label={ts("maxDepth")} value={frame ? `${num(frame.max_depth_m, 1, locale)} ${tu("m")}` : "—"} />
             </div>
             <div className="mt-3">
               <KeyValue rows={[
                 [ts("version"), prov.name_i18n ? `${pickName(prov.name_i18n, locale)} · v${scenario.version}` : scenario.name],
-                [ts("member"), <span key="m">{ts.has(`memberLabel.${scenario.active_member}`) ? ts(`memberLabel.${scenario.active_member}`) : `${scenario.active_member} · ${scenario.members.find((m) => m.id === scenario.active_member)?.label}`}</span>],
+                [ts("member"), <span key="m">{memberText(scenario.active_member)}</span>],
                 [ts("selection"), <span key="s">{sel?.method ? ts(`method.${sel.method}`) : "—"}{selNote ? <span className="block text-[10.5px] text-muted">{selNote}</span> : null}</span>],
                 [ts("referenceTime"), dateTime(scenario.reference_time, area?.utc_offset_min ?? 300)],
                 [ts("provider"), <span key="p" className="text-ink-2">{ts.has(`providerKind.${scenario.provider}`) ? ts(`providerKind.${scenario.provider}`) : scenario.provider_note}</span>],
@@ -122,7 +127,7 @@ export default function SituationPage() {
                 <Field label={ts("member")}>
                   <select className={inputCls} value={member} onChange={(e) => setMember(e.target.value)}>
                     <option value="">—</option>
-                    {scenario.members_order.map((m) => <option key={m} value={m} disabled={m === scenario.active_member}>{m} · {scenario.members.find((x) => x.id === m)?.label}</option>)}
+                    {scenario.members_order.map((m) => <option key={m} value={m} disabled={m === scenario.active_member}>{memberText(m)}</option>)}
                   </select>
                 </Field>
                 <Field label={ts("selectNote")}>

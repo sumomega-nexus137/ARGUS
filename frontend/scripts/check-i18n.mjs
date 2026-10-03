@@ -66,5 +66,26 @@ for (const file of walk(root)) {
     }
   }
 }
-console.log(`i18n: ${ref.size} keys × ${locales.length} locales, ${used} static usages checked, ${problems} problem(s)`);
+// hardcoded user-facing text in components (JSX text, user-facing attributes, Cyrillic literals).
+// Technical identifiers / brand names are allowed; a line containing "i18n-ignore" is skipped.
+const LETTERS = "A-Za-zА-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі";
+const ALLOW = /^(Promise|ARGUS|FLOODOPS|FloodOps|ARGUS FloodOps|2D|3D|IoU|F1|CP-SAT|OSM|ID|ETA|PDF|HTML|JSON|CSV|GeoJSON|GeoTIFF|XLSX|HH:MM|[A-Z]{1,4}\d*|T\d+|v\d+|ALT-\d+)$/;
+let hardcoded = 0;
+for (const file of walk(root).filter((f) => f.endsWith(".tsx"))) {
+  const lines = readFileSync(file, "utf8").split("\n");
+  const src = lines.map((l) => (l.includes("i18n-ignore") || /^\s*\/\//.test(l) ? "" : l)).join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+  const hits = [];
+  for (const m of src.matchAll(new RegExp(`>([^<>{}\\n]*[${LETTERS}]{2,}[^<>{}\\n]*)<`, "g"))) {
+    const t = m[1].trim();
+    if (!t || ALLOW.test(t) || /^[a-z]+$/.test(t) || /[(){};=&|?:]/.test(t)) continue; // generics like api<T>, code
+    hits.push(`text "${t}"`);
+  }
+  for (const m of src.matchAll(/\b(title|aria-label|placeholder|alt|label)="([^"]*)"/g)) {
+    if (new RegExp(`[${LETTERS}]{2,}`).test(m[2]) && !ALLOW.test(m[2])) hits.push(`${m[1]}="${m[2]}"`);
+  }
+  for (const m of src.matchAll(/["'`]([^"'`\n]*[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі][^"'`\n]*)["'`]/g)) hits.push(`Cyrillic literal "${m[1].slice(0, 50)}"`);
+  for (const h of hits) { console.error(`${file.replace(root, "")}: hardcoded ${h}`); hardcoded++; }
+}
+problems += hardcoded;
+console.log(`i18n: ${ref.size} keys × ${locales.length} locales, ${used} static usages checked, ${hardcoded} hardcoded UI string(s), ${problems} problem(s)`);
 process.exit(problems ? 1 : 0);

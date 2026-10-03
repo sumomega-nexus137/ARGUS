@@ -4,6 +4,7 @@ import clsx from "clsx";
 import {
   Activity,
   BarChart3,
+  BookOpen,
   ClipboardCheck,
   Database,
   FileText,
@@ -132,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="text-[11.5px] font-semibold">{user.full_name}</div>
               <div className="text-[10px] uppercase tracking-wider text-accent">{tr(user.role)}</div>
             </div>
-            <button onClick={() => { logout(); router.replace("/login"); }} title="Sign out" aria-label="Sign out"
+            <button onClick={() => { logout(); router.replace("/login"); }} title={ta("signOut")} aria-label={ta("signOut")}
               className="rounded p-1 text-muted hover:bg-panel-2 hover:text-ink"><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
@@ -156,7 +157,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <div className="flex min-h-0 flex-1">
-        <nav aria-label="Main" className="hidden w-52 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-line bg-panel p-2 lg:flex">
+        <nav aria-label={ta("mainNav")} className="hidden w-52 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-line bg-panel p-2 lg:flex">
           <NavItem href="/overview" icon={LayoutGrid} label={t("overview")} active={pathname.startsWith("/overview")} />
           <div className="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{t("areaSection")}</div>
           {AREA_NAV.map((n) => (
@@ -164,17 +165,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
           <div className="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{t("systemSection")}</div>
           <NavItem href="/audit" icon={History} label={t("audit")} active={pathname.startsWith("/audit")} />
+          <NavItem href="/help" icon={BookOpen} label={t("help")} active={pathname.startsWith("/help")} />
           {(can("data_admin") || can("user_admin")) && <NavItem href="/admin" icon={Settings} label={t("admin")} active={pathname.startsWith("/admin")} />}
           <div className="mt-auto px-2 pt-4 text-[10px] leading-snug text-muted">{ta("statement")}</div>
         </nav>
         {/* compact nav for tablets */}
-        <nav aria-label="Main compact" className="flex w-11 shrink-0 flex-col items-center gap-1 border-r border-line bg-panel py-2 lg:hidden">
+        <nav aria-label={ta("mainNav")} className="flex w-11 shrink-0 flex-col items-center gap-1 border-r border-line bg-panel py-2 lg:hidden">
           <Link href="/overview" title={t("overview")} className="rounded p-1.5 text-muted hover:text-ink"><LayoutGrid className="h-4 w-4" /></Link>
           {AREA_NAV.map((n) => (
             <Link key={n.id} href={`/area/${currentArea}/${n.id}`} title={t(n.id)} aria-label={t(n.id)}
               className={clsx("rounded p-1.5", section === n.id ? "bg-accent/15 text-accent" : "text-muted hover:text-ink")}><n.icon className="h-4 w-4" /></Link>
           ))}
           <Link href="/audit" title={t("audit")} className="rounded p-1.5 text-muted hover:text-ink"><History className="h-4 w-4" /></Link>
+          <Link href="/help" title={t("help")} aria-label={t("help")} className="rounded p-1.5 text-muted hover:text-ink"><BookOpen className="h-4 w-4" /></Link>
         </nav>
         <main id="main" className="min-w-0 flex-1 overflow-hidden">{children}</main>
       </div>

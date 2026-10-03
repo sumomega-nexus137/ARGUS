@@ -2,6 +2,8 @@
 
 import { useTranslations } from "use-intl";
 
+import { qualityLabel } from "@/lib/format";
+
 export interface HydroStation {
   station_id: string;
   thresholds: { bankfull: number | null; watch: number | null; warning: number | null; critical: number | null };
@@ -24,6 +26,7 @@ const PAD = { l: 34, r: 8, t: 10, b: 20 };
 function ObservationList({ st, dateFmt }: { st: HydroStation; dateFmt: (iso: string) => string }) {
   const t = useTranslations("scenario");
   const tu = useTranslations("units");
+  const tq = useTranslations("obsQuality");
   if (!st.observations.length) return <p className="text-[11px] text-muted">{t("noObservations")}</p>;
   return (
     <table className="w-full text-[11px] [&_td]:px-1">
@@ -33,7 +36,7 @@ function ObservationList({ st, dateFmt }: { st: HydroStation; dateFmt: (iso: str
             <td className="tabular whitespace-nowrap py-0.5">{o.observed_at ? dateFmt(o.observed_at) : "—"}</td>
             <td className="tabular whitespace-nowrap font-semibold">{o.stage_cm} {tu("cm")}</td>
             <td className="w-full">
-              <span className="break-all">{o.quality || o.source_type}</span>
+              <span className="break-words">{o.quality ? qualityLabel(o.quality, tq) : o.source_type}</span>
               {o.future && <span className="ml-1 inline-block rounded-[2px] border border-line px-1 text-[9.5px] uppercase tracking-wide">{t("hindsight")}</span>}
             </td>
           </tr>

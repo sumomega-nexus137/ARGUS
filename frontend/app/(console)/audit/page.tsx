@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { ScreenHelp } from "@/components/help/ScreenHelp";
+
 import { Badge, ErrorState, inputCls, Loading } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { pickName } from "@/lib/format";
@@ -33,7 +35,7 @@ export default function AuditPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-3 p-3">
       <div>
-        <h1 className="text-base font-bold tracking-wide">{tn("audit")}</h1>
+        <div className="flex items-start justify-between gap-2"><h1 className="text-base font-bold tracking-wide">{tn("audit")}</h1><ScreenHelp screen="audit" /></div>
         <p className="text-[12.5px] text-accent">{tq("audit")}</p>
       </div>
       <div className="flex flex-wrap items-center gap-3 text-xs">
