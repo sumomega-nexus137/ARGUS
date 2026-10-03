@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
     return [{ source: "/api/:path*", destination: `${API_URL}/api/:path*` }];
   },
   poweredByHeader: false,
+  experimental: {
+    // optimizer / stress-test / recompute calls can exceed the 30 s proxy default on a modest laptop
+    proxyTimeout: 300_000,
+  },
 };
 
 export default nextConfig;

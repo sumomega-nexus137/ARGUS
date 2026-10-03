@@ -35,7 +35,11 @@ from app.realdata import common as C
 from app.realdata.install import pack_dir, status
 
 log = get_logger("argus.realdata.build")
-BUILDER_VERSION = 15
+BUILDER_VERSION = 16
+# unnamed OSM waterway types in crossing names (kk, ru, en)
+WATER_TYPE_LABEL = {"stream": ("бұлақ", "ручей", "stream"), "river": ("өзен", "река", "river"),
+                    "canal": ("канал", "канал", "canal"), "ditch": ("арық", "канава", "ditch"),
+                    "drain": ("су бұру арнасы", "водоотводный канал", "drain")}
 CURATED = REPO_ROOT / "data" / "realdata"
 SIM = "SIMULATION"
 
@@ -547,12 +551,12 @@ def build_kokshetau(out: Path) -> dict:
     for _rank, sid, pt, wtype, wname in sorted(cands)[:6]:
         rp = seg_props[sid]["properties"]
         kind = "CULVERT" if wtype in ("stream", "ditch", "drain") else "CHANNEL_CONSTRAINT"
-        lab = wname or wtype
+        wk, wr, we = WATER_TYPE_LABEL.get(wtype, (wtype, wtype, wtype))
         bottlenecks.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": proj.ll(pt.x, pt.y)}, "properties": {
             "id": f"KBN-X-{sid}", "kind": kind, "segment_ids": [sid], "bridge_id": None,
             "notes": f"Candidate {('culvert' if kind == 'CULVERT' else 'channel crossing')}: {rp['road_class']} road crosses mapped OSM {wtype} without a bridge tag. No surveyed dimensions.",
-            "name_kk": f"Су өткізу қиылысы — {rp['name_kk']} × {lab}", "name_ru": f"Водопропускное пересечение — {rp['name_ru']} × {lab}",
-            "name_en": f"Water crossing — {rp['name_en']} × {lab}", "name_original": rp["name_original"]}})
+            "name_kk": f"Су өткізу қиылысы — {rp['name_kk']} × {wname or wk}", "name_ru": f"Водопропускное пересечение — {rp['name_ru']} × {wname or wr}",
+            "name_en": f"Water crossing — {rp['name_en']} × {wname or we}", "name_original": rp["name_original"]}})
     # Candidate low-road bottlenecks should remain visible even after the conservative BASE envelope is
     # narrowed. Prefer major roads that become affected only in HIGH; if none do, fall back to the
     # closest major river-adjacent roads. A candidate is NOT a claim that the road flooded in 2024.

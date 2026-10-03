@@ -20,6 +20,12 @@ export function HealthBanner({ health, fmt, siteName, planLabel, defaultOpen = f
   const tw = useTranslations("windows");
   const [open, setOpen] = useState(defaultOpen);
   const bad = health.status !== "PLAN_VALID";
+  // when the plan turns AT RISK while the banner is on screen (e.g. BASE → HIGH escalation), show WHY at once
+  const [prevBad, setPrevBad] = useState(bad);
+  if (bad !== prevBad) {
+    setPrevBad(bad);
+    if (bad && defaultOpen) setOpen(true);
+  }
   return (
     <section aria-live="polite" className={clsx("rounded-[4px] border p-3", bad ? (health.severity === "critical" ? "border-crit/60 bg-crit/10" : "border-warn/50 bg-warn/5") : "border-ok/40 bg-ok/5")}>
       <div className="flex flex-wrap items-center justify-between gap-2">

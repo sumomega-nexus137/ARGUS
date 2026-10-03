@@ -110,17 +110,29 @@ Stop with:
 
 `scripts\STOP_ARGUS.bat`
 
-## Demo sequence
+## In-app user guide
 
-1. Atbasar / HISTORICAL 2024.
-2. Show real map, impact and action windows.
-3. Open Plan A on BASE: FEASIBLE.
-4. Press EXERCISE: HIGH: same plan becomes AT RISK.
-5. Show WHY: scenario → road/access loss → missed action window.
-6. Restore BASE.
-7. Run STRESS TEST: mixed feasible/failing scenarios.
-8. GENERATE ALTERNATIVES and show measured robustness comparison.
-9. Close a road → recompute → DRAFT → commander review/approve/activate.
-10. Validation: observed vs modelled Sentinel-2 evidence + real calculated metrics and caveats.
-11. Kokshetau: show conservative SIMULATION and real bottleneck/network consequence.
-12. Switch ҚАЗ / РУС / ENG and show report/offline operation.
+Every screen has an **Анықтама / Справка / Help** button (top right of the screen header) that explains what the
+screen is for, how to use it and the related step-by-step recipes. The full guide is in the menu under
+**Нұсқаулық / Руководство / User guide** (`/help`): quick start, badge meanings, map and timeline, every screen,
+recipes (check / stress-test / alternatives / approve / report a road closure / escalate the scenario / change
+language / offline), how to add data (observations, resources, road events, facilities, file imports, real-data
+packs), roles and demo accounts, what ARGUS does and does not claim, keyboard and FAQ. New users see a welcome card
+on the overview once.
+
+## Demo sequence (3 minutes)
+
+1. **0:00** Overview in Kazakh → click **Атбасар — Жабай**. Point at the **ТАРИХИ ҚАЙТА ОЙНАТУ** badge.
+2. **0:15** Press **3D**, then ⤢ (fit area). Real OSM streets, buildings and the Zhabai on the Copernicus DEM.
+3. **0:30** Timeline: ⏮ then ▶ at **2×**. The flood spreads east of the river; roads turn orange/red, flooded
+   buildings turn yellow-red, closure countdowns appear. Click a building or road → info card.
+4. **1:00** **Жоспар**: Plan A on BASE → **ЖОСПАР ОРЫНДАЛАДЫ**. Press the BASE → HIGH exercise escalation →
+   **ЖОСПАР ҚАУІПТЕ**; the **НЕГЕ?** chain opens automatically (scenario → road closes earlier → resource loses
+   access → task misses window).
+5. **1:30** Restore BASE → **ЖОСПАРДЫ СТРЕСС-ТЕСТІЛЕУ**: mixed robustness. **БАЛАМАЛАРДЫ ҚҰРУ**: CP-SAT
+   alternatives with higher measured robustness.
+6. **2:10** Operations: commander reviews → approves → activates (human approval).
+7. **2:30** Validation: Sentinel-2 evidence and ARGUS-computed holdout metrics with the QC caveat.
+8. **2:45** Kokshetau bottlenecks: click KBR02 → closed road, task at risk, no hydraulic claim. Switch РУС / ENG.
+
+Full 26-step automated flow: `node scripts/e2e/demo26.mjs` (see `FINAL_SYSTEM_TEST.md`).

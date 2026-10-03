@@ -117,3 +117,23 @@ cd ../frontend && npm install && npm run build && npx next start -p 3000   # or 
 
 Accounts (password `argus2026`, demo mode): `viewer`, `operator`, `planner`, `commander`, `admin`.
 Demo sequence: README → *The competition demo flow*; automated: `node scripts/e2e/demo26.mjs` on an empty database.
+
+
+## Competition UX upgrade — test record (3 Oct 2026)
+
+| Check | Result |
+|---|---|
+| `ruff check app` | clean |
+| `pytest app/tests` | passed |
+| `pytest app/tests_realdata` (alone) | 10 passed |
+| `npm run typecheck` / `npx eslint .` | clean / 0 errors |
+| `node scripts/check-i18n.mjs` (now also fails on hardcoded JSX text, attributes and Cyrillic literals) | 1250 keys × 3, 0 hardcoded strings, 0 problems |
+| `npx vitest run` | 6 passed |
+| `npm run build` | success, 20 routes (incl. `/help`) |
+| `node scripts/e2e/demo26.mjs` on a fresh DB | **26 / 26 PASS**, no server or page errors (BASE valid → HIGH at risk with WHY → stress 9/23 → alternatives 0.391 → 0.522 → recompute → commander approval) |
+| Startup name sync on an existing DB | 1403 + 29 + 1 object names refreshed, no reset |
+| Browser QA | 2D / 3D, playback 0.5×–4× with growing flood, building / road info cards, layers panel, help page and drawer, welcome card, kk / ru / en language scans (remaining non-locale text = OSM proper names, plan names, station IDs, product names) |
+
+Note: in this sandbox the headless browser renders WebGL in software, so 3D runs at about one frame per 1.7 s here;
+on a laptop GPU it is interactive. 3D building heights (OSM levels × 3 m), smooth playback between frames and the
+water slab are labelled as visualization.

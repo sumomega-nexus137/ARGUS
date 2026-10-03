@@ -74,6 +74,12 @@ On first start the backend container installs the pinned real-data packs into th
 (verified; later starts reuse them without downloading), then runs `alembic upgrade head` against
 PostgreSQL. Set `ARGUS_DEMO_MODE=false` for an empty production database (no seeding, no demo accounts).
 
+## In-app help
+
+Every screen has a **Help** button with plain-language instructions, and the menu contains a full **User guide**
+(`/help`) in Kazakh, Russian and English: quick start, badge meanings, map / 3D / timeline, every screen,
+step-by-step recipes, how to add data, roles, scientific limitations and FAQ.
+
 ## The competition demo flow (26 steps, real data)
 
 Start from an empty database. Automated end-to-end: `node scripts/e2e/demo26.mjs` (see

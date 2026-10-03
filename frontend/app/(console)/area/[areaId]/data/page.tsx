@@ -51,6 +51,7 @@ function Observations({ areaId }: { areaId: string }) {
   const td = useTranslations("data");
   const tm = useTranslations("mode");
   const tsrc = useTranslations("source");
+  const tver = useTranslations("verification");
   const tsc = useTranslations("scenario");
   const { area, scenario } = useAreaCtx();
   const { can } = useAuth();
@@ -73,8 +74,8 @@ function Observations({ areaId }: { areaId: string }) {
             <Field label={td("station")}><select className={inputCls} value={f.station_id || stations[0] || ""} onChange={(e) => setF({ ...f, station_id: e.target.value })}>{stations.map((s) => <option key={s}>{s}</option>)}</select></Field>
             <Field label={td("waterLevel")}><input type="number" className={inputCls} value={f.water_level_cm} onChange={(e) => setF({ ...f, water_level_cm: e.target.value })} /></Field>
             <Field label={td("source")}><input className={inputCls} value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} /></Field>
-            <Field label={td("sourceType")}><select className={inputCls} value={f.source_type} onChange={(e) => setF({ ...f, source_type: e.target.value })}>{["FIELD", "HYDROPOST", "FORECAST", "SATELLITE"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-            <Field label={td("verification")}><select className={inputCls} value={f.verification} onChange={(e) => setF({ ...f, verification: e.target.value })}>{["UNVERIFIED", "VERIFIED"].map((s) => <option key={s}>{s}</option>)}</select></Field>
+            <Field label={td("sourceType")}><select className={inputCls} value={f.source_type} onChange={(e) => setF({ ...f, source_type: e.target.value })}>{["FIELD", "HYDROPOST", "FORECAST", "SATELLITE"].map((s) => <option key={s} value={s}>{tsrc.has(s) ? tsrc(s) : s}</option>)}</select></Field>
+            <Field label={td("verification")}><select className={inputCls} value={f.verification} onChange={(e) => setF({ ...f, verification: e.target.value })}>{["UNVERIFIED", "VERIFIED"].map((s) => <option key={s} value={s}>{tver(s)}</option>)}</select></Field>
             <Field label={td("notes")}><input className={inputCls} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
           </div>
           <p className="mt-1 text-[10.5px] text-muted">{td("nowDefault")} · {td("manualMeta")}</p>
@@ -153,6 +154,7 @@ function Conflicts({ areaId }: { areaId: string }) {
 
 function Resources({ areaId }: { areaId: string }) {
   const td = useTranslations("data");
+  const trs = useTranslations("resourceStatus");
   const tt = useTranslations("resourceType");
   const tsub = useTranslations("subtype");
   const { can } = useAuth();
@@ -174,7 +176,7 @@ function Resources({ areaId }: { areaId: string }) {
               <td>{x.base_id || "—"}</td>
               <td>
                 <select className={`${inputCls} w-40`} value={x.status} disabled={!can("field_update")} onChange={(e) => set.mutate({ id: x.id, status: e.target.value })}>
-                  {["AVAILABLE", "UNAVAILABLE", "FAILED"].map((s) => <option key={s}>{s}</option>)}
+                  {["AVAILABLE", "UNAVAILABLE", "FAILED"].map((s) => <option key={s} value={s}>{trs.has(s) ? trs(s) : s}</option>)}
                 </select>
                 {x.delay_min > 0 && <span className="ml-1 text-warn">+{x.delay_min}′</span>}
               </td>
@@ -188,6 +190,8 @@ function Resources({ areaId }: { areaId: string }) {
 
 function RoadEvents({ areaId }: { areaId: string }) {
   const td = useTranslations("data");
+  const trd = useTranslations("road");
+  const tver2 = useTranslations("verification");
   const { area, layers } = useAreaCtx();
   const { can } = useAuth();
   const q = useQuery({ queryKey: ["roadEvents", areaId, area?.data_version], queryFn: () => api<RoadEvent[]>(`/api/areas/${areaId}/road-events`) });
@@ -203,8 +207,8 @@ function RoadEvents({ areaId }: { areaId: string }) {
         <Panel title={td("addRoadEvent")}>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <Field label={td("road")}><select className={inputCls} value={f.road_id} onChange={(e) => setF({ ...f, road_id: e.target.value })}><option value="">—</option>{roads.map((r) => <option key={r}>{r}</option>)}</select></Field>
-            <Field label={td("state")}><select className={inputCls} value={f.state} onChange={(e) => setF({ ...f, state: e.target.value })}>{["CLOSED", "RESTRICTED", "OPEN"].map((s) => <option key={s}>{s}</option>)}</select></Field>
-            <Field label={td("verification")}><select className={inputCls} value={f.verification} onChange={(e) => setF({ ...f, verification: e.target.value })}>{["VERIFIED", "UNVERIFIED"].map((s) => <option key={s}>{s}</option>)}</select></Field>
+            <Field label={td("state")}><select className={inputCls} value={f.state} onChange={(e) => setF({ ...f, state: e.target.value })}>{["CLOSED", "RESTRICTED", "OPEN"].map((s) => <option key={s} value={s}>{trd.has(s) ? trd(s) : s}</option>)}</select></Field>
+            <Field label={td("verification")}><select className={inputCls} value={f.verification} onChange={(e) => setF({ ...f, verification: e.target.value })}>{["VERIFIED", "UNVERIFIED"].map((s) => <option key={s} value={s}>{tver2(s)}</option>)}</select></Field>
             <Field label={td("notes")}><input className={inputCls} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
           </div>
           <Button className="mt-2" size="sm" variant="primary" disabled={!f.road_id} busy={add.isPending} onClick={() => add.mutate()}>{td("addRoadEvent")}</Button>

@@ -221,6 +221,16 @@ TR: dict[str, tuple[str, str]] = {
     # scenario selection notes (seed)
     "BASE member at exercise start": ("Жаттығу басындағы BASE мүшесі", "Член BASE на начало учений"),
     "Median member selected at forecast issuance": ("Болжам шыққан кездегі медианалық мүше", "Медианный член, выбранный при выпуске прогноза"),
+    ("Candidate low road section on real terrain: affected in the HIGH exercise member. This is a SIMULATION candidate, "
+     "not a reported 2024 road-flood observation."): (
+        "Нақты жер бедеріндегі ойпаң жол учаскесі (үміткер): HIGH жаттығу мүшесінде су басады. Бұл — СИМУЛЯЦИЯ үміткері, "
+        "2024 жылы тіркелген жол су басуының бақылауы емес.",
+        "Кандидат — низкий участок дороги на реальном рельефе: затапливается в учебном члене HIGH. Это кандидат МОДЕЛИРОВАНИЯ, "
+        "а не зарегистрированное в 2024 г. наблюдение подтопления дороги."),
+    "Competition exercise escalation BASE → HIGH": (
+        "Жаттығу сценарийін күшейту BASE → HIGH", "Эскалация учебного сценария BASE → HIGH"),
+    "Competition exercise reset HIGH → BASE": (
+        "Жаттығу сценарийін қайтару HIGH → BASE", "Возврат учебного сценария HIGH → BASE"),
     # report notes
     "All DEMO fixtures are synthetic.": (
         "Барлық DEMO деректері синтетикалық.", "Все DEMO-данные синтетические."),

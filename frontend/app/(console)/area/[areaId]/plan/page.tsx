@@ -40,6 +40,8 @@ export default function PlanPage() {
   const to = useTranslations("optimizer");
   const tg = useTranslations("gap");
   const tor = useTranslations("origin");
+  const tps = useTranslations("planStatus");
+  const tpol = useTranslations("policy");
   const { locale } = useLocale();
   const { can } = useAuth();
   const names = useNames(areaId);
@@ -199,7 +201,7 @@ export default function PlanPage() {
           <select className={`${inputCls} w-64`} value={vid || ""} onChange={(e) => setVid(e.target.value)}>
             {(plans.data || []).map((p) => (
               <optgroup key={p.id} label={p.name}>
-                {p.versions.map((v) => <option key={v.id} value={v.id}>{p.name} v{v.version} · {v.status}{v.origin !== "HUMAN" ? ` · ${v.origin}` : ""}</option>)}
+                {p.versions.map((v) => <option key={v.id} value={v.id}>{p.name} v{v.version} · {tps.has(v.status) ? tps(v.status) : v.status}{v.origin !== "HUMAN" ? ` · ${tor.has(v.origin) ? tor(v.origin) : v.origin}` : ""}</option>)}
               </optgroup>
             ))}
           </select>
@@ -211,7 +213,7 @@ export default function PlanPage() {
           <span className="text-sm font-bold">{version.plan_name} v{version.version}</span>
           <StatusBadge ns="planStatus" code={version.status} />
           <Badge tone={version.origin === "HUMAN" ? "muted" : "info"} icon={false}>{tor.has(version.origin) ? tor(version.origin) : version.origin}</Badge>
-          {version.policy && <Badge tone="muted" icon={false}>{version.policy}</Badge>}
+          {version.policy && <Badge tone="muted" icon={false}>{tpol.has(version.policy) ? tpol(version.policy) : version.policy}</Badge>}
           <span className="text-muted">{tp("createdBy")}: {version.created_by || "—"} · {area ? dateTime(version.created_at, area.utc_offset_min) : ""}</span>
           {version.approved_by && <span className="text-muted">· {tp("approvedBy")}: {version.approved_by}</span>}
           <span className="ml-auto flex flex-wrap items-center gap-1">
