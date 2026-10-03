@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -28,10 +30,18 @@ def _job_out(j: ImportJob, with_rows: bool = True) -> dict:
     d = {"id": j.id, "area_id": j.area_id, "import_type": j.import_type, "filename": j.filename, "file_format": j.file_format,
          "status": j.status, "created_by": j.created_by, "created_at": j.created_at, "rows_total": j.rows_total,
          "rows_valid": j.rows_valid, "rows_invalid": j.rows_invalid, "rows_warning": j.rows_warning,
-         "confirmed_at": j.confirmed_at, "applied_count": j.applied_count, "message": j.message}
+         "confirmed_at": j.confirmed_at, "applied_count": j.applied_count, "message": j.message,
+         "failed_on_apply": _failed(j)}
     if with_rows:
         d["preview"] = j.preview
     return d
+
+
+def _failed(j: ImportJob) -> list:
+    try:
+        return list(json.loads(j.message).get("failed_on_apply", [])) if j.message else []
+    except (ValueError, AttributeError):
+        return []
 
 
 @router.post("/api/areas/{area_id}/imports")
@@ -42,10 +52,7 @@ async def upload(import_type: str, file: UploadFile = File(...), area: Operation
         raise ArgusError("file_too_large", "Maximum upload size is 10 MB")
     if not content:
         raise ArgusError("empty_file", "The uploaded file is empty")
-    try:
-        job = imp.create_preview(db, area, import_type, file.filename or "upload", content, actor)
-    except (UnicodeDecodeError, ValueError) as exc:
-        raise ArgusError("unreadable_file", f"File could not be parsed: {type(exc).__name__}") from exc
+    job = imp.create_preview(db, area, import_type, file.filename or "upload", content, actor)
     db.commit()
     return clean(_job_out(job))
 
@@ -74,7 +81,8 @@ def confirm_import(job_id: str, db: Session = Depends(get_db), actor: Actor = De
     pipe = run_pipeline(db, j.area_id, f"IMPORT_{j.import_type.upper()}", j.id, actor,
                         condition=j.import_type == "observations")
     db.commit()
-    return clean({**_job_out(j, with_rows=False), "pipeline": {k: v for k, v in pipe.items() if k != "health"}})
+    pipeline = {k: v for k, v in pipe.items() if k != "health"} | {"plan_status": (pipe.get("health") or {}).get("status")}
+    return clean({**_job_out(j, with_rows=False), "pipeline": pipeline})
 
 
 @router.post("/api/imports/{job_id}/cancel")

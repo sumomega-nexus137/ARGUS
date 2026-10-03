@@ -11,4 +11,5 @@ case "${ARGUS_DATABASE_URL:-}" in
   postgresql*) alembic upgrade head ;;
 esac
 
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+# keep-alive outlives the frontend proxy's pooled sockets (prevents ECONNRESET on reused connections)
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 75

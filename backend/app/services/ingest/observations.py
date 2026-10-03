@@ -32,6 +32,11 @@ class ObservationInput:
     import_id: str | None = None
 
 
+def entry_mode(area) -> str:
+    """Data typed in by people is LIVE only on a live clock; during a historical replay or exercise it is an exercise input."""
+    return "LIVE" if area is not None and area.clock_mode == "LIVE" else "SIMULATION"
+
+
 def validate_observation(db: Session, area_id: str, inp: ObservationInput) -> list[str]:
     errors: list[str] = []
     st = db.get(HydroStation, inp.station_id)

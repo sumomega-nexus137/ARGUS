@@ -22,6 +22,8 @@ type EventType = "ROAD_CLOSED" | "PUMP_FAILED" | "CREW_DELAYED" | "FORECAST_CHAN
 export default function OperationsPage() {
   const { areaId, area, scenario, layers, fmt, clearOverlays } = useAreaCtx();
   const to = useTranslations("ops");
+  const taa = useTranslations("auditAction");
+  const tu = useTranslations("units");
   const tp = useTranslations("plan");
   const tc = useTranslations("common");
   const tts = useTranslations("taskStatus");
@@ -122,17 +124,17 @@ export default function OperationsPage() {
       )}
 
       {can("field_update") && <EventInjector areaId={areaId} roads={(layers.roads?.features || []).map((f) => String(f.properties.road_id ?? f.properties.id))}
-        resources={d.resources} members={scenario?.members.map((m) => m.id) || []} canForecast={can("plan_edit")} onDone={(o) => { setMsg(to("reported", { outcome: o })); invalidate(areaId); }} />}
+        resources={d.resources} members={scenario?.members.map((m) => m.id) || []} canForecast={can("plan_edit")} onDone={(o) => { setMsg(to("reported", { outcome: to.has(`outcome.${o}`) ? to(`outcome.${o}`) : o })); invalidate(areaId); }} />}
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <Panel title={to("pipeline")}>
           {d.last_pipeline ? (
             <ol className="space-y-1 text-xs">
-              <li className="text-muted">{d.last_pipeline.trigger} · {hhmm(d.last_pipeline.started_at, area.utc_offset_min)} → <b>{to.has(`outcome.${d.last_pipeline.outcome}`) ? to(`outcome.${d.last_pipeline.outcome}`) : d.last_pipeline.outcome}</b></li>
+              <li className="text-muted">{to.has(`trigger.${d.last_pipeline.trigger}`) ? to(`trigger.${d.last_pipeline.trigger}`) : d.last_pipeline.trigger} · {hhmm(d.last_pipeline.started_at, area.utc_offset_min)} → <b>{to.has(`outcome.${d.last_pipeline.outcome}`) ? to(`outcome.${d.last_pipeline.outcome}`) : d.last_pipeline.outcome}</b></li>
               {d.last_pipeline.steps.map((s) => (
                 <li key={s.step} className="flex justify-between gap-2">
-                  <span><Badge tone={s.status === "OK" ? "ok" : "crit"} icon={false}>{s.status}</Badge> {to.has(`steps.${s.step}`) ? to(`steps.${s.step}`) : s.step}</span>
-                  <span className="tabular text-muted">{s.ms} ms</span>
+                  <span><Badge tone={s.status === "OK" ? "ok" : "crit"} icon={false}>{to.has(`stepStatus.${s.status}`) ? to(`stepStatus.${s.status}`) : s.status}</Badge> {to.has(`steps.${s.step}`) ? to(`steps.${s.step}`) : s.step}</span>
+                  <span className="tabular text-muted">{s.ms} {tu("ms")}</span>
                 </li>
               ))}
             </ol>
@@ -156,7 +158,7 @@ export default function OperationsPage() {
             {d.events.map((e) => (
               <li key={e.id} className="flex gap-2 border-t border-line/50 py-0.5 first:border-0">
                 <span className="tabular text-muted">{hhmm(e.op_time || e.ts, area.utc_offset_min)}</span>
-                <span className="font-mono text-accent">{e.action}</span>
+                <span className="text-accent" title={e.action}>{taa.has(e.action) ? taa(e.action) : e.action}</span>
                 <span className="min-w-0 flex-1 truncate">{e.summary}</span>
                 <span className="text-muted">{e.username}</span>
               </li>

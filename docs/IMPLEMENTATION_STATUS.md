@@ -39,7 +39,7 @@ as a fallback/unit-test profile._
 * Plan A now starts on its approved BASE member and is FEASIBLE at baseline. Its real evaluator stress test
   returns a mixed 9/23 feasible scenarios (robustness 0.3913); HIGH/earlier-peak/resource-loss cases fail
   naturally. CP-SAT alternatives are re-evaluated, with the best current alternative improving robustness
-  to 0.4231. No pass/fail values are hardcoded.
+  to 0.462 (deterministic CP-SAT budget: reproducible across machines and CPU load). No pass/fail values are hardcoded.
 * The optional external CARTO basemap is unreachable offline; operational layers and local rivers still render.
 * Headless PDF (browser print → PDF works); map click-to-place for new facilities.
 * 16 pre-existing eslint warnings (react-hooks style rules), 0 errors.

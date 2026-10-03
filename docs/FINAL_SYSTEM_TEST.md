@@ -76,7 +76,7 @@ Open-Meteo GloFAS / weather event-period context.
 | 9–10 | Plan A | approved BASE starts FEASIBLE; audited exercise escalation BASE → HIGH changes the same plan to PLAN AT RISK |
 | 11 | WHY | SCENARIO CHANGED BASE→HIGH → R37 closes earlier (02:29→23:43) → C5 loses access → T1 misses window |
 | 12 | Stress test from BASE | **9 / 23 feasible**, robustness **0.3913** — mixed survivals/failures produced by the evaluator |
-| 13–14 | Alternatives; pumps 16 → 8 | CP-SAT alternatives are stress-tested; best current alternative robustness **0.4231** vs Plan A **0.3913**; pool 8/16 re-run works |
+| 13–14 | Alternatives; pumps 16 → 8 | CP-SAT alternatives are stress-tested; best alternative robustness **0.462** vs Plan A **0.3913** (deterministic solver); pool 8/16 re-run works |
 | 15–16 | Road R29 closed; RECOMPUTE | pipeline → PLAN_AT_RISK; DRAFT v2 |
 | 17–18 | Commander review / approve / activate; board | Plan A v2 active; 5 task rows |
 | 19–20 | Validation | holdout label, evidence images, metrics below |
@@ -110,7 +110,7 @@ Not forecast accuracy, not hydrodynamic validation, not certified accuracy; cave
 ```bash
 cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements-dev.txt
 python -m app.cli install-realdata
-uvicorn app.main:app --host 127.0.0.1 --port 8000
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-keep-alive 75
 cd ../frontend && npm install && npm run build && npx next start -p 3000   # or npm run dev
 # Docker: cp .env.example .env && docker compose up --build
 ```
@@ -130,10 +130,34 @@ Demo sequence: README → *The competition demo flow*; automated: `node scripts/
 | `node scripts/check-i18n.mjs` (now also fails on hardcoded JSX text, attributes and Cyrillic literals) | 1250 keys × 3, 0 hardcoded strings, 0 problems |
 | `npx vitest run` | 6 passed |
 | `npm run build` | success, 20 routes (incl. `/help`) |
-| `node scripts/e2e/demo26.mjs` on a fresh DB | **26 / 26 PASS**, no server or page errors (BASE valid → HIGH at risk with WHY → stress 9/23 → alternatives 0.391 → 0.522 → recompute → commander approval) |
+| `node scripts/e2e/demo26.mjs` on a fresh DB | **26 / 26 PASS**, no server or page errors (BASE valid → HIGH at risk with WHY → stress 9/23 → alternatives 0.391 → 0.522 (before the solver was made deterministic) → recompute → commander approval) |
 | Startup name sync on an existing DB | 1403 + 29 + 1 object names refreshed, no reset |
 | Browser QA | 2D / 3D, playback 0.5×–4× with growing flood, building / road info cards, layers panel, help page and drawer, welcome card, kk / ru / en language scans (remaining non-locale text = OSM proper names, plan names, station IDs, product names) |
 
 Note: in this sandbox the headless browser renders WebGL in software, so 3D runs at about one frame per 1.7 s here;
 on a laptop GPU it is interactive. 3D building heights (OSM levels × 3 m), smooth playback between frames and the
 water slab are labelled as visualization.
+
+## Final hardening pass — test record (3 Oct 2026)
+
+Fixed: the Data → Imports screen crashed after any successful upload (the page expected a list but the API returns
+`{rows, columns, …}`); replaced by a guided import wizard. Also fixed: negative bars in the weather chart (sub-zero
+temperatures), a missing-parameter message after manual observations / road events, raw plan / trigger / audit /
+quality codes on Operations, Audit, Data sources and Validation, facility types missing from the add form, and an
+intermittent proxy `ECONNRESET` (uvicorn keep-alive now 75 s). The CP-SAT optimizer now uses a deterministic
+parallel search on a fixed work budget: alternatives no longer depend on CPU load (they did — one e2e run under
+load found no improvement), and the same inputs give the same plans on any machine. Added localized error boundaries (screen, area,
+map/timeline widgets, global) and a localized 404 page, so a failure never shows a blank page.
+
+| Check | Result |
+|---|---|
+| `ruff check app` | clean |
+| `pytest app/tests` | **28 passed** (new: Excel cp1251 `;` CSV, dd.mm.yyyy + `utc_offset`, missing/unknown columns, broken XLSX/JSON/GeoJSON → 400 never 500) |
+| `pytest app/tests_realdata` (alone) | **10 passed** |
+| `npm run typecheck` / `npx eslint .` | clean / 0 errors |
+| `node scripts/check-i18n.mjs` | 1458 keys × 3, 0 hardcoded, 0 problems |
+| `npx vitest run` | 7 passed (new CSV export test) |
+| `npm run build` | success |
+| Browser: import wizard kk/ru/en | valid + invalid rows, cp1251 file, broken file, wrong extension, confirm, resume preview from history, export → re-import round trip (31 rows, 0 errors) |
+| Browser sweep: every screen × every tab, both cities, kk / ru / en, planner / admin / viewer | no page errors, no server 5xx, no missing translations (remaining codes = Sentinel-2 product IDs and recorded system log text) |
+| `node scripts/e2e/demo26.mjs` on a fresh DB | **26 / 26 PASS**, no server or page errors; alternatives 0.391 → 0.462 (identical on repeated runs) |

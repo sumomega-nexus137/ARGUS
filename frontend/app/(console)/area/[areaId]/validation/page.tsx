@@ -196,7 +196,7 @@ function HistoricalEvidence({ h, areaId }: { h: HistoricalInfo; areaId: string }
             </>
           )}
           {h.mask_method && <div>{tv("usableCoverage")}: {num(h.mask_method.common_clear_fraction * 100, 2, locale)}% · {tv("observedArea")}: {num(h.mask_method.observed_flood_area_m2_raw_pixel_count / 1e6, 2, locale)} {tv("km2")}</div>}
-          <InlineNote tone="warn">{tv("qcState")}: {h.observed_qc.status} · {tv("visualReview")}: {h.observed_qc.technical_visual_review || "—"} · {tv("notCertified")}</InlineNote>
+          <InlineNote tone="warn">{tv("qcState")}: {tv.has(`qc.${h.observed_qc.status}`) && <>{tv(`qc.${h.observed_qc.status}`)} </>}<span className="font-mono text-[10px] opacity-80">({h.observed_qc.status})</span> · {tv("visualReview")}: {h.observed_qc.technical_visual_review ? (tv.has(`qc.${h.observed_qc.technical_visual_review}`) ? tv(`qc.${h.observed_qc.technical_visual_review}`) : h.observed_qc.technical_visual_review) : "—"} · {tv("notCertified")}</InlineNote>
           {h.model && <div className="text-muted">{tv("modelKind")}: {h.model.algorithm} · {tv("noXY")}</div>}
           {h.limitations.length > 0 && (
             <details className="text-[11px]"><summary className="cursor-pointer font-semibold text-muted">{tv("limitations")}</summary>

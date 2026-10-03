@@ -35,19 +35,23 @@ function DailyChart({ rows, field, color, unit }: { rows: Row[]; field: string; 
   const tc = useTranslations("history");
   const vals = rows.map((r) => Number(r[field])).filter((v) => Number.isFinite(v));
   if (!vals.length) return null;
-  const W = 380, H = 70, max = Math.max(...vals, 0.001);
+  // signed series (e.g. air temperature below 0 °C) are drawn from a zero baseline
+  const W = 380, H = 70, max = Math.max(...vals, 0), min = Math.min(...vals, 0);
+  const range = Math.max(max - min, 0.001);
+  const y0 = (max / range) * H;
   const bw = W / rows.length;
   return (
     <svg viewBox={`0 0 ${W} ${H + 12}`} className="w-full" role="img" aria-label={field}>
       {rows.map((r, i) => {
         const v = Number(r[field]);
         if (!Number.isFinite(v)) return null;
-        const h = (v / max) * H;
-        return <rect key={i} x={i * bw + 0.5} y={H - h} width={Math.max(1, bw - 1)} height={h} fill={color} opacity={0.75}><title>{`${r.date}: ${v} ${unit}`}</title></rect>;
+        const h = (Math.abs(v) / range) * H;
+        return <rect key={i} x={i * bw + 0.5} y={v >= 0 ? y0 - h : y0} width={Math.max(1, bw - 1)} height={h} fill={color} opacity={v >= 0 ? 0.75 : 0.45}><title>{`${r.date}: ${v} ${unit}`}</title></rect>;
       })}
+      {min < 0 && <line x1={0} x2={W} y1={y0} y2={y0} stroke="#738396" strokeWidth={0.5} />}
       <text x={0} y={H + 10} fontSize={8} fill="#738396">{rows[0]?.date}</text>
       <text x={W} y={H + 10} fontSize={8} fill="#738396" textAnchor="end">{rows[rows.length - 1]?.date}</text>
-      <text x={W} y={9} fontSize={8} fill="#738396" textAnchor="end">{tc("max")} {num(max, 2)} {unit}</text>
+      <text x={W} y={9} fontSize={8} fill="#738396" textAnchor="end">{tc("max")} {num(max, 2)} {unit}{min < 0 ? ` · ${tc("min")} ${num(min, 2)} ${unit}` : ""}</text>
     </svg>
   );
 }

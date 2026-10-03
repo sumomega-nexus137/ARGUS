@@ -48,6 +48,8 @@ const MAP: Record<string, Tone> = {
   AVAILABLE: "ok", UNAVAILABLE: "muted",
   // validation
   READY: "ok", PARTIAL: "watch", NOT_LOADED: "muted",
+  // imports
+  VALID: "ok", INVALID: "crit", PREVIEW: "info", CONFIRMED: "ok", CANCELLED: "muted",
 };
 
 export function toneOf(code: string | null | undefined): Tone {

@@ -1,14 +1,17 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Download } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import { useAreaCtx } from "@/components/area/AreaContext";
 import { ScreenHeader } from "@/components/common/ScreenHeader";
+import { ImportWizard } from "@/components/data/ImportWizard";
 import { Badge, Button, Empty, ErrorState, Field, InlineNote, inputCls, Loading, Panel, StatusBadge, Tabs } from "@/components/ui/primitives";
-import { api, post, upload } from "@/lib/api";
+import { api, post } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { downloadCsv } from "@/lib/csv";
 import { dateTime, hhmm, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { useActions, useInvalidateArea, useResources } from "@/lib/queries";
@@ -17,9 +20,9 @@ import type { Freshness } from "@/lib/types";
 type Tab = "observations" | "conflicts" | "resources" | "roadEvents" | "facilities" | "imports" | "sources" | "actions";
 const TABS: Tab[] = ["observations", "conflicts", "resources", "roadEvents", "facilities", "imports", "sources", "actions"];
 
-interface Obs { id: string; station_id: string; observed_at: string; water_level_cm: number; source: string; source_type: string; verification: string; authority: string; effective: boolean; entered_by: string; mode: string }
+interface Obs { id: string; station_id: string; observed_at: string; water_level_cm: number; discharge_m3s?: number | null; notes?: string | null; source: string; source_type: string; verification: string; authority: string; effective: boolean; entered_by: string; mode: string }
 interface Conflict { id: string; station_id: string; status: string; difference: number; resolved_by: string | null; selected_observation_id: string | null; observations: { id: string; observed_at: string; water_level_cm: number; source: string; authority: string; verification: string }[] }
-interface RoadEvent { id: string; road_id: string; segment_ids: string[]; state: string; source: string; verification: string; reported_by: string; active: boolean; created_at: string; notes: string | null }
+interface RoadEvent { id: string; road_id: string; segment_ids: string[]; effective_from?: string | null; effective_until?: string | null; state: string; source: string; verification: string; reported_by: string; active: boolean; created_at: string; notes: string | null }
 
 export default function DataPage() {
   const { areaId } = useAreaCtx();
@@ -34,17 +37,29 @@ export default function DataPage() {
       {tab === "resources" && <Resources areaId={areaId} />}
       {tab === "roadEvents" && <RoadEvents areaId={areaId} />}
       {tab === "facilities" && <Facilities areaId={areaId} />}
-      {tab === "imports" && <Imports areaId={areaId} />}
+      {tab === "imports" && <ImportWizard areaId={areaId} />}
       {tab === "sources" && <Sources areaId={areaId} />}
       {tab === "actions" && <Actions areaId={areaId} />}
     </div>
   );
 }
 
+function ExportButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  const td = useTranslations("data");
+  return <Button size="sm" variant="ghost" icon={Download} disabled={disabled} onClick={onClick} title={td("exportHint")}>{td("exportCsv")}</Button>;
+}
+
+function TableBar({ children, right }: { children?: ReactNode; right: ReactNode }) {
+  return <div className="flex flex-wrap items-center justify-between gap-2"><div className="text-[10.5px] text-muted">{children}</div>{right}</div>;
+}
+
 function useDone(areaId: string) {
   const invalidate = useInvalidateArea();
+  const td = useTranslations("data");
+  const tps = useTranslations("ops.outcome");
   const [msg, setMsg] = useState<string | null>(null);
-  return { msg, done: (m: string) => { setMsg(m); invalidate(areaId); } };
+  const pipeline = (status?: string | null) => td("pipelineResult", { outcome: status ? (tps.has(status) ? tps(status) : status) : "—" });
+  return { msg, pipeline, done: (m: string) => { setMsg(m); invalidate(areaId); } };
 }
 
 function Observations({ areaId }: { areaId: string }) {
@@ -58,10 +73,10 @@ function Observations({ areaId }: { areaId: string }) {
   const q = useQuery({ queryKey: ["obs", areaId, area?.data_version], queryFn: () => api<{ observations: Obs[] }>(`/api/areas/${areaId}/observations`) });
   const stations = Array.from(new Set((q.data?.observations || []).map((o) => o.station_id)));
   const [f, setF] = useState({ station_id: "", water_level_cm: "", source: "", source_type: "FIELD", verification: "UNVERIFIED", notes: "" });
-  const { msg, done } = useDone(areaId);
+  const { msg, done, pipeline } = useDone(areaId);
   const add = useMutation({
     mutationFn: () => post<{ pipeline?: { plan_status?: string } }>(`/api/areas/${areaId}/observations`, { ...f, station_id: f.station_id || stations[0], water_level_cm: Number(f.water_level_cm), notes: f.notes || null }),
-    onSuccess: (r) => done(td("pipelineResult", { status: r.pipeline?.plan_status || "—" })),
+    onSuccess: (r) => { done(pipeline(r.pipeline?.plan_status)); setF((x) => ({ ...x, water_level_cm: "", notes: "" })); },
   });
   const verify = useMutation({ mutationFn: ({ id, v }: { id: string; v: string }) => post(`/api/observations/${id}/verification`, { verification: v }), onSuccess: () => done(td("saved")) });
   if (!area) return <Loading />;
@@ -84,6 +99,10 @@ function Observations({ areaId }: { areaId: string }) {
           {msg && <InlineNote tone="ok" className="mt-2">{msg}</InlineNote>}
         </Panel>
       )}
+      <TableBar right={<ExportButton disabled={!q.data?.observations.length} onClick={() => downloadCsv(`argus_${areaId}_observations.csv`,
+        ["station_id", "observed_at", "water_level_cm", "discharge_m3s", "source", "source_type", "verification", "notes"], q.data?.observations || [])} />}>
+        {td("rowsCount", { n: q.data?.observations.length ?? 0 })}
+      </TableBar>
       {q.isLoading ? <Loading /> : (
         <table className="w-full text-xs [&_td]:px-1.5 [&_th]:px-1.5">
           <thead className="text-left text-[10px] uppercase tracking-wider text-muted"><tr><th>{td("observedAt")}</th><th>{td("station")}</th><th>{td("waterLevel")}</th><th>{td("source")}</th><th>{td("authority")}</th><th>{td("verification")}</th><th /></tr></thead>
@@ -112,6 +131,9 @@ function Observations({ areaId }: { areaId: string }) {
 
 function Conflicts({ areaId }: { areaId: string }) {
   const td = useTranslations("data");
+  const tu = useTranslations("units");
+  const tsrc = useTranslations("source");
+  const tver = useTranslations("verification");
   const { area } = useAreaCtx();
   const { can } = useAuth();
   const q = useQuery({ queryKey: ["conflicts", areaId, area?.data_version], queryFn: () => api<Conflict[]>(`/api/areas/${areaId}/conflicts`) });
@@ -136,9 +158,9 @@ function Conflicts({ areaId }: { areaId: string }) {
           <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
             {c.observations.map((o) => (
               <div key={o.id} className={`rounded-[3px] border p-2 text-xs ${c.selected_observation_id === o.id ? "border-ok" : "border-line"}`}>
-                <div className="text-lg font-bold tabular">{o.water_level_cm} cm</div>
+                <div className="text-lg font-bold tabular">{o.water_level_cm} {tu("cm")}</div>
                 <div>{o.source}</div>
-                <div className="text-muted">{o.authority} · {o.verification} · {hhmm(o.observed_at, area.utc_offset_min)}</div>
+                <div className="text-muted">{tsrc.has(o.authority) ? tsrc(o.authority) : o.authority} · {tver.has(o.verification) ? tver(o.verification) : o.verification} · {area.is_demo ? hhmm(o.observed_at, area.utc_offset_min) : dateTime(o.observed_at, area.utc_offset_min)}</div>
                 {c.status === "OPEN" && can("data_admin") && <Button size="sm" className="mt-1" busy={resolve.isPending} onClick={() => resolve.mutate({ id: c.id, obs: o.id })}>{td("resolve")}</Button>}
               </div>
             ))}
@@ -165,6 +187,11 @@ function Resources({ areaId }: { areaId: string }) {
   return (
     <div className="space-y-2">
       {msg && <InlineNote tone="ok">{msg}</InlineNote>}
+      <TableBar right={<ExportButton disabled={!r.data?.length} onClick={() => downloadCsv(`argus_${areaId}_resources.csv`,
+        ["id", "resource_type", "subtype", "capacity", "capacity_unit", "base_id", "name_kk", "name_ru", "name_en", "status"],
+        (r.data || []).map((x) => ({ ...x, name_kk: x.names?.kk, name_ru: x.names?.ru, name_en: x.names?.en })))} />}>
+        {td("rowsCount", { n: r.data?.length ?? 0 })} · {td("exportRoundTrip")}
+      </TableBar>
       <table className="w-full text-xs [&_td]:px-1.5 [&_th]:px-1.5">
         <thead className="text-left text-[10px] uppercase tracking-wider text-muted"><tr><th>{td("resourceId")}</th><th>{td("resourceType")}</th><th>{td("subtype")}</th><th>{td("base")}</th><th>{td("state")}</th></tr></thead>
         <tbody>
@@ -197,8 +224,8 @@ function RoadEvents({ areaId }: { areaId: string }) {
   const q = useQuery({ queryKey: ["roadEvents", areaId, area?.data_version], queryFn: () => api<RoadEvent[]>(`/api/areas/${areaId}/road-events`) });
   const roads = Array.from(new Set((layers.roads?.features || []).map((f) => String(f.properties.road_id)))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const [f, setF] = useState({ road_id: "", state: "CLOSED", verification: "VERIFIED", notes: "" });
-  const { msg, done } = useDone(areaId);
-  const add = useMutation({ mutationFn: () => post<{ pipeline?: { plan_status?: string } }>(`/api/areas/${areaId}/road-events`, { ...f, notes: f.notes || null }), onSuccess: (r) => done(td("pipelineResult", { status: r.pipeline?.plan_status || "—" })) });
+  const { msg, done, pipeline } = useDone(areaId);
+  const add = useMutation({ mutationFn: () => post<{ pipeline?: { plan_status?: string } }>(`/api/areas/${areaId}/road-events`, { ...f, notes: f.notes || null }), onSuccess: (r) => done(pipeline(r.pipeline?.plan_status)) });
   const clear = useMutation({ mutationFn: (id: string) => post(`/api/road-events/${id}/clear`), onSuccess: () => done(td("saved")) });
   if (!area) return <Loading />;
   return (
@@ -216,11 +243,17 @@ function RoadEvents({ areaId }: { areaId: string }) {
           {msg && <InlineNote tone="ok" className="mt-2">{msg}</InlineNote>}
         </Panel>
       )}
+      <TableBar right={<ExportButton disabled={!q.data?.length} onClick={() => downloadCsv(`argus_${areaId}_road_events.csv`,
+        ["road_id", "segment_ids", "state", "effective_from", "effective_until", "source", "verification", "notes"],
+        (q.data || []).filter((e) => e.active))} />}>
+        {td("rowsCount", { n: q.data?.length ?? 0 })}
+      </TableBar>
       {(q.data || []).length === 0 ? <Empty /> : (q.data || []).map((e) => (
         <div key={e.id} className="flex flex-wrap items-center gap-2 border-t border-line/60 py-1 text-xs">
           <span className="font-mono font-bold">{e.road_id}</span>
-          <Badge tone={e.state === "CLOSED" ? "crit" : e.state === "RESTRICTED" ? "warn" : "ok"} icon={false}>{e.state}</Badge>
-          <span>{e.source} · {e.verification} · {e.reported_by} · {dateTime(e.created_at, area.utc_offset_min)}</span>
+          <Badge tone={e.state === "CLOSED" ? "crit" : e.state === "RESTRICTED" ? "warn" : "ok"} icon={false}>{trd.has(e.state) ? trd(e.state) : e.state}</Badge>
+          <span>{e.source} · {tver2.has(e.verification) ? tver2(e.verification) : e.verification} · {e.reported_by} · {dateTime(e.created_at, area.utc_offset_min)}</span>
+          {e.notes && <span className="text-muted">— {e.notes}</span>}
           <Badge tone={e.active ? "info" : "muted"} icon={false}>{e.active ? td("active") : td("inactive")}</Badge>
           {e.active && can("field_update") && <Button size="sm" variant="ghost" onClick={() => clear.mutate(e.id)}>{td("clear")}</Button>}
         </div>
@@ -241,7 +274,7 @@ function Facilities({ areaId }: { areaId: string }) {
     mutationFn: () => post(`/api/areas/${areaId}/facilities`, { ...f, lon: Number(f.lon), lat: Number(f.lat), criticality: Number(f.criticality), population_served: Number(f.population_served), name_kk: f.name_kk || null, name_ru: f.name_ru || null, name_en: f.name_en || null }),
     onSuccess: () => done(td("saved")),
   });
-  const types = ["HOSPITAL", "CLINIC", "SCHOOL", "SHELTER", "WATER", "POWER", "FIRE", "ADMIN", "CARE_HOME"].filter((x) => tf.has(x));
+  const types = ["SHELTER", "HOSPITAL", "CLINIC", "CARE_HOME", "SCHOOL", "WATER_SUPPLY", "POWER", "HEATING", "FIRE_STATION", "ADMINISTRATION", "OTHER"];
   return (
     <div className="space-y-3">
       {can("field_update") && (
@@ -261,15 +294,16 @@ function Facilities({ areaId }: { areaId: string }) {
           {msg && <InlineNote tone="ok" className="mt-2">{msg}</InlineNote>}
         </Panel>
       )}
-      <table className="w-full text-xs [&_td]:px-1.5">
+      <table className="w-full text-xs [&_td]:px-1.5 [&_th]:px-1.5">
+        <thead className="text-left text-[10px] uppercase tracking-wider text-muted"><tr><th>{td("resourceId")}</th><th>{td("name")}</th><th>{td("facilityType")}</th><th>{td("criticality")}</th><th>{td("verification")}</th></tr></thead>
         <tbody>
           {(layers.facilities?.features || []).map((x) => (
             <tr key={String(x.properties.id)} className="border-t border-line/60">
               <td className="py-1 font-mono">{String(x.properties.id)}</td>
               <td>{pickName(x.properties.names as never, locale)}</td>
               <td>{tf.has(String(x.properties.facility_type)) ? tf(String(x.properties.facility_type)) : String(x.properties.facility_type)}</td>
-              <td className="tabular">{String(x.properties.criticality)}</td>
-              <td>{String(x.properties.verification)}</td>
+              <td className="tabular">{String(x.properties.criticality ?? "—")}</td>
+              <td><StatusBadge ns="verification" code={x.properties.verification ? String(x.properties.verification) : null} icon={false} /></td>
             </tr>
           ))}
         </tbody>
@@ -278,88 +312,9 @@ function Facilities({ areaId }: { areaId: string }) {
   );
 }
 
-interface ImportJob { id: string; status: string; import_type: string; filename: string; rows_total: number; rows_valid: number; rows_invalid: number; rows_warning: number; applied_count: number | null; preview?: { row: number; status: string; errors: string[]; warnings: string[]; data: Record<string, unknown> }[] }
-
-function Imports({ areaId }: { areaId: string }) {
-  const ti = useTranslations("imports");
-  const { can } = useAuth();
-  const [type, setType] = useState("resources");
-  const [file, setFile] = useState<File | null>(null);
-  const [job, setJob] = useState<ImportJob | null>(null);
-  const invalidate = useInvalidateArea();
-  const history = useQuery({ queryKey: ["imports", areaId, job?.status], queryFn: () => api<ImportJob[]>(`/api/areas/${areaId}/imports`) });
-  const up = useMutation({ mutationFn: () => upload<ImportJob>(`/api/areas/${areaId}/imports?import_type=${type}`, file!), onSuccess: setJob });
-  const confirm = useMutation({ mutationFn: () => post<ImportJob>(`/api/imports/${job!.id}/confirm`), onSuccess: (j) => { setJob(j); invalidate(areaId); } });
-  const cancel = useMutation({ mutationFn: () => post<ImportJob>(`/api/imports/${job!.id}/cancel`), onSuccess: () => setJob(null) });
-  const step = !job ? 0 : job.status === "CONFIRMED" ? 5 : 3;
-  const steps = ["upload", "preview", "validate", "errors", "confirm", "import"];
-  return (
-    <div className="space-y-3">
-      <ol className="flex flex-wrap gap-1 text-[10.5px]">
-        {steps.map((s, i) => <li key={s} className={`rounded-[3px] border px-2 py-0.5 ${i <= step ? "border-accent text-accent" : "border-line text-muted"}`}>{i + 1}. {ti(`steps.${s}`)}</li>)}
-      </ol>
-      <InlineNote tone="info">{ti("neverSilent")}</InlineNote>
-      {can("field_update") && !job && (
-        <Panel title={ti("title")}>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-            <Field label={ti("type")}><select className={inputCls} value={type} onChange={(e) => setType(e.target.value)}>{["resources", "facilities", "observations", "road_events"].map((x) => <option key={x} value={x}>{ti(`types.${x}`)}</option>)}</select></Field>
-            <Field label={ti("choose")}><input type="file" accept=".csv,.xlsx,.json,.geojson" className="text-xs" onChange={(e) => setFile(e.target.files?.[0] || null)} /></Field>
-            <div className="flex items-end gap-2">
-              <Button size="sm" variant="primary" disabled={!file} busy={up.isPending} onClick={() => up.mutate()}>{ti("upload")}</Button>
-              <a className="text-[11px] text-accent underline" href={`/api/imports/templates/${type}.csv`}>{ti("template")}</a>
-            </div>
-          </div>
-          {up.isError && <ErrorState error={up.error} />}
-        </Panel>
-      )}
-      {job && (
-        <Panel title={`${job.filename} · ${job.status}`}>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <Badge tone="muted" icon={false}>{ti("rows")}: {job.rows_total}</Badge>
-            <Badge tone="ok" icon={false}>{ti("valid")}: {job.rows_valid}</Badge>
-            <Badge tone="crit" icon={false}>{ti("invalid")}: {job.rows_invalid}</Badge>
-            <Badge tone="warn" icon={false}>{ti("warnings")}: {job.rows_warning}</Badge>
-          </div>
-          <div className="mt-2 max-h-72 overflow-auto">
-            <table className="w-full text-[11px] [&_td]:px-1.5">
-              <tbody>
-                {(job.preview || []).map((r) => (
-                  <tr key={r.row} className={`border-t border-line/60 ${r.status === "INVALID" ? "bg-crit/10" : ""}`}>
-                    <td className="font-mono">{ti("row")} {r.row}</td>
-                    <td>{r.status}</td>
-                    <td className="font-mono text-ink-2">{JSON.stringify(r.data).slice(0, 90)}</td>
-                    <td className="text-crit">{r.errors.join("; ")}</td>
-                    <td className="text-warn">{r.warnings.join("; ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {step === 3 ? (
-            <div className="mt-2 flex gap-2">
-              <Button size="sm" variant="primary" disabled={job.rows_valid === 0} busy={confirm.isPending} onClick={() => confirm.mutate()}>{ti("confirm", { n: job.rows_valid })}</Button>
-              <Button size="sm" variant="ghost" onClick={() => cancel.mutate()}>{ti("cancel")}</Button>
-            </div>
-          ) : (
-            <div className="mt-2 flex items-center gap-2">
-              <InlineNote tone="ok">{ti("confirmed", { n: job.applied_count ?? 0, rejected: job.rows_invalid })}</InlineNote>
-              <Button size="sm" onClick={() => { setJob(null); setFile(null); }}>{ti("upload")}</Button>
-            </div>
-          )}
-          {confirm.isError && <ErrorState error={confirm.error} />}
-        </Panel>
-      )}
-      <Panel title={ti("history")}>
-        {(history.data || []).length === 0 ? <Empty /> : (history.data || []).map((j) => (
-          <div key={j.id} className="border-t border-line/60 py-0.5 text-[11px] first:border-0">{j.filename} · {ti.has(`types.${j.import_type}`) ? ti(`types.${j.import_type}`) : j.import_type} · {j.status} · {j.rows_valid}/{j.rows_total}</div>
-        ))}
-      </Panel>
-    </div>
-  );
-}
-
 function Sources({ areaId }: { areaId: string }) {
   const tc = useTranslations("common");
+  const tq = useTranslations("quality");
   const { area } = useAreaCtx();
   const q = useQuery({ queryKey: ["freshness", areaId, area?.data_version], queryFn: () => api<{ sources: Freshness[] }>(`/api/areas/${areaId}/freshness`) });
   if (q.isLoading || !area) return <Loading />;
@@ -372,7 +327,7 @@ function Sources({ areaId }: { areaId: string }) {
             <td className="py-1"><div className="font-semibold">{s.source}</div><div className="text-[10.5px] text-muted">{s.layer} · {s.provider}{s.message ? ` · ${s.message}` : ""}</div></td>
             <td><StatusBadge ns="mode" code={s.mode} icon={false} /></td>
             <td><StatusBadge ns="mode" code={s.freshness} icon={false} /></td>
-            <td>{s.quality || "—"}</td>
+            <td>{s.quality ? (tq.has(s.quality) ? tq(s.quality) : s.quality) : "—"}</td>
             <td className="tabular">{s.last_success_at ? dateTime(s.last_success_at, area.utc_offset_min) : "—"}</td>
           </tr>
         ))}
@@ -383,6 +338,9 @@ function Sources({ areaId }: { areaId: string }) {
 
 function Actions({ areaId }: { areaId: string }) {
   const ta = useTranslations("admin");
+  const tu = useTranslations("units");
+  const trt = useTranslations("resourceType");
+  const tsub = useTranslations("subtype");
   const tat = useTranslations("actionType");
   const { locale } = useLocale();
   const q = useActions(areaId);
@@ -391,14 +349,19 @@ function Actions({ areaId }: { areaId: string }) {
     <div className="space-y-2">
       <InlineNote tone="info">{ta("libraryNote")}</InlineNote>
       <table className="w-full text-xs [&_td]:px-1.5 [&_th]:px-1.5">
-        <thead className="text-left text-[10px] uppercase tracking-wider text-muted"><tr><th>ID</th><th>{ta("library")}</th><th>{ta("requirements")}</th><th>{ta("durations")}</th><th>{ta("approvedBy")}</th></tr></thead>
+        <thead className="text-left text-[10px] uppercase tracking-wider text-muted"><tr><th>{ta("actionId")}</th><th>{ta("library")}</th><th>{ta("requirements")}</th><th>{ta("durations")}</th><th>{ta("approvedBy")}</th></tr></thead>
         <tbody>
           {(q.data || []).map((a) => (
             <tr key={a.id} className="border-t border-line/60 align-top">
               <td className="py-1 font-mono">{a.id} v{a.version}</td>
               <td><div className="font-semibold">{pickName(a.names, locale)}</div><div className="text-[10.5px] text-muted">{tat.has(a.action_type) ? tat(a.action_type) : a.action_type}</div></td>
-              <td className="font-mono text-[10.5px]">{[a.requirements.crew && `crew ${a.requirements.crew.types.join("/")}×${a.requirements.crew.count}`, a.requirements.vehicle && `veh ${a.requirements.vehicle.types.join("/")}`, a.requirements.pumps && `pumps ${a.requirements.pumps}`, a.requirements.equipment && Object.entries(a.requirements.equipment).map(([k, v]) => `${k}×${v}`).join(" ")].filter(Boolean).join(" · ")}</td>
-              <td className="tabular">{a.setup_min} / {a.execution_min} / {a.safety_buffer_min} min</td>
+              <td className="text-[10.5px]">{[
+                a.requirements.crew && `${trt("CREW")}: ${a.requirements.crew.types.map((x) => (tsub.has(x) ? tsub(x) : x)).join(" / ")} ×${a.requirements.crew.count}`,
+                a.requirements.vehicle && `${trt("VEHICLE")}: ${a.requirements.vehicle.types.map((x) => (tsub.has(x) ? tsub(x) : x)).join(" / ")}`,
+                a.requirements.pumps && `${trt("PUMP")}: ×${a.requirements.pumps}`,
+                a.requirements.equipment && Object.entries(a.requirements.equipment).map(([k, v]) => `${tsub.has(k) ? tsub(k) : k} ×${v}`).join(", "),
+              ].filter(Boolean).join(" · ")}</td>
+              <td className="tabular whitespace-nowrap">{a.setup_min} / {a.execution_min} / {a.safety_buffer_min} {tu("min")}</td>
               <td>{a.approved_by || "—"}</td>
             </tr>
           ))}

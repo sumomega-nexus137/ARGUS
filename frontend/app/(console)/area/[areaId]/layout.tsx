@@ -5,6 +5,7 @@ import { useParams, usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { AreaProvider } from "@/components/area/AreaContext";
+import { SafeBoundary } from "@/components/common/SafeBoundary";
 import { Timeline } from "@/components/timeline/Timeline";
 import { useUi } from "@/lib/store";
 
@@ -40,12 +41,14 @@ export default function AreaLayout({ children }: { children: ReactNode }) {
         <div className="flex h-full flex-col">
           <div className="flex min-h-0 flex-1">
             <div className="relative min-w-0 flex-1">
-              <OpsMap key={areaId} />
-              <MapControls />
+              <SafeBoundary key={areaId}>
+                <OpsMap />
+                <MapControls />
+              </SafeBoundary>
             </div>
             <aside className={`${panel} min-w-[320px] max-w-full shrink-0 overflow-y-auto border-l border-line bg-bg`}>{children}</aside>
           </div>
-          <Timeline />
+          <SafeBoundary><Timeline /></SafeBoundary>
         </div>
       ) : (
         <div className="h-full overflow-y-auto">{children}</div>

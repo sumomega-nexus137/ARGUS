@@ -105,6 +105,33 @@ def test_import_workflow_rejects_invalid_rows(client, auth):
     assert client.get("/api/imports/templates/observations.csv").text.startswith("station_id")
 
 
+def test_import_parsing_is_robust(client, auth):
+    """Excel (ru/kk locale) CSV: cp1251 + ';'; local dd.mm.yyyy times with utc_offset; broken files → 400, never 500."""
+    def up(kind, name, data):
+        return client.post(f"/api/areas/atbasar/imports?import_type={kind}", headers=auth("operator"),
+                           files={"file": (name, io.BytesIO(data), "application/octet-stream")})
+
+    res = up("resources", "excel.csv", "id;resource_type;subtype;capacity;name_ru\nP77;PUMP;MOBILE;12,5;Насос\n;;;;\n".encode("cp1251"))
+    assert res.status_code == 200, res.text
+    job = res.json()
+    assert job["rows_total"] == 1 and job["rows_valid"] == 1
+    assert job["preview"]["rows"][0]["data"]["capacity"] == 12.5 and job["preview"]["rows"][0]["data"]["name_ru"] == "Насос"
+    assert job["preview"]["missing_columns"] == []
+    st = client.get("/api/areas/atbasar/observations", headers=auth()).json()["observations"][0]["station_id"]
+    obs = up("observations", "o.csv", (f"station_id,observed_at,utc_offset,water_level_cm,source,source_type\n"
+                                       f"{st},12.04.2026 09:30,+05:00,412,Field team 3,FIELD\n"
+                                       f"{st},12.04.2026 09:40,,413,Field team 3,FIELD\n").encode())
+    rows = obs.json()["preview"]["rows"]
+    assert rows[0]["status"] == "VALID" and rows[0]["data"]["observed_at"] == "2026-04-12T09:30:00+05:00"
+    assert "timestamp_without_timezone:observed_at" in rows[1]["errors"]
+    cols = up("observations", "c.csv", b"station,level\nX,1\n").json()["preview"]
+    assert "station_id" in cols["missing_columns"] and "level" in cols["unknown_columns"]
+    for name, data in (("b.xlsx", b"not a zip"), ("b.json", b"[1, 2]"), ("b.json", b"{bad json"), ("b.geojson", b'{"type": "FeatureCollection", "features": [{"geometry": {"type": "Point"}}]}')):
+        r = up("facilities", name, data)
+        assert r.status_code in (200, 400), (name, r.status_code, r.text)
+    assert up("facilities", "b.xlsx", b"not a zip").json()["error"]["code"] == "unreadable_file"
+
+
 def test_validation_not_loaded_and_synthetic(client, auth):
     v = client.get("/api/areas/atbasar/validation", headers=auth()).json()
     ds = v["datasets"][0]

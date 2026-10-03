@@ -57,7 +57,8 @@ The failures are mixed and interpretable: higher water, earlier peak, selected r
 delays can break the plan, while other perturbations remain feasible.
 
 The CP-SAT alternatives are independently stress-tested. The best current alternative improves measured
-robustness to 0.4231. Results come from the evaluator; they are not hardcoded.
+robustness from 0.391 to 0.462. Results come from the evaluator; they are not hardcoded, and the deterministic
+solver budget makes them reproducible run after run.
 
 For the causal demo, use the audited **EXERCISE: HIGH** control:
 BASE FEASIBLE → HIGH PLAN AT RISK → WHY chain → restore BASE → stress test → generate alternatives.

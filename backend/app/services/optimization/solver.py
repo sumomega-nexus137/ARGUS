@@ -346,8 +346,12 @@ def solve(p: OptProblem, travel: TravelTable, time_limit_s: float, workers: int 
             m.AddHint(x[c.code], 1)
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_limit_s
+    # Deterministic parallel search on a deterministic work budget: the same inputs give the same alternatives on any
+    # machine and under any CPU load (reproducible, auditable plans). The wall-clock cap is only a safety net.
     solver.parameters.num_workers = max(workers, 8)
+    solver.parameters.interleave_search = True
+    solver.parameters.max_deterministic_time = time_limit_s
+    solver.parameters.max_time_in_seconds = max(10.0, time_limit_s * 5)
     solver.parameters.random_seed = 17
     st = solver.Solve(m)
     if st not in (cp_model.OPTIMAL, cp_model.FEASIBLE):

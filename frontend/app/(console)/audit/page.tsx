@@ -17,6 +17,7 @@ interface Row { id: number; ts: string; op_time: string | null; username: string
 /** "Why did ARGUS change its result?" — every result-affecting change bumps the data version and is listed here. */
 export default function AuditPage() {
   const ta = useTranslations("audit");
+  const taa = useTranslations("auditAction");
   const tn = useTranslations("nav");
   const tq = useTranslations("questions");
   const tc = useTranslations("common");
@@ -60,8 +61,8 @@ export default function AuditPage() {
                 <td className="py-1 tabular">{t(r.op_time || r.ts)}</td>
                 <td className="tabular">{r.data_version ?? "—"}</td>
                 <td>{r.username} <span className="text-muted">({r.role})</span></td>
-                <td><Badge tone={r.affects_results ? "warn" : "muted"} icon={false}>{r.action}</Badge></td>
-                <td>{r.summary}</td>
+                <td><Badge tone={r.affects_results ? "warn" : "muted"} icon={false} title={r.action}>{taa.has(r.action) ? taa(r.action) : r.action}</Badge></td>
+                <td className="font-mono text-[10.5px] text-ink-2">{r.summary}</td>
               </tr>
               {open === r.id && r.details && (
                 <tr><td colSpan={5} className="bg-panel-2 p-2"><pre className="max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[10.5px] text-ink-2">{JSON.stringify(r.details, null, 2)}</pre></td></tr>

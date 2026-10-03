@@ -9,7 +9,8 @@ from __future__ import annotations
 import csv
 import io
 import json
-from datetime import datetime
+import re
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -22,29 +23,53 @@ from app.services.audit import Actor, record
 
 IMPORT_TYPES = ("resources", "facilities", "observations", "road_events")
 MAX_ROWS = 5000
+REQUIRED = {
+    "resources": ["id", "resource_type"],
+    "facilities": ["facility_type", "lon", "lat"],
+    "observations": ["station_id", "observed_at", "water_level_cm", "source", "source_type"],
+    "road_events": ["road_id", "state"],
+}
+OPTIONAL_EXTRA = {"utc_offset", "name", "name_original"}
 
 TEMPLATES = {
     "resources": ["id", "resource_type", "subtype", "capacity", "capacity_unit", "base_id", "name_kk", "name_ru", "name_en",
                   "status"],
     "facilities": ["id", "facility_type", "name_kk", "name_ru", "name_en", "lon", "lat", "criticality", "population_served",
                    "sector_id", "verification", "source"],
-    "observations": ["station_id", "observed_at", "water_level_cm", "discharge_m3s", "source", "source_type",
+    "observations": ["station_id", "observed_at", "utc_offset", "water_level_cm", "discharge_m3s", "source", "source_type",
                      "verification", "notes"],
-    "road_events": ["road_id", "segment_ids", "state", "effective_from", "effective_until", "source", "verification",
-                    "notes"],
+    "road_events": ["road_id", "segment_ids", "state", "effective_from", "effective_until", "utc_offset", "source",
+                    "verification", "notes"],
 }
 
 
-def parse_file(filename: str, content: bytes) -> tuple[str, list[dict[str, Any]]]:
+def _decode(content: bytes) -> str:
+    """UTF-8 (with or without BOM) first; Excel on Russian/Kazakh Windows saves CSV as cp1251."""
+    try:
+        return content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return content.decode("cp1251")
+
+
+def _delimiter(text: str) -> str:
+    """The header line decides: Excel in ru/kk locales writes ';', others ',' or tab."""
+    first = next((ln for ln in text.splitlines() if ln.strip()), "")
+    counts = {d: first.count(d) for d in (",", ";", "\t")}
+    best = max(counts, key=lambda d: counts[d])
+    return best if counts[best] else ","
+
+
+def _blank(row: dict) -> bool:
+    return not any(v is not None and str(v).strip() for k, v in row.items() if k is not None)
+
+
+def _parse(filename: str, content: bytes) -> tuple[str, list[dict[str, Any]]]:
     name = filename.lower()
-    if name.endswith(".csv"):
-        text = content.decode("utf-8-sig")
-        sample = text[:2048]
-        try:
-            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
-        except csv.Error:
-            dialect = csv.excel
-        return "CSV", [dict(r) for r in csv.DictReader(io.StringIO(text), dialect=dialect)]
+    if name.endswith(".csv") or name.endswith(".txt"):
+        text = _decode(content)
+        reader = csv.DictReader(io.StringIO(text), delimiter=_delimiter(text))
+        rows = [{(k.strip().lstrip("\ufeff") if isinstance(k, str) else k): v for k, v in r.items()} for r in reader]
+        return "CSV", [r for r in rows if not _blank(r)]
     if name.endswith(".xlsx"):
         from openpyxl import load_workbook
 
@@ -57,23 +82,35 @@ def parse_file(filename: str, content: bytes) -> tuple[str, list[dict[str, Any]]
         return "XLSX", [{header[i]: v for i, v in enumerate(r) if i < len(header) and header[i]} for r in rows[1:]
                         if any(v is not None and str(v).strip() for v in r)]
     if name.endswith(".geojson") or name.endswith(".json"):
-        data = json.loads(content.decode("utf-8-sig"))
+        data = json.loads(_decode(content))
         if isinstance(data, dict) and data.get("type") == "FeatureCollection":
             out = []
-            for f in data.get("features", []):
+            for f in data.get("features") or []:
+                if not isinstance(f, dict):
+                    continue
                 props = dict(f.get("properties") or {})
                 g = f.get("geometry") or {}
-                if g.get("type") == "Point":
-                    props.setdefault("lon", g["coordinates"][0])
-                    props.setdefault("lat", g["coordinates"][1])
+                coords = g.get("coordinates") if isinstance(g, dict) else None
+                if isinstance(g, dict) and g.get("type") == "Point" and isinstance(coords, list) and len(coords) >= 2:
+                    props.setdefault("lon", coords[0])
+                    props.setdefault("lat", coords[1])
                 out.append(props)
             return "GEOJSON", out
-        if isinstance(data, list):
-            return "JSON", [dict(x) for x in data]
-        if isinstance(data, dict) and isinstance(data.get("rows"), list):
-            return "JSON", [dict(x) for x in data["rows"]]
+        items = data if isinstance(data, list) else data.get("rows") if isinstance(data, dict) else None
+        if isinstance(items, list) and all(isinstance(x, dict) for x in items):
+            return "JSON", [dict(x) for x in items]
         raise ArgusError("unsupported_json", "JSON must be an array of objects or a GeoJSON FeatureCollection")
     raise ArgusError("unsupported_format", "Supported formats: CSV, XLSX, JSON, GeoJSON")
+
+
+def parse_file(filename: str, content: bytes) -> tuple[str, list[dict[str, Any]]]:
+    """Any parser failure (broken XLSX zip, bad JSON, binary data) becomes one clear, localizable error, never a 500."""
+    try:
+        return _parse(filename, content)
+    except ArgusError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — third-party parsers raise many exception types
+        raise ArgusError("unreadable_file", f"File could not be parsed: {type(exc).__name__}") from exc
 
 
 def _s(v: Any) -> str | None:
@@ -100,25 +137,48 @@ def _f(v: Any, errors: list[str], field: str, required: bool = False) -> float |
     return x
 
 
-def _dt(v: Any, errors: list[str], field: str, required: bool = False) -> str | None:
+_DMY = re.compile(r"^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*(.*)$")
+
+
+def _tz(offset: Any) -> timezone | None:
+    """'+05:00', '+5', '300' (minutes) or 5 (hours) → tzinfo; None when absent or unreadable."""
+    s = _s(offset)
+    if s is None:
+        return None
+    m = re.fullmatch(r"(?:UTC)?\s*([+-])?(\d{1,2})(?::?(\d{2}))?", s, re.I)
+    if m and int(m.group(2)) <= 14:
+        sign = -1 if m.group(1) == "-" else 1
+        return timezone(sign * timedelta(hours=int(m.group(2)), minutes=int(m.group(3) or 0)))
+    try:
+        minutes = int(float(s))
+    except ValueError:
+        return None
+    return timezone(timedelta(minutes=minutes)) if abs(minutes) <= 14 * 60 else None
+
+
+def _dt(v: Any, errors: list[str], field: str, required: bool = False, tz: timezone | None = None) -> str | None:
     if isinstance(v, datetime):
-        if v.tzinfo is None:
+        d = v
+    else:
+        s = _s(v)
+        if s is None:
+            if required:
+                errors.append(f"missing:{field}")
+            return None
+        m = _DMY.match(s)
+        if m:  # 10.04.2024 18:00[+05:00] — the way dates are typed in Kazakhstan
+            dd, mm, yyyy, hh, mi, ss, rest = m.groups()
+            s = f"{yyyy}-{int(mm):02d}-{int(dd):02d}T{int(hh or 0):02d}:{mi or '00'}:{ss or '00'}{rest.strip()}"
+        try:
+            d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            errors.append(f"invalid_timestamp:{field}")
+            return None
+    if d.tzinfo is None:
+        if tz is None:
             errors.append(f"timestamp_without_timezone:{field}")
             return None
-        return v.isoformat()
-    s = _s(v)
-    if s is None:
-        if required:
-            errors.append(f"missing:{field}")
-        return None
-    try:
-        d = datetime.fromisoformat(s.replace("Z", "+00:00"))
-    except ValueError:
-        errors.append(f"invalid_timestamp:{field}")
-        return None
-    if d.tzinfo is None:
-        errors.append(f"timestamp_without_timezone:{field}")
-        return None
+        d = d.replace(tzinfo=tz)
     return d.isoformat()
 
 
@@ -185,11 +245,14 @@ def validate_row(db: Session, area: OperationalArea, kind: str, raw: dict, seen:
         station = db.get(HydroStation, st) if st else None
         if station is None or station.area_id != area.id:
             e.append("unknown:station_id")
-        ts = _dt(r.get("observed_at"), e, "observed_at", required=True)
+        tz = _tz(r.get("utc_offset"))
+        ts = _dt(r.get("observed_at"), e, "observed_at", required=True, tz=tz)
         lvl = _f(r.get("water_level_cm"), e, "water_level_cm", required=True)
         if lvl is not None and not -100 <= lvl <= 3000:
             e.append("out_of_range:water_level_cm")
         q = _f(r.get("discharge_m3s"), e, "discharge_m3s")
+        if q is not None and not 0 <= q <= 50000:
+            e.append("out_of_range:discharge_m3s")
         stype = (_s(r.get("source_type")) or "").upper()
         if stype not in ("FIELD", "HYDROPOST", "FORECAST", "SATELLITE", "GLOBAL_MODEL", "SIMULATION"):
             e.append("invalid:source_type")
@@ -203,6 +266,12 @@ def validate_row(db: Session, area: OperationalArea, kind: str, raw: dict, seen:
         if key in seen:
             e.append("duplicate_in_file")
         seen.add(key)
+        if station is not None and ts and src and lvl is not None and not e:
+            from app.services.ingest.observations import ObservationInput, is_duplicate
+
+            if is_duplicate(db, ObservationInput(station_id=st, observed_at=datetime.fromisoformat(ts), water_level_cm=lvl,
+                                                 discharge_m3s=q, source=src, source_type=stype, verification=ver)):
+                e.append("duplicate_in_database")
         data = {"station_id": st, "observed_at": ts, "water_level_cm": lvl, "discharge_m3s": q, "source": src,
                 "source_type": stype, "verification": ver, "notes": _s(r.get("notes"))}
     elif kind == "road_events":
@@ -211,7 +280,10 @@ def validate_row(db: Session, area: OperationalArea, kind: str, raw: dict, seen:
         if not segs_all:
             e.append("unknown:road_id")
         segs_raw = r.get("segment_ids")
-        segs = [x.strip() for x in segs_raw.replace(",", ";").split(";") if x.strip()] if isinstance(segs_raw, str) else list(segs_raw or [])
+        if isinstance(segs_raw, (list, tuple)):
+            segs = [str(x).strip() for x in segs_raw if str(x).strip()]
+        else:
+            segs = [x.strip() for x in str(segs_raw or "").replace(",", ";").split(";") if x.strip()]
         if any(s not in segs_all for s in segs):
             e.append("unknown:segment_ids")
         state = (_s(r.get("state")) or "").upper()
@@ -221,14 +293,26 @@ def validate_row(db: Session, area: OperationalArea, kind: str, raw: dict, seen:
         if ver not in ("VERIFIED", "UNVERIFIED"):
             e.append("invalid:verification")
         data = {"road_id": rid, "segment_ids": segs, "state": state,
-                "effective_from": _dt(r.get("effective_from"), e, "effective_from"),
-                "effective_until": _dt(r.get("effective_until"), e, "effective_until"),
+                "effective_from": _dt(r.get("effective_from"), e, "effective_from", tz=_tz(r.get("utc_offset"))),
+                "effective_until": _dt(r.get("effective_until"), e, "effective_until", tz=_tz(r.get("utc_offset"))),
                 "source": _s(r.get("source")) or "IMPORT", "verification": ver, "notes": _s(r.get("notes"))}
         if not data["effective_from"]:
             w.append("effective_from_defaults_to_now")
+        if data["effective_from"] and data["effective_until"] and data["effective_until"] <= data["effective_from"]:
+            e.append("until_before_from")
     else:
         raise ArgusError("invalid_import_type")
     return data, e, w
+
+
+def _jsonable(v: Any) -> Any:
+    if isinstance(v, (datetime, date, time)):
+        return v.isoformat()
+    if v is None or isinstance(v, (str, int, float, bool)):
+        return v
+    if isinstance(v, (list, tuple)):
+        return [_jsonable(x) for x in v]
+    return str(v)
 
 
 def create_preview(db: Session, area: OperationalArea, kind: str, filename: str, content: bytes, actor: Actor) -> ImportJob:
@@ -237,20 +321,28 @@ def create_preview(db: Session, area: OperationalArea, kind: str, filename: str,
     fmt, rows = parse_file(filename, content)
     if len(rows) > MAX_ROWS:
         raise ArgusError("too_many_rows", f"Maximum {MAX_ROWS} rows per import", max=MAX_ROWS)
+    columns = [c.strip().lower() for c in (rows[0].keys() if rows else []) if isinstance(c, str) and c.strip()]
+    missing_columns = [c for c in REQUIRED[kind] if c not in columns]
+    unknown_columns = [c for c in columns if c not in TEMPLATES[kind] and c not in OPTIONAL_EXTRA]
     seen: set = set()
     out, nv, ni, nw = [], 0, 0, 0
     for i, raw in enumerate(rows, start=1):
-        data, errs, warns = validate_row(db, area, kind, raw, seen)
+        try:
+            data, errs, warns = validate_row(db, area, kind, raw, seen)
+        except ArgusError:
+            raise
+        except Exception:  # noqa: BLE001 — one malformed row must not abort the whole preview
+            data, errs, warns = {}, ["unreadable_row"], []
         status = "INVALID" if errs else ("WARNING" if warns else "VALID")
         nv += status != "INVALID"
         ni += status == "INVALID"
         nw += status == "WARNING"
         out.append({"row": i, "status": status, "errors": errs, "warnings": warns, "data": data,
-                    "raw": {k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in raw.items()}})
+                    "raw": {(k if isinstance(k, str) else "_extra"): _jsonable(v) for k, v in raw.items()}})
     job = ImportJob(id=new_id("imp-"), area_id=area.id, import_type=kind, filename=filename, file_format=fmt,
                     status="PREVIEW", created_by=actor.username, rows_total=len(rows), rows_valid=nv, rows_invalid=ni,
-                    rows_warning=nw, preview={"rows": out, "columns": list(rows[0].keys()) if rows else [],
-                                              "template": TEMPLATES[kind]})
+                    rows_warning=nw, preview={"rows": out, "columns": columns, "template": TEMPLATES[kind],
+                                              "missing_columns": missing_columns, "unknown_columns": unknown_columns})
     db.add(job)
     db.flush()
     record(db, actor, "IMPORT_PREVIEWED", "import", job.id, f"{kind} from {filename}: {nv} valid, {ni} invalid",
@@ -259,11 +351,13 @@ def create_preview(db: Session, area: OperationalArea, kind: str, filename: str,
 
 
 def confirm(db: Session, job: ImportJob, actor: Actor) -> ImportJob:
-    from app.services.ingest.observations import ObservationInput, add_observation
+    from app.services.ingest.observations import ObservationInput, add_observation, entry_mode
     from app.services.operations.inputs import add_facility, add_road_event, upsert_resource
 
     if job.status != "PREVIEW":
         raise Conflict("import_not_in_preview", "Import already confirmed or cancelled")
+    area = db.get(OperationalArea, job.area_id)
+    obs_mode = entry_mode(area)
     applied, failed = 0, []
     for row in job.preview.get("rows", []):
         if row["status"] == "INVALID":
@@ -280,7 +374,7 @@ def confirm(db: Session, job: ImportJob, actor: Actor) -> ImportJob:
                         station_id=d["station_id"], observed_at=datetime.fromisoformat(d["observed_at"]),
                         water_level_cm=d["water_level_cm"], discharge_m3s=d["discharge_m3s"], source=d["source"],
                         source_type=d["source_type"], verification=d["verification"], notes=d.get("notes"),
-                        mode="LIVE", import_id=job.id), actor)
+                        mode=obs_mode, import_id=job.id), actor)
                 elif job.import_type == "road_events":
                     add_road_event(db, job.area_id, road_id=d["road_id"], segment_ids=d["segment_ids"], state=d["state"],
                                    effective_from=datetime.fromisoformat(d["effective_from"]) if d["effective_from"] else None,

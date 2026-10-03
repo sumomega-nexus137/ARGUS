@@ -24,7 +24,7 @@ const SCREENS: { id: string; icon: LucideIcon; area: boolean }[] = [
   { id: "data", icon: Database, area: true }, { id: "audit", icon: History, area: false }, { id: "admin", icon: Settings, area: false },
 ];
 const RECIPES = ["checkPlan", "stress", "alternatives", "approve", "roadClosure", "scenario", "language", "offline"];
-const DATA = ["observation", "resource", "roadEvent", "facility", "import", "realdata"];
+const DATA = ["observation", "import", "roadEvent", "export", "resource", "facility", "realdata"];
 const MODES: { k: string; cls: string }[] = [
   { k: "LIVE", cls: "border-ok/60 bg-ok/15 text-ok" }, { k: "HISTORICAL", cls: "border-accent/60 bg-accent/15 text-accent" },
   { k: "SIMULATION", cls: "border-sim/60 bg-sim/15 text-sim" }, { k: "CACHED", cls: "border-warn/50 bg-warn/10 text-warn" },

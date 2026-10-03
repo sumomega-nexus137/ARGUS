@@ -16,7 +16,7 @@ export const SCREEN_RECIPES: Record<string, { ns: "howto" | "addData"; key: stri
   operations: [{ ns: "howto", key: "roadClosure" }, { ns: "howto", key: "approve" }],
   validation: [],
   report: [{ ns: "howto", key: "language" }],
-  data: [{ ns: "addData", key: "observation" }, { ns: "addData", key: "import" }, { ns: "addData", key: "roadEvent" }, { ns: "addData", key: "facility" }],
+  data: [{ ns: "addData", key: "import" }, { ns: "addData", key: "observation" }, { ns: "addData", key: "export" }, { ns: "addData", key: "roadEvent" }, { ns: "addData", key: "resource" }],
   audit: [],
   admin: [{ ns: "howto", key: "offline" }],
 };

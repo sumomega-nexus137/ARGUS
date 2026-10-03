@@ -41,7 +41,7 @@ cd backend
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 python -m app.cli install-realdata        # once: download, SHA-256 verify, install both packs (~150 MB)
-uvicorn app.main:app --host 127.0.0.1 --port 8000   # ARGUS_DATA_PROFILE=auto → HISTORICAL pilots
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-keep-alive 75   # ARGUS_DATA_PROFILE=auto → HISTORICAL pilots
 #   → http://127.0.0.1:8000/docs  (OpenAPI)
 
 # 2. Console (new terminal)
@@ -80,6 +80,22 @@ Every screen has a **Help** button with plain-language instructions, and the men
 (`/help`) in Kazakh, Russian and English: quick start, badge meanings, map / 3D / timeline, every screen,
 step-by-step recipes, how to add data, roles, scientific limitations and FAQ.
 
+## Loading your own data (Data & input → Imports)
+
+A guided import wizard: pick what you load (observations, road events, resources, facilities), read the column
+guide (required columns, allowed values and the real station / road / base codes of the area), drag in a file and
+check the preview before confirming.
+
+* Formats: CSV (comma or semicolon; UTF-8 or Windows-1251 as saved by Excel in ru/kk locales), XLSX (first sheet),
+  JSON, GeoJSON; up to 10 MB / 5,000 rows. Decimal commas (`12,5`) are accepted.
+* Times must carry a time zone — ARGUS never guesses: `2024-04-10T18:00+05:00`, or `10.04.2024 18:00` plus a
+  `utc_offset` column (`+05:00`).
+* Every invalid row is listed with a plain-language reason and is never imported; rows already in the database
+  are flagged before confirmation. Confirming re-runs the recompute pipeline and shows the resulting plan state.
+* Observations, Resources and Road events have **Download CSV**: the export uses the template columns, so a list
+  can be edited in Excel and imported back. Data typed in by people is labelled LIVE only on a live clock; during
+  the historical replay or an exercise it is labelled SIMULATION.
+
 ## The competition demo flow (26 steps, real data)
 
 Start from an empty database. Automated end-to-end: `node scripts/e2e/demo26.mjs` (see
@@ -94,8 +110,9 @@ Start from an empty database. Automated end-to-end: `node scripts/e2e/demo26.mjs
 `SCENARIO CHANGED → ROAD CLOSES EARLIER → RESOURCE LOSES ACCESS → TASK MISSES ACTION WINDOW`.
 12. Restore BASE and run **STRESS TEST**: the recorded real-data test gives **9/23 feasible** scenarios
 (robustness 0.391), so the result is meaningfully mixed rather than all-pass/all-fail.
-13. **GENERATE ALTERNATIVES** (CP-SAT): the recorded run produced an alternative with robustness **11/26 = 0.423**,
-a measured improvement computed by the evaluator, not a hard-coded score.
+13. **GENERATE ALTERNATIVES** (CP-SAT): the best alternative reaches robustness **0.462** (Plan A 0.391) — a measured
+improvement computed by the evaluator, not a hard-coded score. The solver runs a deterministic parallel search on a
+fixed work budget, so the same inputs give the same alternatives on any machine.
 14. Reduce pumps 16 → 8 and re-run to demonstrate resource sensitivity.
 15–17. **Operations** — report *road closed* (R29) → pipeline → **RECOMPUTE** → DRAFT v2 → commander
 reviews / approves / activates. 18. Operations board.

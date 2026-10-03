@@ -189,7 +189,8 @@
   },
   "health": {
     "PLAN_VALID": "PLAN VALID",
-    "PLAN_AT_RISK": "PLAN AT RISK"
+    "PLAN_AT_RISK": "PLAN AT RISK",
+    "NO_ACTIVE_PLAN": "NO ACTIVE PLAN"
   },
   "origin": {
     "HUMAN": "Human",
@@ -854,7 +855,30 @@
     "crewLbl": "Crew",
     "member": "Forecast member",
     "openPlan": "Open in Plan",
-    "reported": "Reported. Recomputed: {outcome}"
+    "reported": "Reported. Recomputed: {outcome}",
+    "trigger": {
+      "FORECAST_CHANGED": "Forecast changed",
+      "CONDITIONING_REQUESTED": "Scenario conditioning",
+      "IMPORT_RESOURCES": "Resource import",
+      "IMPORT_FACILITIES": "Facility import",
+      "IMPORT_OBSERVATIONS": "Observation import",
+      "IMPORT_ROAD_EVENTS": "Road event import",
+      "TASK_STATUS_CHANGED": "Task status changed",
+      "OBSERVATION": "New observation",
+      "OBSERVATION_VERIFIED": "Observation verified",
+      "DATA_CONFLICT_RESOLVED": "Data conflict resolved",
+      "RESOURCE_CHANGED": "Resource changed",
+      "RESOURCE_POOL_CHANGED": "Resource count changed",
+      "ROAD_CLOSED": "Road closed",
+      "ROAD_RESTRICTED": "Road restricted",
+      "ROAD_OPEN": "Road opened",
+      "ROAD_EVENT_CLEARED": "Road event cleared",
+      "FACILITY_ADDED": "Facility added"
+    },
+    "stepStatus": {
+      "OK": "OK",
+      "ERROR": "ERROR"
+    }
   },
   "data": {
     "title": "Data & manual input",
@@ -919,7 +943,12 @@
     "roleNeeded": "Requires role: {role}",
     "noConflicts": "No data conflicts",
     "conflictDesc": "Two sources disagree. ARGUS shows both and uses the authority hierarchy until an authorised person selects the authoritative observation.",
-    "nowDefault": "defaults to the operational clock"
+    "nowDefault": "defaults to the operational clock",
+    "name": "Name",
+    "exportCsv": "Download CSV",
+    "exportHint": "Same columns as the import template — edit in Excel and import back",
+    "rowsCount": "Records: {n}",
+    "exportRoundTrip": "export the list to CSV, edit it in Excel and load it back via Imports"
   },
   "imports": {
     "title": "Imports",
@@ -951,7 +980,122 @@
       "errors": "Show errors",
       "confirm": "Confirm",
       "import": "Import"
-    }
+    },
+    "typeDesc": {
+      "observations": "Water levels from a hydropost or a field team.",
+      "road_events": "Road closures, restrictions or re-openings.",
+      "resources": "Crews, pumps, vehicles — new or updated.",
+      "facilities": "Key sites: hospitals, schools, shelters."
+    },
+    "effect": {
+      "observations": "After confirming, the scenario and plan are re-checked.",
+      "road_events": "After confirming, the road network, access and plan are recomputed.",
+      "resources": "After confirming, the plan's resource check is updated.",
+      "facilities": "After confirming, the site appears on the map."
+    },
+    "drop": "Drag a file here or choose one",
+    "dropHint": "CSV (comma or semicolon, UTF-8 or Windows-1251), XLSX (first sheet), JSON, GeoJSON · up to 10 MB / 5,000 rows",
+    "browse": "Choose file",
+    "changeFile": "Change file",
+    "removeFile": "Remove file",
+    "badExtension": "This file type is not supported. Choose CSV, XLSX, JSON or GeoJSON.",
+    "tooBig": "The file is too large (maximum 10 MB).",
+    "viewOnly": "Your role can only view imports. Uploading needs the operator, planner or admin role.",
+    "guideTitle": "Column guide — {type}",
+    "column": "Column",
+    "needed": "Needed",
+    "meaning": "What to write",
+    "allowed": "Allowed values",
+    "required": "required",
+    "optional": "optional",
+    "inThisArea": "In this area",
+    "andMore": "and {n} more",
+    "col": {
+      "id": "Unique code (e.g. P-17). An existing code updates that record.",
+      "resource_type": "Resource type.",
+      "subtype": "Subtype; empty means GENERIC.",
+      "capacity": "Capacity number (12,5 or 12.5).",
+      "capacity_unit": "Unit, e.g. m³/h or people.",
+      "base_id": "Code of the base where the resource is kept.",
+      "name_kk": "Name in Kazakh.",
+      "name_ru": "Name in Russian.",
+      "name_en": "Name in English.",
+      "status": "Current state; empty means AVAILABLE.",
+      "facility_type": "Facility type.",
+      "lon": "Longitude (WGS84), must be inside the area.",
+      "lat": "Latitude (WGS84), must be inside the area.",
+      "criticality": "Criticality 0–100; empty means 50.",
+      "population_served": "How many people it serves.",
+      "sector_id": "Analysis-cell code (optional).",
+      "verification": "Verified or not; empty means UNVERIFIED.",
+      "source": "Who or where the data came from (agency, team, document).",
+      "station_id": "Hydropost code.",
+      "observed_at": "Measurement time: 2024-04-10T18:00+05:00 or 10.04.2024 18:00 (+ utc_offset column).",
+      "utc_offset": "Time zone if the time has none: +05:00.",
+      "water_level_cm": "Water level, cm (from the post's own zero).",
+      "discharge_m3s": "Discharge, m³/s (optional).",
+      "source_type": "Source type — sets the authority ranking.",
+      "notes": "Any comment.",
+      "road_id": "Road code.",
+      "segment_ids": "Only part of the road? Segment codes separated by ';'. Empty means the whole road.",
+      "state": "Road state.",
+      "effective_from": "From when; empty means now.",
+      "effective_until": "Until when (optional)."
+    },
+    "tipExcel": "Excel: 'File → Save as → CSV' or just .xlsx. Both comma and semicolon work.",
+    "tipTime": "A time zone is required: ARGUS never guesses times. Write +05:00 or add a utc_offset column.",
+    "tipNumbers": "Decimals may use a comma or a dot. Rows with errors are never imported — they are listed first.",
+    "jobStatus": {
+      "PREVIEW": "Preview",
+      "CONFIRMED": "Imported",
+      "CANCELLED": "Cancelled"
+    },
+    "rowStatus": {
+      "VALID": "Valid",
+      "INVALID": "Error",
+      "WARNING": "Warning"
+    },
+    "missingColumns": "Required columns are missing: {cols}. Download the template and compare the header row.",
+    "unknownColumns": "These columns are unknown and will be ignored: {cols}",
+    "noRows": "No data rows were found in the file.",
+    "filter": {
+      "all": "All",
+      "INVALID": "Errors",
+      "WARNING": "Warnings"
+    },
+    "statusCol": "Status",
+    "issues": "What's wrong",
+    "nothingHere": "No rows match this filter.",
+    "showingFirst": "Showing the first {n} of {total} rows.",
+    "invalidSkipped": "{n} rows with errors will be skipped.",
+    "allGood": "All rows passed the checks.",
+    "failedOnApply": "{n} rows were rejected while saving:",
+    "planRechecked": "Plan re-checked:",
+    "openMap": "Open the map",
+    "openPlan": "Check the plan",
+    "another": "Another file",
+    "historyEmpty": "No imports yet.",
+    "when": "When",
+    "file": "File",
+    "by": "By",
+    "issue": {
+      "missing": "Missing value: {field}",
+      "not_a_number": "{field} is not a number",
+      "invalid": "Value not allowed: {field}",
+      "unknown": "{field} not found in this area",
+      "duplicate_in_file": "Duplicate in the file {field}",
+      "id_used_in_other_area": "This code is already used in another area",
+      "outside_area": "Coordinates are outside the area",
+      "out_of_range": "{field} is out of range",
+      "invalid_timestamp": "{field}: time format not recognised",
+      "timestamp_without_timezone": "{field}: no time zone (add +05:00 or utc_offset)",
+      "duplicate_in_database": "The same observation is already in the system",
+      "until_before_from": "End time is before the start time",
+      "unreadable_row": "The row could not be read",
+      "will_update_existing": "An existing record will be updated",
+      "effective_from_defaults_to_now": "No start time — the current time will be used"
+    },
+    "resume": "Resume"
   },
   "validation": {
     "title": "Validation",
@@ -1020,7 +1164,11 @@
     "modelKind": "Model",
     "noXY": "terrain/hydro features only, no raw X/Y coordinates",
     "limitations": "Scientific limitations",
-    "qcFigure": "QC figure from the data pack: flood-period vs post-recession spectral comparison and extracted mask"
+    "qcFigure": "QC figure from the data pack: flood-period vs post-recession spectral comparison and extracted mask",
+    "qc": {
+      "AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC": "Automated satellite baseline mask — needs expert review",
+      "PASS_WITH_LIMITATIONS": "Passed with limitations"
+    }
   },
   "report": {
     "title": "Operational briefing",
@@ -1057,7 +1205,7 @@
     "user": "User",
     "action": "Action",
     "entity": "Entity",
-    "summary": "Summary",
+    "summary": "System record",
     "dataVersion": "Data v.",
     "affects": "Affects results",
     "onlyResults": "Only changes that affect results",
@@ -1083,7 +1231,8 @@
     "demoResetHint": "Restores the DEMO dataset to its initial state (Plan A at risk). Everything, including the audit trail, is reset.",
     "demoResetConfirm": "Reset all demo data?",
     "resetDone": "Demo dataset restored",
-    "active": "active"
+    "active": "active",
+    "actionId": "Code"
   },
   "errors": {
     "network_unavailable": "ARGUS server unreachable",
@@ -1115,7 +1264,10 @@
     "invalid_road_state": "Invalid road state",
     "unreadable_file": "The file could not be read",
     "conflict_already_resolved": "The conflict is already resolved",
-    "generic": "Operation failed ({code})"
+    "generic": "Operation failed ({code})",
+    "unsupported_json": "JSON must be an array of objects or a GeoJSON FeatureCollection",
+    "invalid_import_type": "Unknown import type",
+    "file_too_large": "The file is too large (maximum 10 MB)"
   },
   "resourceType": {
     "CREW": "Crew",
@@ -1181,7 +1333,11 @@
     "km": "km",
     "km2": "km²",
     "min": "min",
-    "h": "h"
+    "h": "h",
+    "b": "B",
+    "kb": "KB",
+    "mb": "MB",
+    "ms": "ms"
   },
   "methodology": {
     "title": "Methodology and limitations",
@@ -1226,7 +1382,8 @@
     },
     "officialEvidence": "Officially reported impact locations",
     "reportedNotModelled": "REPORTED · NOT MODELLED",
-    "modelSeparation": "Historical evidence is shown separately from the modelled inundation layer: ARGUS does not hide impacts the model failed to reproduce."
+    "modelSeparation": "Historical evidence is shown separately from the modelled inundation layer: ARGUS does not hide impacts the model failed to reproduce.",
+    "min": "min"
   },
   "live": {
     "title": "Live global-model context (today)",
@@ -1443,7 +1600,8 @@
       "resource": {
         "title": "Crews, vehicles and pumps",
         "steps": [
-          "Data & input → Resources: add or update a resource (ID, type, capacity, base).",
+          "Data & input → Resources: change the state of each resource (available, unavailable, failed).",
+          "To add a new resource or change an existing one: Download CSV → edit in Excel → Imports → Resource register.",
           "To test fewer resources, change \"Available pumps\" on the Plan screen and see the effect immediately."
         ]
       },
@@ -1464,10 +1622,11 @@
       "import": {
         "title": "Import a file",
         "steps": [
-          "Data & input → Imports: choose what you import (resources, facilities, observations or road events).",
-          "Download the template, fill it in and upload a CSV, XLSX, JSON or GeoJSON file.",
-          "Check the preview: invalid rows are listed and never imported silently.",
-          "Press CONFIRM IMPORT."
+          "Data & input → Imports: choose what you are loading (observations, road events, resources or facilities).",
+          "Read the column guide below: required columns, allowed values and the real codes of this area. Download the template if you like.",
+          "Save from Excel as CSV (comma or semicolon) or .xlsx, drag the file into the frame and press UPLOAD AND PREVIEW.",
+          "Check the preview: every error is explained in plain words and is never imported. The Errors filter helps you find and fix them in the file.",
+          "Press CONFIRM IMPORT — ARGUS re-checks the plan and shows the result; links take you to the map or the plan."
         ]
       },
       "realdata": {
@@ -1475,6 +1634,14 @@
         "steps": [
           "Roads, buildings, population and satellite layers come from the installed real-data packs (command: python -m app.cli install-realdata).",
           "They are downloaded once, checked by checksum and reused on every start — no internet needed afterwards."
+        ]
+      },
+      "export": {
+        "title": "Export and edit in Excel",
+        "steps": [
+          "Observations, Resources, Road events: press Download CSV.",
+          "The file uses the same columns as the import template — open it in Excel, edit it and load it back via Imports.",
+          "Cyrillic text opens correctly in Excel (UTF-8 BOM)."
         ]
       }
     },
@@ -1548,5 +1715,76 @@
     "date": "date only",
     "event_time": "event time",
     "publication_time": "publication time"
+  },
+  "crash": {
+    "title": "This screen ran into a problem",
+    "body": "Your data is safe — nothing was changed. Try again, or go back to the overview.",
+    "retry": "Try again",
+    "reload": "Reload page",
+    "overview": "Regional overview",
+    "details": "Technical details (for support)",
+    "widgetTitle": "This panel is temporarily unavailable",
+    "widgetBody": "The rest of the screen keeps working.",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The link may be outdated or mistyped."
+  },
+  "auditAction": {
+    "ACTION_TEMPLATE_CREATED": "Action template added",
+    "ALTERNATIVES_GENERATED": "Alternatives generated",
+    "CONSTRAINT_CHANGED": "Constraint changed",
+    "DATA_CONFLICT_DETECTED": "Data conflict detected",
+    "DATA_CONFLICT_RESOLVED": "Data conflict resolved",
+    "DEMO_RESET": "Demo reset",
+    "FACILITY_ADDED": "Facility added",
+    "IMPORT_CANCELLED": "Import cancelled",
+    "IMPORT_CONFIRMED": "Import confirmed",
+    "IMPORT_PREVIEWED": "Import previewed",
+    "OBSERVATION_ENTERED": "Observation entered",
+    "OBSERVATION_VERIFIED": "Observation verified",
+    "PIPELINE_RUN": "Recomputation",
+    "PLAN_ACTIVATED": "Plan activated",
+    "PLAN_APPROVED": "Plan approved",
+    "PLAN_CREATED": "Plan created",
+    "PLAN_MODIFIED": "Plan modified",
+    "PLAN_REVIEWED": "Plan reviewed",
+    "PLAN_REJECTED": "Plan rejected",
+    "PLAN_RETURNED_TO_DRAFT": "Plan returned to draft",
+    "PLAN_STRESS_TESTED": "Plan stress-tested",
+    "PLAN_SUPERSEDED": "Plan superseded",
+    "PLAN_VERSION_CREATED": "New plan version",
+    "PROVIDER_OUTAGE_SIMULATION": "Provider outage simulation",
+    "RESOURCE_CREATED": "Resource added",
+    "RESOURCE_CHANGED": "Resource changed",
+    "RESOURCE_DELAYED": "Resource delayed",
+    "RESOURCE_FAILED": "Resource failed",
+    "RESOURCE_GAP_ANALYSED": "Resource gap analysed",
+    "RESOURCE_POOL_CHANGED": "Resource count changed",
+    "ROAD_CLOSED": "Road closed",
+    "ROAD_RESTRICTED": "Road restricted",
+    "ROAD_OPENED": "Road opened",
+    "ROAD_EVENT_CLEARED": "Road event cleared",
+    "SCENARIO_GENERATED": "Scenario generated",
+    "SCENARIO_UPDATED": "Scenario updated",
+    "SIMULATION_CLOCK_CHANGED": "Exercise clock changed",
+    "TASK_STATUS_CHANGED": "Task status changed",
+    "VALIDATION_RUN": "Validation run",
+    "VALIDATION_SELF_TEST": "Validation self-test",
+    "USER_LOGIN": "Sign-in",
+    "EXERCISE_INJECT": "Exercise inject"
+  },
+  "quality": {
+    "PACK": "Data pack",
+    "REAL_DATA_PACK": "Real-data pack",
+    "MODELLED": "Modelled",
+    "OFFICIAL_REPORTED": "Officially reported",
+    "OFFICIAL": "Official",
+    "OFFICIAL_FORECAST": "Official forecast",
+    "GLOBAL_MODEL": "Global model",
+    "REANALYSIS": "Reanalysis",
+    "REANALYSIS_OR_HISTORICAL_MODEL": "Reanalysis / historical model",
+    "REQUIRES_QC": "Requires quality control",
+    "SATELLITE": "Satellite",
+    "OFFLINE": "Offline",
+    "DEMO": "Demo"
   }
 }

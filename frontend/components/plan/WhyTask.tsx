@@ -3,7 +3,7 @@
 import { useTranslations } from "use-intl";
 
 import { StatusBadge } from "@/components/ui/primitives";
-import { countdown, num } from "@/lib/format";
+import { num } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import type { AltTask } from "@/lib/types";
 

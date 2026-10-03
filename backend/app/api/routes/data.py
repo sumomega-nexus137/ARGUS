@@ -40,6 +40,7 @@ from app.services.ingest.observations import (
     ObservationInput,
     add_observation,
     effective_observations,
+    entry_mode,
     resolve_conflict,
     verify_observation,
 )
@@ -84,7 +85,7 @@ def create_obs(body: ObservationCreate, area: OperationalArea = Depends(area_or_
     inp = ObservationInput(station_id=body.station_id, observed_at=body.observed_at or operational_now(db, area.id),
                            water_level_cm=body.water_level_cm, discharge_m3s=body.discharge_m3s, source=body.source,
                            source_type=body.source_type, verification=body.verification, notes=body.notes,
-                           mode="SIMULATION" if area.clock_mode == "SIMULATION" else "LIVE")
+                           mode=entry_mode(area))
     obs, conflicts = add_observation(db, area.id, inp, actor)
     pipe = run_pipeline(db, area.id, "OBSERVATION", obs.id, actor, condition=True)
     db.commit()
