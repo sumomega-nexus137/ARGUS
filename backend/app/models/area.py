@@ -49,7 +49,7 @@ class Sector(MultilingualName, Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     area_id: Mapped[str] = mapped_column(ForeignKey("operational_areas.id", ondelete="CASCADE"), index=True)
     code: Mapped[str] = mapped_column(String(16))
-    geom: Mapped[Any] = mapped_column(GeometryType("POLYGON"))
+    geom: Mapped[Any] = mapped_column(GeometryType("GEOMETRY"))
 
 
 class PopulationZone(Base):
@@ -60,7 +60,7 @@ class PopulationZone(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     area_id: Mapped[str] = mapped_column(ForeignKey("operational_areas.id", ondelete="CASCADE"), index=True)
     sector_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    geom: Mapped[Any] = mapped_column(GeometryType("POLYGON"))
+    geom: Mapped[Any] = mapped_column(GeometryType("GEOMETRY"))
     population: Mapped[int] = mapped_column(Integer)
     vulnerable_share: Mapped[float | None] = mapped_column(Float, nullable=True)
     source: Mapped[str] = mapped_column(String(255))
