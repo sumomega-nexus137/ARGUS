@@ -8,6 +8,9 @@ on:
     paths:
       - ".github/workflows/competition-e2e.yml"
       - "scripts/e2e/**"
+      - "backend/**"
+      - "frontend/**"
+      - "docker-compose.yml"
 
 jobs:
   demo26:
