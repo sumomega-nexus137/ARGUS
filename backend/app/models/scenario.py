@@ -33,7 +33,7 @@ class Scenario(Base):
     parameters: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     uncertainty: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     provenance: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
-    model_version: Mapped[str] = mapped_column(String(64))
+    model_version: Mapped[str] = mapped_column(String(255))
     is_current: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     parent_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
