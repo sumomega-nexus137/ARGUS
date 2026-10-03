@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-Write-Host "ARGUS FloodOps — competition launcher" -ForegroundColor Cyan
+Write-Host "ARGUS FloodOps - competition launcher" -ForegroundColor Cyan
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
   Write-Host "Docker is not installed or not in PATH. Install/start Docker Desktop, then run this file again." -ForegroundColor Red
@@ -25,7 +25,6 @@ if (-not (Test-Path ".env")) {
   Write-Host "Created .env from .env.example"
 }
 
-# Competition mode must never silently fall back to the synthetic demo when a real-data pack is missing.
 $env:ARGUS_DATA_PROFILE = "historical"
 $env:ARGUS_INSTALL_REALDATA = "true"
 $env:ARGUS_OPEN_METEO_ENABLED = "true"
@@ -53,7 +52,6 @@ if (-not $healthy) {
   exit 1
 }
 
-# The frontend can take a few seconds longer than the API.
 $front = $false
 for ($i=0; $i -lt 60; $i++) {
   try {
@@ -62,6 +60,7 @@ for ($i=0; $i -lt 60; $i++) {
   } catch {}
   Start-Sleep -Seconds 2
 }
+
 if (-not $front) {
   Write-Host "Backend is healthy, but the console is not responding. Recent frontend logs:" -ForegroundColor Red
   docker compose logs --tail=120 frontend
