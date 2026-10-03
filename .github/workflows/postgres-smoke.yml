@@ -8,6 +8,10 @@ on:
       - claude/festive-faraday-90f1gh
     paths:
       - ".github/workflows/postgres-smoke.yml"
+      - "backend/app/db/**"
+      - "backend/app/models/**"
+      - "backend/alembic/**"
+      - "backend/requirements.txt"
 
 jobs:
   migrate:
