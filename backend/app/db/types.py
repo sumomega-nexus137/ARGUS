@@ -54,7 +54,9 @@ class GeometryType(TypeDecorator):
         # checking unrelated spatial types (for example Raster). In that probe
         # mode return the portable TEXT impl; the real PostgreSQL DDL call
         # supplies the dialect and receives a PostGIS Geometry.
-        if dialect is not None and dialect.name == "postgresql":
+        if dialect is None:
+            return Text()
+        if dialect.name == "postgresql":
             return dialect.type_descriptor(Geometry(geometry_type=self.geometry_type, srid=self.srid))
         return dialect.type_descriptor(Text())
 
