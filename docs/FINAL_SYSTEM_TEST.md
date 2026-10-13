@@ -179,3 +179,10 @@ map/timeline widgets, global) and a localized 404 page, so a failure never shows
 | Static export (`ARGUS_STATIC_EXPORT=1`, base path `/ARGUS`) served like GitHub Pages | every screen × every tab, both cities: 0 missing responses, 0 page errors, 0 HTTP errors |
 | Static demo buttons | stress test 9/23 and CP-SAT alternatives ALT-1…3 answered from the recorded real runs; data-changing actions show the localized read-only message |
 | Server build + `node scripts/e2e/demo26.mjs` on a fresh DB | **26 / 26 PASS**, no server or page errors; alternatives 0.391 → 0.462 |
+
+## Single "daylight blue" theme (14 Oct 2026)
+
+One theme only (no switch): medium-blue header and navigation with white text, soft blue-grey workspace,
+off-white panels, navy text; Inter bundled locally (Kazakh / Russian Cyrillic, works offline); the smallest labels
+enlarged by 0.5 px. Checks: tsc / eslint clean, i18n 1465 keys × 3 with 0 problems, vitest 9 passed, every screen ×
+every tab (ru) without page or server errors.

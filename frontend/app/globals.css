@@ -1,35 +1,35 @@
 @import "tailwindcss";
 @import "maplibre-gl/dist/maplibre-gl.css";
 
-/* ARGUS FloodOps design tokens. LIGHT is the default (calm, readable in daylight); the original dark
-   command-centre palette is kept under `.dark` (toggle in the header). Blue is reserved for water / flood
-   depth; the UI accent is teal. Semantic status colours are always paired with text / icons. */
+/* ARGUS FloodOps — one theme: "daylight blue". Soft blue-grey workspace, off-white panels (no glare), a medium-blue
+   header and navigation (`.chrome`) for identity, dark navy text for crisp reading. Flood depth keeps the full blue
+   ramp so water always stands out. Semantic status colours are always paired with text / icons. */
 @theme {
-  --color-bg: #f3f5f4;
-  --color-panel: #ffffff;
-  --color-panel-2: #f6f8f7;
-  --color-panel-3: #ebefed;
-  --color-line: #e1e6e4;
-  --color-line-2: #cdd5d2;
-  --color-ink: #1c2a2e;
-  --color-ink-2: #44555b;
-  --color-muted: #6b7a80;
-  --color-accent: #0f7b74;
-  --color-accent-2: #0d6b65;
+  --color-bg: #e8eef5;
+  --color-panel: #f8fafd;
+  --color-panel-2: #eef3f9;
+  --color-panel-3: #e1e9f3;
+  --color-line: #d3deea;
+  --color-line-2: #b9c9db;
+  --color-ink: #12263c;
+  --color-ink-2: #34506d;
+  --color-muted: #5b728b;
+  --color-accent: #1b6ac0;
+  --color-accent-2: #1a5ca6;
   --color-water: #1f7fd6;
 
-  --color-ok: #17834f;
-  --color-watch: #9a6b00;
-  --color-warn: #c25a08;
-  --color-crit: #cf2b2b;
-  --color-sim: #6d48d6;
-  --color-live: #17834f;
-  --color-cached: #4f6f8f;
-  --color-stale: #a85f08;
-  --color-offline: #cf2b2b;
-  --color-static: #64748b;
+  --color-ok: #137648;
+  --color-watch: #8a6400;
+  --color-warn: #b45309;
+  --color-crit: #c42b2b;
+  --color-sim: #6a45cc;
+  --color-live: #137648;
+  --color-cached: #45688d;
+  --color-stale: #9a5807;
+  --color-offline: #c42b2b;
+  --color-static: #5f7089;
 
-  --font-sans: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --font-sans: "Inter Variable", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
 
   --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
@@ -39,41 +39,39 @@
   }
 }
 
-/* light-theme extras that are not colour utilities */
 :root {
   color-scheme: light;
-  --shadow-card: 0 1px 2px rgba(20, 40, 45, 0.06), 0 2px 8px rgba(20, 40, 45, 0.05);
+  --shadow-card: 0 1px 2px rgba(18, 38, 60, 0.07), 0 3px 10px rgba(18, 38, 60, 0.06);
   --map-label-halo: #ffffff;
-  --scrollbar: #c9d2cf;
+  --scrollbar: #b9c9db;
 }
 
-html.dark {
-  color-scheme: dark;
-  --color-bg: #0a0e13;
-  --color-panel: #10161e;
-  --color-panel-2: #151d27;
-  --color-panel-3: #1b2531;
-  --color-line: #223040;
-  --color-line-2: #2d3e52;
-  --color-ink: #dbe4ee;
-  --color-ink-2: #a9b6c4;
-  --color-muted: #738396;
-  --color-accent: #3fb3ff;
-  --color-accent-2: #1e88d6;
-  --color-water: #3fb3ff;
-  --color-ok: #34c38f;
-  --color-watch: #e2c541;
-  --color-warn: #f59e2b;
-  --color-crit: #ef4d4d;
-  --color-sim: #a78bfa;
-  --color-live: #34c38f;
-  --color-cached: #7aa2c7;
-  --color-stale: #e0a13a;
-  --color-offline: #ef4d4d;
-  --color-static: #8b98a8;
-  --shadow-card: none;
-  --map-label-halo: #000000;
-  --scrollbar: #243242;
+/* Header and navigation: medium blue with white text. Tokens are re-scoped, so every component inside
+   (buttons, badges, language switch, nav items) adapts without special cases. */
+.chrome {
+  --color-panel: #2f63a0;
+  --color-panel-2: #3a70ae;
+  --color-panel-3: #457cba;
+  --color-line: #4a7db7;
+  --color-line-2: #6a95c6;
+  --color-ink: #ffffff;
+  --color-ink-2: #e3eefa;
+  --color-muted: #bcd2ea;
+  --color-accent: #bfe2ff;
+  --color-accent-2: #ffffff;
+  --color-ok: #a7f0c8;
+  --color-watch: #ffe597;
+  --color-warn: #ffcd94;
+  --color-crit: #ffc0c0;
+  --color-sim: #e1d3ff;
+  --color-live: #a7f0c8;
+  --color-cached: #d3e5f7;
+  --color-stale: #ffd9a0;
+  --color-offline: #ffc0c0;
+  --color-static: #d6e2ef;
+  --scrollbar: #6a95c6;
+  background: var(--color-panel);
+  color: var(--color-ink);
 }
 
 html, body {
@@ -103,7 +101,6 @@ body {
 
 /* MapLibre overrides (both themes) */
 .maplibregl-ctrl-group { background: var(--color-panel) !important; border: 1px solid var(--color-line-2); box-shadow: var(--shadow-card) !important; }
-html.dark .maplibregl-ctrl-group button { filter: invert(0.85); }
 .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--color-panel) 80%, transparent) !important; color: var(--color-muted); font-size: 10px; }
 .maplibregl-ctrl-scale { background: color-mix(in srgb, var(--color-panel) 75%, transparent); color: var(--color-ink-2); border-color: var(--color-ink-2); }
 .maplibregl-ctrl-attrib a { color: var(--color-ink-2) !important; }
@@ -119,8 +116,7 @@ html.dark .maplibregl-ctrl-group button { filter: invert(0.85); }
 }
 
 /* map info cards */
-.argus-popup .maplibregl-popup-content { padding: 10px 12px 9px; box-shadow: 0 8px 28px rgba(15, 30, 35, 0.22); min-width: 210px; }
-html.dark .argus-popup .maplibregl-popup-content { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55); }
+.argus-popup .maplibregl-popup-content { padding: 10px 12px 9px; box-shadow: 0 8px 28px rgba(18, 38, 60, 0.22); min-width: 210px; }
 .argus-popup .maplibregl-popup-close-button { color: var(--color-muted); font-size: 16px; right: 4px; top: 2px; }
 .argus-pop-kind { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent); }
 .argus-pop-title { font-size: 13px; font-weight: 700; margin: 1px 18px 6px 0; line-height: 1.25; }
@@ -129,3 +125,10 @@ html.dark .argus-popup .maplibregl-popup-content { box-shadow: 0 8px 28px rgba(0
 .argus-pop-row b { text-align: right; font-variant-numeric: tabular-nums; }
 .argus-pop-note { margin-top: 5px; font-size: 10px; line-height: 1.3; color: var(--color-muted); }
 .argus-label { transition: opacity 120ms; }
+
+/* Legibility: the smallest labels get half a pixel more and slightly heavier strokes (crisp on every screen). */
+.text-\[9px\], .text-\[9\.5px\] { font-size: 10px; }
+.text-\[10px\] { font-size: 10.5px; }
+.text-\[10\.5px\] { font-size: 11px; }
+.text-\[11px\] { font-size: 11.5px; }
+body { text-rendering: optimizeLegibility; font-feature-settings: "cv11", "ss01"; }

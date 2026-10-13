@@ -32,7 +32,6 @@ import { useArea, useAreas, useHealth } from "@/lib/queries";
 import { getManifest, IS_STATIC, REPO_URL } from "@/lib/staticDemo";
 
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { ThemeToggle } from "./ThemeToggle";
 
 const AREA_NAV: { id: string; icon: LucideIcon; perm?: string }[] = [
   { id: "situation", icon: MapIcon },
@@ -53,7 +52,7 @@ function NavItem({ href, icon: Icon, label, active }: { href: string; icon: Luci
       aria-current={active ? "page" : undefined}
       className={clsx(
         "group flex items-center gap-2.5 rounded-[3px] px-2.5 py-1.5 text-[12.5px] font-medium",
-        active ? "bg-accent/15 text-ink shadow-[inset_2px_0_0_var(--color-accent)]" : "text-ink-2 hover:bg-panel-2 hover:text-ink",
+        active ? "bg-white/18 font-semibold text-ink shadow-[inset_3px_0_0_#ffffff]" : "text-ink-2 hover:bg-panel-2 hover:text-ink",
       )}
     >
       <Icon aria-hidden className={clsx("h-4 w-4 shrink-0", active ? "text-accent" : "text-muted group-hover:text-ink-2")} />
@@ -95,9 +94,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-screen flex-col overflow-hidden">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[100] focus:bg-panel focus:p-2">{ta("skipToContent")}</a>
       {/* top bar */}
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
+      <header className="chrome flex h-12 shrink-0 items-center gap-3 border-b border-line-2 bg-[linear-gradient(90deg,#2b5c98,#3470b0)] px-3 shadow-[0_1px_4px_rgba(18,38,60,0.18)]">
         <Link href="/overview" className="flex items-center gap-2">
-          <span aria-hidden className="grid h-6 w-6 place-items-center rounded-[3px] bg-accent/20 text-accent"><Gauge className="h-4 w-4" /></span>
+          <span aria-hidden className="grid h-7 w-7 place-items-center rounded-[5px] bg-white/20 text-white"><Gauge className="h-4 w-4" /></span>
           <span className="leading-tight">
             <span className="block text-[13px] font-bold tracking-[0.14em]">ARGUS <span className="text-accent">FLOODOPS</span></span>
             <span className="hidden text-[10px] text-muted lg:block">{ta("subtitle")}</span>
@@ -130,7 +129,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           )}
           <LanguageSwitcher />
-          <ThemeToggle />
           <div className="hidden items-center gap-2 border-l border-line pl-2 sm:flex">
             <div className="text-right leading-tight">
               <div className="text-[11.5px] font-semibold">{IS_STATIC ? ta("staticUser") : user.full_name}</div>
@@ -168,7 +166,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <div className="flex min-h-0 flex-1">
-        <nav aria-label={ta("mainNav")} className="hidden w-52 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-line bg-panel p-2 lg:flex">
+        <nav aria-label={ta("mainNav")} className="chrome hidden w-52 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-line p-2 lg:flex">
           <NavItem href="/overview" icon={LayoutGrid} label={t("overview")} active={pathname.startsWith("/overview")} />
           <div className="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{t("areaSection")}</div>
           {AREA_NAV.map((n) => (
@@ -181,7 +179,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mt-auto px-2 pt-4 text-[10px] leading-snug text-muted">{ta("statement")}</div>
         </nav>
         {/* compact nav for tablets */}
-        <nav aria-label={ta("mainNav")} className="flex w-11 shrink-0 flex-col items-center gap-1 border-r border-line bg-panel py-2 lg:hidden">
+        <nav aria-label={ta("mainNav")} className="chrome flex w-11 shrink-0 flex-col items-center gap-1 border-r border-line py-2 lg:hidden">
           <Link href="/overview" title={t("overview")} className="rounded p-1.5 text-muted hover:text-ink"><LayoutGrid className="h-4 w-4" /></Link>
           {AREA_NAV.map((n) => (
             <Link key={n.id} href={`/area/${currentArea}/${n.id}`} title={t(n.id)} aria-label={t(n.id)}

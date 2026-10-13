@@ -48,7 +48,7 @@ export function featureMarker(opts: { kind: string; label?: string; tone: Tone; 
   const ring = opts.ring ? `box-shadow:0 0 0 2px ${TONE_VAR[opts.ring]}, 0 0 10px ${TONE_VAR[opts.ring]};` : "box-shadow:0 1px 3px rgba(0,0,0,.22);";
   el.innerHTML = `<div style="display:flex;align-items:center;gap:4px;pointer-events:auto">
     <div style="display:grid;place-items:center;width:20px;height:20px;border-radius:5px;background:var(--color-panel);border:1.5px solid ${color};${ring}">${iconSvg(opts.kind, color, 13)}</div>
-    ${opts.showLabel && opts.label ? `<div class="argus-label" style="background:color-mix(in srgb,var(--color-panel) 90%,transparent);border:1px solid var(--color-line-2);border-radius:4px;padding:1px 5px;font:600 10.5px Inter,Segoe UI,sans-serif;color:var(--color-ink);white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px rgba(0,0,0,.12)">${esc(opts.label)}${opts.sub ? `<span style="color:${opts.ring ? TONE_VAR[opts.ring] : "var(--color-ink-2)"};font-weight:700"> · ${esc(opts.sub)}</span>` : ""}</div>` : ""}
+    ${opts.showLabel && opts.label ? `<div class="argus-label" style="background:color-mix(in srgb,var(--color-panel) 90%,transparent);border:1px solid var(--color-line-2);border-radius:4px;padding:1px 5px;font:600 10.5px 'Inter Variable',Inter,Segoe UI,sans-serif;color:var(--color-ink);white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px rgba(0,0,0,.12)">${esc(opts.label)}${opts.sub ? `<span style="color:${opts.ring ? TONE_VAR[opts.ring] : "var(--color-ink-2)"};font-weight:700"> · ${esc(opts.sub)}</span>` : ""}</div>` : ""}
   </div>`;
   return el;
 }
@@ -59,7 +59,7 @@ export function roadLabel(opts: { id: string; name?: string; state: string; stat
   meta(el, opts);
   const color = TONE_VAR[opts.tone];
   const open = opts.state === "OPEN";
-  el.innerHTML = `<div class="argus-label" style="display:flex;align-items:center;gap:0;font:700 10.5px Inter,Segoe UI,sans-serif;white-space:nowrap;border-radius:3px;overflow:hidden;border:1px solid ${open ? "var(--color-line-2)" : color};background:var(--color-panel);box-shadow:0 1px 2px rgba(0,0,0,.14)">
+  el.innerHTML = `<div class="argus-label" style="display:flex;align-items:center;gap:0;font:700 10.5px 'Inter Variable',Inter,Segoe UI,sans-serif;white-space:nowrap;border-radius:3px;overflow:hidden;border:1px solid ${open ? "var(--color-line-2)" : color};background:var(--color-panel);box-shadow:0 1px 2px rgba(0,0,0,.14)">
     <span style="padding:1px 5px;color:var(--color-ink);background:var(--color-panel-3);max-width:170px;overflow:hidden;text-overflow:ellipsis">${esc(opts.name || opts.id)}</span>
     ${open ? "" : `<span style="padding:1px 5px;color:${color}">${esc(opts.stateText)}${opts.countdown ? ` ${esc(opts.countdown)}` : ""}</span>`}
   </div>`;
@@ -73,7 +73,7 @@ export function countdownMarker(opts: { label: string; sub?: string; tone: Tone 
   el.innerHTML = `<div style="transform:translateY(-18px);display:flex;flex-direction:column;align-items:center">
     <div style="background:var(--color-panel);border:1.5px solid ${color};border-radius:4px;padding:2px 6px;text-align:center;box-shadow:0 0 12px color-mix(in srgb,${color} 35%,transparent)">
       <div style="font:800 12px 'JetBrains Mono',Consolas,monospace;color:${color}">${esc(opts.label)}</div>
-      ${opts.sub ? `<div style="font:600 9.5px Inter,Segoe UI,sans-serif;color:var(--color-ink-2);white-space:nowrap">${esc(opts.sub)}</div>` : ""}
+      ${opts.sub ? `<div style="font:600 9.5px 'Inter Variable',Inter,Segoe UI,sans-serif;color:var(--color-ink-2);white-space:nowrap">${esc(opts.sub)}</div>` : ""}
     </div>
     <div style="width:1px;height:10px;background:${color}"></div>
   </div>`;

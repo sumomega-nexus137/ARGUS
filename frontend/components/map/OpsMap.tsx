@@ -9,10 +9,9 @@ import { absUrl, apiFetch, mapTransformRequest } from "@/lib/api";
 import { countdown, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { getMaplibre } from "@/lib/maplibre";
-import { applyMapPalette, buildingColor, MAP_PALETTE, roadLineColor } from "@/lib/mapPalette";
+import { buildingColor, MAP_PALETTE, roadLineColor } from "@/lib/mapPalette";
 import { useUi } from "@/lib/store";
 import { IS_STATIC } from "@/lib/staticDemo";
-import { useTheme } from "@/lib/theme";
 import { toneOf, type Tone } from "@/lib/status";
 
 import { mapHandle } from "@/lib/mapRef";
@@ -49,10 +48,8 @@ export function OpsMap() {
   const tmap = useTranslations("map");
   const mapMode = useUi((s) => s.mapMode);
   const lay = useUi((s) => s.layers);
-  const theme = useTheme((s) => s.theme);
-  const pal = MAP_PALETTE[theme];
+  const pal = MAP_PALETTE;
   const palRef = useRef(pal);
-  palRef.current = pal;
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<ML.Map | null>(null);
   const markers = useRef<Markers>({});
@@ -463,7 +460,7 @@ export function OpsMap() {
       const cx = ring.reduce((s, c) => s + c[0], 0) / ring.length;
       const cy = ring.reduce((s, c) => s + c[1], 0) / ring.length;
       const d = document.createElement("div");
-      d.innerHTML = `<div style="font:700 11px Inter,Segoe UI,sans-serif;color:var(--color-ink-2);opacity:.85;text-shadow:0 0 3px var(--map-label-halo),0 0 2px var(--map-label-halo)">${pickName(p.names, locale)}</div>`;
+      d.innerHTML = `<div style="font:700 11px 'Inter Variable',Inter,Segoe UI,sans-serif;color:var(--color-ink-2);opacity:.85;text-shadow:0 0 3px var(--map-label-halo),0 0 2px var(--map-label-halo)">${pickName(p.names, locale)}</div>`;
       return make(d, [cx, cy]);
     }));
   }, [ready, layers, lay.facilities, lay.sites, lay.labels, lay.sectors, facilityStates, roadStates, access, locale, rebuild, tr, tf, tk, tmap, facilityPopup]);
@@ -493,13 +490,6 @@ export function OpsMap() {
     }
     if (m.getLayer("water-3d")) m.setLayoutProperty("water-3d", "visibility", mapMode === "3d" && lay.flood ? "visible" : "none");
   }, [ready, mapMode, lay.flood, pal]);
-
-  // theme switch: re-colour in place
-  useEffect(() => {
-    const m = mapRef.current;
-    if (!ready || !m) return;
-    applyMapPalette(m, pal);
-  }, [ready, pal]);
 
   useEffect(() => {
     const m = mapRef.current;

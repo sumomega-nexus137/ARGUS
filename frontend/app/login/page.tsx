@@ -59,13 +59,13 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-[4px] bg-accent/20 text-accent"><Gauge className="h-5 w-5" /></span>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[8px] bg-accent-2 text-white shadow-[var(--shadow-card)]"><Gauge className="h-5 w-5" /></span>
             <div>
               <div className="text-lg font-bold tracking-[0.16em]">ARGUS <span className="text-accent">FLOODOPS</span></div>
               <div className="text-[11px] text-muted">{ta("subtitle")}</div>
             </div>
           </div>
-          <LanguageSwitcher />
+          <div className="shrink-0"><LanguageSwitcher /></div>
         </div>
         <form
           className="space-y-3 rounded-[8px] border border-line bg-panel p-5 shadow-[var(--shadow-card)]"

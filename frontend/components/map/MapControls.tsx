@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/primitives";
 import { mapHandle } from "@/lib/mapRef";
 import { MAP_PALETTE } from "@/lib/mapPalette";
 import { useUi, type LayerToggles } from "@/lib/store";
-import { useTheme } from "@/lib/theme";
 
 const GROUPS: { key: string; items: (keyof LayerToggles)[] }[] = [
   { key: "groupFlood", items: ["flood", "extent", "waterFx"] },
@@ -39,7 +38,7 @@ export function MapControls() {
   const layers = useUi((s) => s.layers);
   const toggle = useUi((s) => s.toggleLayer);
   const [open, setOpen] = useState(false);
-  const pal = MAP_PALETTE[useTheme((s) => s.theme)];
+  const pal = MAP_PALETTE;
   const forecast = time !== null && nowMin !== null && time > nowMin + 0.5;
   // LIVE only for a live clock with a live scenario; the 2024 reconstruction is HISTORICAL REPLAY; exercises are SIMULATION
   const modeKey = area?.clock_mode === "LIVE" && scenario?.mode === "LIVE" ? "LIVE" : scenario?.mode === "HISTORICAL" ? "HISTORICAL" : "SIMULATION";
