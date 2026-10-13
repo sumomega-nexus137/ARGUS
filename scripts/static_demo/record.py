@@ -19,9 +19,13 @@ import json
 import math
 import os
 import shutil
+import socket
+import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qsl, urlsplit
@@ -49,6 +53,54 @@ def get_key(path: str) -> str:
 def post_key(path: str, body: dict | None) -> str:
     b = {k: v for k, v in (body or {}).items() if k != "as_of_min"}
     return "POST " + urlsplit(path).path + " " + json.dumps(b, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+class Resp:
+    def __init__(self, status: int, content: bytes, ct: str):
+        self.status_code, self.content, self.headers = status, content, {"content-type": ct}
+
+    @property
+    def text(self) -> str:
+        return self.content.decode("utf-8", "replace")
+
+    def json(self):
+        return json.loads(self.content)
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}: {self.text[:300]}")
+
+
+class Http:
+    """Minimal client for the real ARGUS API process (no test-client dependency)."""
+
+    def __init__(self, base: str):
+        self.base = base
+
+    def _req(self, method: str, path: str, headers: dict | None = None, json_body=None) -> Resp:
+        data = None
+        h = dict(headers or {})
+        if json_body is not None:
+            data = json.dumps(json_body).encode()
+            h["Content-Type"] = "application/json"
+        req = urllib.request.Request(self.base + path, data=data, headers=h, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=900) as r:
+                return Resp(r.status, r.read(), r.headers.get("content-type", ""))
+        except urllib.error.HTTPError as e:
+            return Resp(e.code, e.read(), e.headers.get("content-type", "") if e.headers else "")
+
+    def get(self, path: str, headers: dict | None = None) -> Resp:
+        return self._req("GET", path, headers)
+
+    def post(self, path: str, headers: dict | None = None, json=None) -> Resp:  # noqa: A002 — mirrors requests' API
+        return self._req("POST", path, headers, json if json is not None else {})
+
+
+def free_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
 
 
 class Recorder:
@@ -226,13 +278,25 @@ def main() -> int:
         "ARGUS_OPEN_METEO_ENABLED": "false",  # a recording must never pose as live data
         "ARGUS_ENABLE_PROVIDER_WORKER": "false",
     })
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
-    from fastapi.testclient import TestClient
-
-    from app.main import create_app
-
+    backend = Path(__file__).resolve().parents[2] / "backend"
+    port = free_port()
+    log = open(work / "api.log", "wb")  # noqa: SIM115 — must outlive this block (API process output)
+    api = subprocess.Popen([sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port)],
+                           cwd=backend, env=os.environ.copy(), stdout=log, stderr=subprocess.STDOUT)
     started = time.time()
-    with TestClient(create_app()) as c:
+    try:
+        c = Http(f"http://127.0.0.1:{port}")
+        for _ in range(600):
+            if api.poll() is not None:
+                raise RuntimeError("ARGUS API exited during startup:\n" + (work / "api.log").read_text()[-3000:])
+            try:
+                if c.get("/api/system/health").status_code == 200:
+                    break
+            except OSError:
+                pass
+            time.sleep(1)
+        else:
+            raise RuntimeError("ARGUS API did not become healthy")
         r = c.post("/api/auth/login", json={"username": "planner", "password": "argus2026"})
         r.raise_for_status()
         token = r.json()["token"]
@@ -249,6 +313,13 @@ def main() -> int:
             rec.get("/api/audit?limit=300" + ("&affects_results=true" if only else ""))
         for kind in ("resources", "facilities", "observations", "road_events"):
             rec.get(f"/api/imports/templates/{kind}.csv")
+    finally:
+        api.terminate()
+        try:
+            api.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            api.kill()
+        log.close()
     manifest = {
         "created": datetime.now(UTC).isoformat(timespec="seconds"),
         "user": {**me, "full_name": me.get("full_name", "Demo")},
