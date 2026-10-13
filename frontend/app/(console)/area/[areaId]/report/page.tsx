@@ -8,7 +8,7 @@ import { useTranslations } from "use-intl";
 import { useAreaCtx } from "@/components/area/AreaContext";
 import { ScreenHeader } from "@/components/common/ScreenHeader";
 import { Button, ErrorState, Loading } from "@/components/ui/primitives";
-import { getToken } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { LOCALE_LABEL, LOCALES, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/types";
 
@@ -22,7 +22,7 @@ export default function ReportPage() {
   const q = useQuery({
     queryKey: ["report", areaId, area?.data_version, lang],
     queryFn: async () => {
-      const r = await fetch(`/api/areas/${areaId}/report.html?lang=${lang}`, { headers: { Authorization: `Bearer ${getToken() || ""}` } });
+      const r = await apiFetch(`/api/areas/${areaId}/report.html?lang=${lang}`);
       if (!r.ok) throw new Error(String(r.status));
       return r.text();
     },

@@ -6,7 +6,9 @@ import { api } from "@/lib/api";
 import { getMaplibre } from "@/lib/maplibre";
 import { useEffect, useRef } from "react";
 
-import { TONE_HEX, toneOf } from "@/lib/status";
+import { MAP_PALETTE } from "@/lib/mapPalette";
+import { TONE_HEX, TONE_VAR, toneOf } from "@/lib/status";
+import { useTheme } from "@/lib/theme";
 import type { AreaOverview } from "@/lib/types";
 
 /** Regional context map: operational area extents and status markers. Each area's river / waterway geometry is
@@ -15,6 +17,9 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLType.Map | null>(null);
   const markers = useRef<MLType.Marker[]>([]);
+  const pal = MAP_PALETTE[useTheme((s) => s.theme)];
+  const palRef = useRef(pal);
+  palRef.current = pal;
 
   useEffect(() => {
     if (!el.current || map.current) return;
@@ -33,8 +38,8 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
           },
         },
         layers: [
-          { id: "bg", type: "background", paint: { "background-color": "#0b1118" } },
-          { id: "carto", type: "raster", source: "carto", paint: { "raster-opacity": 0.7, "raster-brightness-max": 0.42, "raster-saturation": -0.65, "raster-contrast": 0.15 } },
+          { id: "bg", type: "background", paint: { "background-color": palRef.current.bg } },
+          { id: "carto", type: "raster", source: "carto", paint: { "raster-opacity": palRef.current.carto.opacity, "raster-brightness-max": palRef.current.carto.brightnessMax, "raster-saturation": palRef.current.carto.saturation, "raster-contrast": 0.1 } },
         ],
       },
       center: [68.9, 52.6],
@@ -48,6 +53,22 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
       map.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const apply = () => {
+      if (m.getLayer("bg")) m.setPaintProperty("bg", "background-color", pal.bg);
+      if (m.getLayer("carto")) {
+        m.setPaintProperty("carto", "raster-opacity", pal.carto.opacity);
+        m.setPaintProperty("carto", "raster-brightness-max", pal.carto.brightnessMax);
+        m.setPaintProperty("carto", "raster-saturation", pal.carto.saturation);
+      }
+      m.getStyle()?.layers?.filter((l) => l.id.startsWith("geo-")).forEach((l) => m.setPaintProperty(l.id, "line-color", pal.river));
+    };
+    if (m.isStyleLoaded()) apply();
+    else m.once("load", apply);
+  }, [pal]);
 
   useEffect(() => {
     const m = map.current;
@@ -78,7 +99,7 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
           const id = `geo-${a.id}-${layer}`;
           if (m.getSource(id)) return;
           m.addSource(id, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-          m.addLayer({ id, type: "line", source: id, paint: { "line-color": "#3fb3ff", "line-width": layer === "river" ? 1.6 : 0.8, "line-opacity": layer === "river" ? 0.9 : 0.55 } }, "areas-fill");
+          m.addLayer({ id, type: "line", source: id, paint: { "line-color": palRef.current.river, "line-width": layer === "river" ? 1.6 : 0.8, "line-opacity": layer === "river" ? 0.9 : 0.55 } }, "areas-fill");
           api<GeoJSON.FeatureCollection>(`/api/areas/${a.id}/layers/${layer}`)
             .then((fc) => (m.getSource(id) as MLType.GeoJSONSource | undefined)?.setData(fc))
             .catch(() => { /* layer unavailable — extents and markers still render */ });
@@ -89,8 +110,8 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
         const d = document.createElement("button");
         d.className = "argus-marker";
         d.setAttribute("aria-label", labels[a.id] || a.id);
-        const color = TONE_HEX[toneOf(a.status)];
-        d.innerHTML = `<div style="display:flex;align-items:center;gap:6px;background:#10161ee6;border:1px solid ${color};border-radius:3px;padding:3px 7px;color:#dbe4ee;font:600 12px Inter,Segoe UI,sans-serif;white-space:nowrap"><span style="width:9px;height:9px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color}"></span>${labels[a.id] || a.id}</div>`;
+        const color = TONE_VAR[toneOf(a.status)];
+        d.innerHTML = `<div style="display:flex;align-items:center;gap:6px;background:var(--color-panel);border:1.5px solid ${color};border-radius:5px;padding:3px 8px;color:var(--color-ink);box-shadow:0 2px 6px rgba(0,0,0,.18);font:600 12px Inter,Segoe UI,sans-serif;white-space:nowrap"><span style="width:9px;height:9px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color}"></span>${labels[a.id] || a.id}</div>`;
         d.onclick = () => onSelect(a.id);
         return new maplibregl.Marker({ element: d }).setLngLat(a.center).addTo(m);
       });

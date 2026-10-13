@@ -9,7 +9,7 @@ import { useTranslations } from "use-intl";
 
 import { useAreaCtx } from "@/components/area/AreaContext";
 import { Badge, Button, Empty, ErrorState, InlineNote, Panel, StatusBadge } from "@/components/ui/primitives";
-import { api, post, upload } from "@/lib/api";
+import { api, apiHref, post, upload } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateTime } from "@/lib/format";
 import { useInvalidateArea } from "@/lib/queries";
@@ -169,7 +169,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label={ti("type")}>
             {KINDS.map((k) => (
               <button key={k} role="radio" aria-checked={kind === k} onClick={() => setKind(k)}
-                className={clsx("rounded-[5px] border p-2.5 text-left transition-colors", kind === k ? "border-accent bg-accent/10 shadow-[0_0_0_1px_rgba(63,179,255,0.35)]" : "border-line bg-panel hover:border-line-2 hover:bg-panel-2")}>
+                className={clsx("rounded-[5px] border p-2.5 text-left transition-colors", kind === k ? "border-accent bg-accent/10 shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_35%,transparent)]" : "border-line bg-panel hover:border-line-2 hover:bg-panel-2")}>
                 <div className={clsx("text-xs font-bold", kind === k ? "text-accent" : "text-ink")}>{ti(`types.${k}`)}</div>
                 <div className="mt-0.5 text-[11px] leading-snug text-ink-2">{ti(`typeDesc.${k}`)}</div>
                 <div className="mt-1 text-[10.5px] leading-snug text-muted">{ti(`effect.${k}`)}</div>
@@ -217,7 +217,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
 
           <Panel
             title={ti("guideTitle", { type: ti(`types.${kind}`) })}
-            right={<a className="flex items-center gap-1 text-[11px] font-semibold text-accent hover:underline" href={`/api/imports/templates/${kind}.csv`} download>
+            right={<a className="flex items-center gap-1 text-[11px] font-semibold text-accent hover:underline" href={apiHref(`/api/imports/templates/${kind}.csv`)} download={`argus_${kind}_template.csv`}>
               <Download className="h-3.5 w-3.5" />{ti("template")}</a>}
           >
             <div className="overflow-x-auto">

@@ -5,11 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { useAreaCtx } from "@/components/area/AreaContext";
-import { absUrl, mapTransformRequest } from "@/lib/api";
+import { absUrl, apiFetch, mapTransformRequest } from "@/lib/api";
 import { countdown, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { getMaplibre } from "@/lib/maplibre";
+import { applyMapPalette, buildingColor, MAP_PALETTE, roadLineColor } from "@/lib/mapPalette";
 import { useUi } from "@/lib/store";
+import { IS_STATIC } from "@/lib/staticDemo";
+import { useTheme } from "@/lib/theme";
 import { toneOf, type Tone } from "@/lib/status";
 
 import { mapHandle } from "@/lib/mapRef";
@@ -26,6 +29,8 @@ const CASE_W = ["match", ["get", "road_class"], ["highway", "motorway"], 9, ["ur
 const LINE_W = ["match", ["get", "road_class"], ["highway", "motorway"], 5.5, ["urban_main", "trunk"], 4.8, "primary", 4.4, ["rural", "secondary"], 3.8, ["track", "tertiary"], 3.2, 2.2];
 // building visualization height: OSM building:levels × 3 m (1 level when untagged) — NOT a surveyed height
 const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+// the static online demo ships DEM tiles up to z12 (finer than the 30 m DEM at 52°N); MapLibre over-zooms beyond
+const DEM_MAXZOOM = IS_STATIC ? 12 : 14;
 
 type Markers = Record<string, ML.Marker[]>;
 
@@ -44,6 +49,10 @@ export function OpsMap() {
   const tmap = useTranslations("map");
   const mapMode = useUi((s) => s.mapMode);
   const lay = useUi((s) => s.layers);
+  const theme = useTheme((s) => s.theme);
+  const pal = MAP_PALETTE[theme];
+  const palRef = useRef(pal);
+  palRef.current = pal;
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<ML.Map | null>(null);
   const markers = useRef<Markers>({});
@@ -68,6 +77,7 @@ export function OpsMap() {
     if (!el.current || mapRef.current || !areaReady || !centerRef.current) return;
     const maplibregl = getMaplibre();
     const demUrl = absUrl(`/api/tiles/terrain/${areaId}/{z}/{x}/{y}.png`);
+    const p0 = palRef.current;
     const m = new maplibregl.Map({
       container: el.current,
       transformRequest: (url) => mapTransformRequest(url),
@@ -80,19 +90,19 @@ export function OpsMap() {
       style: {
         version: 8,
         sources: {
-          dem: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: 14 },
-          demhs: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: 14 },
+          dem: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: DEM_MAXZOOM },
+          demhs: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: DEM_MAXZOOM },
           carto: {
             type: "raster", tileSize: 256, attribution: "© OpenStreetMap contributors",
             tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
           },
         },
         layers: [
-          { id: "bg", type: "background", paint: { "background-color": "#0c1219" } },
-          { id: "carto", type: "raster", source: "carto", layout: { visibility: "none" }, paint: { "raster-opacity": 0.55, "raster-brightness-max": 0.45, "raster-saturation": -0.6, "raster-contrast": 0.12 } },
+          { id: "bg", type: "background", paint: { "background-color": p0.bg } },
+          { id: "carto", type: "raster", source: "carto", layout: { visibility: "none" }, paint: { "raster-opacity": p0.carto.opacity, "raster-brightness-max": p0.carto.brightnessMax, "raster-saturation": p0.carto.saturation, "raster-contrast": 0.12 } },
           {
             id: "hillshade", type: "hillshade", source: "demhs",
-            paint: { "hillshade-exaggeration": 0.55, "hillshade-shadow-color": "#05080c", "hillshade-highlight-color": "#3a4a5c", "hillshade-accent-color": "#1d2835" },
+            paint: { "hillshade-exaggeration": p0.hillshade.exaggeration, "hillshade-shadow-color": p0.hillshade.shadow, "hillshade-highlight-color": p0.hillshade.highlight, "hillshade-accent-color": p0.hillshade.accent },
           },
         ],
       },
@@ -118,6 +128,7 @@ export function OpsMap() {
   useEffect(() => {
     const m = mapRef.current;
     if (!ready || !m || !scenario) return;
+    const p = palRef.current;
     const corners = scenario.image_corners as [[number, number], [number, number], [number, number], [number, number]];
     const blank = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
     const add = (id: string, src: ML.SourceSpecification) => { if (!m.getSource(id)) m.addSource(id, src); };
@@ -131,29 +142,28 @@ export function OpsMap() {
     add("buildings", { type: "geojson", data: (layers.buildings as unknown as GeoJSON.FeatureCollection) || EMPTY_FC, promoteId: "id" });
     add("routes", { type: "geojson", data: EMPTY_FC });
     const addLayer = (spec: ML.LayerSpecification) => { if (!m.getLayer(spec.id)) m.addLayer(spec); };
-    addLayer({ id: "sectors-fill", type: "fill", source: "sectors", paint: { "fill-color": "#7aa2c7", "fill-opacity": 0.05 } });
-    addLayer({ id: "sectors-line", type: "line", source: "sectors", paint: { "line-color": "#7aa2c7", "line-width": 1, "line-dasharray": [3, 3], "line-opacity": 0.6 } });
+    addLayer({ id: "sectors-fill", type: "fill", source: "sectors", paint: { "fill-color": p.sector, "fill-opacity": 0.05 } });
+    addLayer({ id: "sectors-line", type: "line", source: "sectors", paint: { "line-color": p.sector, "line-width": 1, "line-dasharray": [3, 3], "line-opacity": 0.6 } });
     addLayer({ id: "flood-a", type: "raster", source: "flood-a", paint: { "raster-opacity": 0.9, "raster-fade-duration": 0, "raster-opacity-transition": { duration: 650, delay: 0 }, "raster-resampling": "linear" } });
     addLayer({ id: "flood-b", type: "raster", source: "flood-b", paint: { "raster-opacity": 0, "raster-fade-duration": 0, "raster-opacity-transition": { duration: 650, delay: 0 }, "raster-resampling": "linear" } });
     addLayer({ id: "water-fill", type: "fill", source: "waterways", filter: ["==", ["geometry-type"], "Polygon"],
-      paint: { "fill-color": "#2a6fb0", "fill-opacity": 0.35 } });
+      paint: { "fill-color": p.waterFill, "fill-opacity": p.waterFillOpacity } });
     addLayer({ id: "water-line", type: "line", source: "waterways", filter: ["==", ["geometry-type"], "LineString"],
-      paint: { "line-color": "#3d8fd6", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.6, 15, 2], "line-opacity": 0.6 } });
-    addLayer({ id: "river", type: "line", source: "river", paint: { "line-color": "#5fb4ff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 15, 3], "line-opacity": 0.35 } });
-    addLayer({ id: "extent", type: "line", source: "extent", paint: { "line-color": "#c8ecff", "line-width": 1.3, "line-opacity": 0.85, "line-dasharray": [2, 2] } });
+      paint: { "line-color": p.waterLine, "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.6, 15, 2], "line-opacity": 0.6 } });
+    addLayer({ id: "river", type: "line", source: "river", paint: { "line-color": p.river, "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 15, 3], "line-opacity": p.riverOpacity } });
+    addLayer({ id: "extent", type: "line", source: "extent", paint: { "line-color": p.extent, "line-width": 1.3, "line-opacity": 0.85, "line-dasharray": [2, 2] } });
     // 3D only: translucent water slab over the modelled extent — a VISUALIZATION of the same frame, not extra physics
     addLayer({ id: "water-3d", type: "fill-extrusion", source: "extent", filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]],
       layout: { visibility: "none" },
-      paint: { "fill-extrusion-color": "#2f86d8", "fill-extrusion-opacity": 0.32, "fill-extrusion-height": 0.8, "fill-extrusion-base": 0 } });
+      paint: { "fill-extrusion-color": p.water3d, "fill-extrusion-opacity": 0.32, "fill-extrusion-height": 0.8, "fill-extrusion-base": 0 } });
     addLayer({
       id: "roads-case", type: "line", source: "roads", layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#05080c", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 2.2, 15, CASE_W as unknown as number] },
+      paint: { "line-color": p.roadCase, "line-width": ["interpolate", ["linear"], ["zoom"], 11, 2.2, 15, CASE_W as unknown as number] },
     });
     addLayer({
       id: "roads-line", type: "line", source: "roads", layout: { "line-cap": "round", "line-join": "round" },
       paint: {
-        "line-color": ["case", ["boolean", ["feature-state", "hl"], false], "#3fb3ff",
-          ["match", ["coalesce", ["feature-state", "state"], 0], 2, "#ef4d4d", 1, "#f59e2b", "#8aa2b8"]],
+        "line-color": roadLineColor(p),
         "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1.1, 15,
           ["+", LINE_W, ["case", ["boolean", ["feature-state", "hl"], false], 2.5, 0]]] as unknown as number,
         "line-opacity": ["match", ["coalesce", ["feature-state", "state"], 0], 0, 0.75, 1],
@@ -174,9 +184,7 @@ export function OpsMap() {
     addLayer({
       id: "buildings", type: "fill-extrusion", source: "buildings", minzoom: 11,
       paint: {
-        "fill-extrusion-color": ["case", [">", ["coalesce", ["feature-state", "depth"], 0], 5],
-          ["interpolate", ["linear"], ["coalesce", ["feature-state", "depth"], 0], 10, "#f2c14e", 50, "#f59e2b", 100, "#ef6b3b", 200, "#c81d3d"],
-          ["interpolate", ["linear"], ["get", "height_m"], 3, "#2b3746", 9, "#36475b", 18, "#425a74", 30, "#4f6d8c"]],
+        "fill-extrusion-color": buildingColor(p),
         "fill-extrusion-height": ["get", "height_m"],
         "fill-extrusion-base": 0,
         "fill-extrusion-opacity": 0.9,
@@ -271,6 +279,7 @@ export function OpsMap() {
   useEffect(() => {
     const m = mapRef.current;
     if (!ready || !m || !scenario || tRounded === null) return;
+    const p = palRef.current;
     const corners = scenario.image_corners as [[number, number], [number, number], [number, number], [number, number]];
     function load(map: ML.Map, url: string) {
       const next = floodSlot.current === "a" ? "b" : "a";
@@ -315,8 +324,7 @@ export function OpsMap() {
     let alive = true;
     const ctrl = new AbortController();
     const timer = setTimeout(() => {
-      const { url, headers } = mapTransformRequest(`/api/scenarios/${scenario.id}/frames/${tRounded}/extent?member=${scenario.active_member}`);
-      fetch(url, { headers, signal: ctrl.signal }).then((r) => (r.ok ? r.json() : null)).then((fc) => {
+      apiFetch(`/api/scenarios/${scenario.id}/frames/${tRounded}/extent?member=${scenario.active_member}`, { signal: ctrl.signal }).then((r) => (r.ok ? r.json() : null)).then((fc) => {
         if (!alive || !fc) return;
         (m.getSource("extent") as ML.GeoJSONSource | undefined)?.setData(fc);
       }).catch(() => {});
@@ -455,7 +463,7 @@ export function OpsMap() {
       const cx = ring.reduce((s, c) => s + c[0], 0) / ring.length;
       const cy = ring.reduce((s, c) => s + c[1], 0) / ring.length;
       const d = document.createElement("div");
-      d.innerHTML = `<div style="font:700 11px Inter,Segoe UI,sans-serif;color:#7aa2c7;opacity:.9;text-shadow:0 1px 2px #000">${pickName(p.names, locale)}</div>`;
+      d.innerHTML = `<div style="font:700 11px Inter,Segoe UI,sans-serif;color:var(--color-ink-2);opacity:.85;text-shadow:0 0 3px var(--map-label-halo),0 0 2px var(--map-label-halo)">${pickName(p.names, locale)}</div>`;
       return make(d, [cx, cy]);
     }));
   }, [ready, layers, lay.facilities, lay.sites, lay.labels, lay.sectors, facilityStates, roadStates, access, locale, rebuild, tr, tf, tk, tmap, facilityPopup]);
@@ -475,16 +483,23 @@ export function OpsMap() {
     if (mapMode === "3d") {
       m.setTerrain({ source: "dem", exaggeration: 1.8 });
       try {
-        m.setSky({ "sky-color": "#0d1b2c", "horizon-color": "#22384f", "fog-color": "#0c1219", "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.7, "fog-ground-blend": 0.4 });
+        m.setSky({ "sky-color": pal.sky.sky, "horizon-color": pal.sky.horizon, "fog-color": pal.sky.fog, "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.7, "fog-ground-blend": 0.4 });
       } catch { /* older style spec */ }
-      m.setLight({ anchor: "viewport", color: "#ffffff", intensity: 0.38, position: [1.3, 210, 35] });
+      m.setLight({ anchor: "viewport", color: "#ffffff", intensity: pal.lightIntensity, position: [1.3, 210, 35] });
       m.easeTo({ pitch: 60, bearing: -20, zoom: Math.max(m.getZoom(), 13.4), duration: 1200 });
     } else {
       m.setTerrain(null);
       m.easeTo({ pitch: 0, bearing: 0, duration: 800 });
     }
     if (m.getLayer("water-3d")) m.setLayoutProperty("water-3d", "visibility", mapMode === "3d" && lay.flood ? "visible" : "none");
-  }, [ready, mapMode, lay.flood]);
+  }, [ready, mapMode, lay.flood, pal]);
+
+  // theme switch: re-colour in place
+  useEffect(() => {
+    const m = mapRef.current;
+    if (!ready || !m) return;
+    applyMapPalette(m, pal);
+  }, [ready, pal]);
 
   useEffect(() => {
     const m = mapRef.current;

@@ -8,7 +8,9 @@ import { useTranslations } from "use-intl";
 import { useAreaCtx } from "@/components/area/AreaContext";
 import { Badge } from "@/components/ui/primitives";
 import { mapHandle } from "@/lib/mapRef";
+import { MAP_PALETTE } from "@/lib/mapPalette";
 import { useUi, type LayerToggles } from "@/lib/store";
+import { useTheme } from "@/lib/theme";
 
 const GROUPS: { key: string; items: (keyof LayerToggles)[] }[] = [
   { key: "groupFlood", items: ["flood", "extent", "waterFx"] },
@@ -37,6 +39,7 @@ export function MapControls() {
   const layers = useUi((s) => s.layers);
   const toggle = useUi((s) => s.toggleLayer);
   const [open, setOpen] = useState(false);
+  const pal = MAP_PALETTE[useTheme((s) => s.theme)];
   const forecast = time !== null && nowMin !== null && time > nowMin + 0.5;
   // LIVE only for a live clock with a live scenario; the 2024 reconstruction is HISTORICAL REPLAY; exercises are SIMULATION
   const modeKey = area?.clock_mode === "LIVE" && scenario?.mode === "LIVE" ? "LIVE" : scenario?.mode === "HISTORICAL" ? "HISTORICAL" : "SIMULATION";
@@ -114,9 +117,9 @@ export function MapControls() {
         </div>
         <div className="mt-1.5 font-semibold uppercase tracking-wider text-muted">{t("roadStates")}</div>
         <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-          <span className="flex items-center gap-1"><i className="inline-block h-1 w-4 bg-[#8aa2b8]" />{tr("OPEN")}</span>
-          <span className="flex items-center gap-1"><i className="inline-block h-1 w-4 bg-[#f59e2b]" />{tr("RESTRICTED")}</span>
-          <span className="flex items-center gap-1"><i className="inline-block h-1 w-4 bg-[repeating-linear-gradient(90deg,#ef4d4d_0_4px,#ffe1e1_4px_7px)]" />{tr("CLOSED")}</span>
+          <span className="flex items-center gap-1"><i className="inline-block h-1 w-4" style={{ background: pal.roadOpen }} />{tr("OPEN")}</span>
+          <span className="flex items-center gap-1"><i className="inline-block h-1 w-4 bg-[#ee7d14]" />{tr("RESTRICTED")}</span>
+          <span className="flex items-center gap-1"><i className="inline-block h-1 w-4 bg-[repeating-linear-gradient(90deg,#e0393e_0_4px,#ffe1e1_4px_7px)]" />{tr("CLOSED")}</span>
         </div>
         <div className="mt-1 flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 bg-[#f59e2b]" />{t("buildingFlooded")}</div>
         {layers.waterFx && <div className="mt-1 max-w-[210px] text-[9.5px] leading-tight text-muted">{t("waterFxNote")}</div>}

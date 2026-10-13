@@ -72,8 +72,8 @@ export default function ImpactPage() {
           {impactTl && (
             <Panel title={ti("overTime")}>
               <SeriesChart xs={impactTl.frame_offsets_min} nowX={nowMin} cursorX={t} fmtX={(x) => fmt(x)}
-                series={[{ values: impactTl.frames.map((f) => f.buildings_affected), color: "#f59e2b", label: ti("buildingsAffected"), fill: true },
-                  { values: impactTl.frames.map((f) => f.population_exposed / 10), color: "#3fb3ff", label: ti("populationExposed") }]} />
+                series={[{ values: impactTl.frames.map((f) => f.buildings_affected), color: "var(--color-warn)", label: ti("buildingsAffected"), fill: true },
+                  { values: impactTl.frames.map((f) => f.population_exposed / 10), color: "var(--color-water)", label: ti("populationExposed") }]} />
               <div className="mt-1 flex gap-3 text-[10.5px] text-muted">
                 <span className="flex items-center gap-1"><i className="inline-block h-0.5 w-4 bg-warn" />{ti("buildingsAffected")}</span>
                 <span className="flex items-center gap-1"><i className="inline-block h-0.5 w-4 bg-accent" />{ti("populationExposed")} ÷ 10</span>
@@ -156,7 +156,7 @@ export default function ImpactPage() {
             <div>
               <div className="mb-1 font-semibold">{ti("curve")}</div>
               <SeriesChart xs={calc.data.calculation.assumptions.damage_curve.map((p) => p[0])} nowX={null} cursorX={null} fmtX={(x) => `${x} ${tu("m")}`} height={110}
-                series={[{ values: calc.data.calculation.assumptions.damage_curve.map((p) => p[1] * 100), color: "#f59e2b", label: "%", fill: true }]} />
+                series={[{ values: calc.data.calculation.assumptions.damage_curve.map((p) => p[1] * 100), color: "var(--color-warn)", label: "%", fill: true }]} />
             </div>
           </div>
         )}

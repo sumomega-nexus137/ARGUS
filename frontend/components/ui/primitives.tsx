@@ -50,7 +50,7 @@ export function Panel({ title, right, children, className, bodyClass, id }: {
   title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; id?: string;
 }) {
   return (
-    <section id={id} className={clsx("rounded-[4px] border border-line bg-panel/95", className)}>
+    <section id={id} className={clsx("rounded-[6px] border border-line bg-panel/95 shadow-[var(--shadow-card)]", className)}>
       {(title || right) && (
         <header className="flex items-center justify-between gap-2 border-b border-line px-3 py-1.5">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink-2">{title}</h2>

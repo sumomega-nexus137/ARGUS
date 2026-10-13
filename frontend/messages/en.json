@@ -12,7 +12,14 @@
     "historicalBanner": "HISTORICAL 2024 RECONSTRUCTION · real geography (OpenStreetMap, Copernicus DEM, WorldPop, Sentinel-2) · exercise clock · plans, resources and injects are SIMULATION",
     "historicalBannerKok": "PORTABILITY / BOTTLENECK PILOT · real geography (OpenStreetMap, Copernicus DEM, WorldPop) · flood scenario is an uncalibrated SIMULATION exercise",
     "signOut": "Sign out",
-    "mainNav": "Main navigation"
+    "mainNav": "Main navigation",
+    "themeDark": "Dark theme",
+    "themeLight": "Light theme",
+    "staticBadge": "ONLINE DEMO",
+    "staticBanner": "saved ARGUS computations from {date}. Changes are disabled: new recalculation runs only in the full version.",
+    "staticFull": "Run the full version",
+    "staticUser": "Demo guest",
+    "staticLoadFailed": "The online demo data could not be loaded. Reload the page."
   },
   "nav": {
     "overview": "Regional overview",
@@ -1267,7 +1274,9 @@
     "generic": "Operation failed ({code})",
     "unsupported_json": "JSON must be an array of objects or a GeoJSON FeatureCollection",
     "invalid_import_type": "Unknown import type",
-    "file_too_large": "The file is too large (maximum 10 MB)"
+    "file_too_large": "The file is too large (maximum 10 MB)",
+    "static_readonly": "Changes are disabled in the online demo. Run the full version to recalculate.",
+    "static_missing": "This calculation is not saved in the online demo."
   },
   "resourceType": {
     "CREW": "Crew",

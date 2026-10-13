@@ -29,6 +29,36 @@ Two operational areas: **Atbasar / Zhabai** (primary; historical 2024 validation
 > clearly labelled synthetic DEMO. Details: [`docs/REAL_DATA_INSTALL.md`](docs/REAL_DATA_INSTALL.md),
 > test record: [`docs/FINAL_SYSTEM_TEST.md`](docs/FINAL_SYSTEM_TEST.md).
 
+## Open it online (nothing to install)
+
+**Online demo:** <https://sumomega-nexus137.github.io/ARGUS/> — published by GitHub Pages from this repository
+([`.github/workflows/pages.yml`](.github/workflows/pages.yml)). On every push the workflow installs the real-data
+packs, runs the real ARGUS engines once, records every answer the console needs (stress test, CP-SAT alternatives
+for all four policies, resource gap, bottleneck analyses, validation) and publishes the console as static files.
+The online demo is **read-only**: it shows those saved computations (the banner shows their date) and refuses
+changes with a clear message. No value in it is invented; nothing in it is live.
+The workflow publishes to the `gh-pages` branch; if the page is not live after the first run, set once:
+**Settings → Pages → Build and deployment → Deploy from a branch → `gh-pages` / `(root)` → Save**.
+
+### Run the full version
+
+The full version recalculates everything live (road closures, exercise BASE → HIGH with WHY, imports, approvals).
+
+* **In GitHub's cloud, no install:** on the repository page press **Code → Codespaces → Create codespace**.
+  The first start installs everything (≈10 min, [`.devcontainer/`](.devcontainer/)); then open the **PORTS** tab →
+  port **3000** and sign in as `planner` / `argus2026`. To show it to others, right-click port 3000 →
+  *Port visibility → Public*. (Free GitHub accounts include monthly Codespaces hours; stop the codespace after use.)
+* **On a computer:** Docker (`docker compose up --build`) or the quick start below.
+
+### Use your own (free) domain
+
+1. Get a domain or a free sub-domain — e.g. `argus.is-a.dev` (free via a pull request to
+   [is-a.dev](https://github.com/is-a-dev/register)) or any domain you own.
+2. At the domain's DNS add a `CNAME` record pointing to `sumomega-nexus137.github.io`.
+3. Repository **Settings → Pages → Custom domain**: enter the domain, save, then tick **Enforce HTTPS**.
+4. Re-run the *Online demo (GitHub Pages)* workflow (Actions tab → Run workflow): it keeps the domain and
+   builds the site for it (no `/ARGUS` prefix). Step-by-step in Russian: [`docs/ONLINE_DEMO.md`](docs/ONLINE_DEMO.md).
+
 ---
 
 ## Quick start (local demo, no Docker)

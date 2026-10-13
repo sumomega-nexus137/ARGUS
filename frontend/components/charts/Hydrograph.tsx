@@ -67,7 +67,7 @@ export function Hydrograph({ st, nowMin, cursor, fmt, dateFmt }: { st: HydroStat
   const band = st.envelope_low && st.envelope_high
     ? `${path(st.envelope_high)}L${[...st.envelope_low].reverse().map((p) => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("L")}Z`
     : null;
-  const thr: [keyof HydroStation["thresholds"], string][] = [["bankfull", "#7aa2c7"], ["watch", "#e2c541"], ["warning", "#f59e2b"], ["critical", "#ef4d4d"]];
+  const thr: [keyof HydroStation["thresholds"], string][] = [["bankfull", "var(--color-cached)"], ["watch", "var(--color-watch)"], ["warning", "var(--color-warn)"], ["critical", "var(--color-crit)"]];
   const yTicks: number[] = [];
   for (let v = y0; v <= y1; v += (y1 - y0) > 200 ? 50 : 20) yTicks.push(v);
   return (
@@ -75,14 +75,14 @@ export function Hydrograph({ st, nowMin, cursor, fmt, dateFmt }: { st: HydroStat
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={t("hydrograph")}>
         {yTicks.map((v) => (
           <g key={v}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={Y(v)} y2={Y(v)} stroke="#1c2836" strokeWidth={1} />
-            <text x={PAD.l - 4} y={Y(v) + 3} textAnchor="end" fontSize={8.5} fill="#738396">{v}</text>
+            <line x1={PAD.l} x2={W - PAD.r} y1={Y(v)} y2={Y(v)} stroke="var(--color-line)" strokeWidth={1} />
+            <text x={PAD.l - 4} y={Y(v) + 3} textAnchor="end" fontSize={8.5} fill="var(--color-muted)">{v}</text>
           </g>
         ))}
         {[...new Set(active.map((p) => p[0]).filter((m) => Math.abs(m % 360) < 1e-6))].map((m) => (
-          <text key={m} x={X(m)} y={H - 6} textAnchor="middle" fontSize={8.5} fill="#738396">{fmt(m)}</text>
+          <text key={m} x={X(m)} y={H - 6} textAnchor="middle" fontSize={8.5} fill="var(--color-muted)">{fmt(m)}</text>
         ))}
-        <rect x={X(nowMin)} y={PAD.t} width={Math.max(0, X(x1) - X(nowMin))} height={H - PAD.t - PAD.b} fill="#f59e2b" opacity={0.05} />
+        <rect x={X(nowMin)} y={PAD.t} width={Math.max(0, X(x1) - X(nowMin))} height={H - PAD.t - PAD.b} fill="var(--color-warn)" opacity={0.05} />
         {thr.map(([k, c]) => {
           const v = st.thresholds[k];
           if (v === null || v < y0 || v > y1) return null;
@@ -93,24 +93,24 @@ export function Hydrograph({ st, nowMin, cursor, fmt, dateFmt }: { st: HydroStat
             </g>
           );
         })}
-        {band && <path d={band} fill="#3fb3ff" opacity={0.13} />}
+        {band && <path d={band} fill="var(--color-water)" opacity={0.13} />}
         {Object.entries(st.members).filter(([m]) => m !== st.active_member).map(([m, pts]) => (
-          <path key={m} d={path(pts)} fill="none" stroke="#6c7f94" strokeWidth={0.8} opacity={0.45} />
+          <path key={m} d={path(pts)} fill="none" stroke="var(--color-muted)" strokeWidth={0.8} opacity={0.45} />
         ))}
-        <path d={path(past)} fill="none" stroke="#3fb3ff" strokeWidth={2} />
-        <path d={path(future)} fill="none" stroke="#f59e2b" strokeWidth={2} strokeDasharray="5 3" />
+        <path d={path(past)} fill="none" stroke="var(--color-water)" strokeWidth={2} />
+        <path d={path(future)} fill="none" stroke="var(--color-warn)" strokeWidth={2} strokeDasharray="5 3" />
         {inWin.map((o) => (
           <g key={o.id}>
             <circle cx={X(o.t_min)} cy={Y(o.stage_cm)} r={3.2}
-              fill={o.effective ? (o.authority === "VERIFIED_FIELD" ? "#34c38f" : "#dbe4ee") : "none"}
-              stroke={o.conflict ? "#f59e2b" : o.effective ? "#0a0e13" : "#a9b6c4"} strokeWidth={o.conflict ? 1.8 : 1}>
+              fill={o.effective ? (o.authority === "VERIFIED_FIELD" ? "var(--color-ok)" : "var(--color-ink)") : "none"}
+              stroke={o.conflict ? "var(--color-warn)" : o.effective ? "var(--color-panel)" : "var(--color-ink-2)"} strokeWidth={o.conflict ? 1.8 : 1}>
               <title>{`${fmt(o.t_min)} · ${o.stage_cm} cm · ${o.source} · ${o.verification}${o.excluded ? ` · ${t("excluded")}` : ""}`}</title>
             </circle>
           </g>
         ))}
-        <line x1={X(nowMin)} x2={X(nowMin)} y1={PAD.t - 4} y2={H - PAD.b} stroke="#dbe4ee" strokeWidth={1.2} />
-        <text x={X(nowMin) + 3} y={PAD.t + 3} fontSize={8.5} fontWeight={800} fill="#dbe4ee">{tt("now")}</text>
-        {Math.abs(cursor - nowMin) > 0.5 && <line x1={X(cursor)} x2={X(cursor)} y1={PAD.t} y2={H - PAD.b} stroke="#f59e2b" strokeWidth={1} strokeDasharray="2 2" />}
+        <line x1={X(nowMin)} x2={X(nowMin)} y1={PAD.t - 4} y2={H - PAD.b} stroke="var(--color-ink)" strokeWidth={1.2} />
+        <text x={X(nowMin) + 3} y={PAD.t + 3} fontSize={8.5} fontWeight={800} fill="var(--color-ink)">{tt("now")}</text>
+        {Math.abs(cursor - nowMin) > 0.5 && <line x1={X(cursor)} x2={X(cursor)} y1={PAD.t} y2={H - PAD.b} stroke="var(--color-warn)" strokeWidth={1} strokeDasharray="2 2" />}
       </svg>
       <figcaption className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted">
         <span className="flex items-center gap-1"><i className="inline-block h-0.5 w-4 bg-accent" />{tt("analysis")}</span>

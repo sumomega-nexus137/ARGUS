@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "@/components/shell/LanguageSwitcher";
 import { Button, Field, inputCls, useErrorText } from "@/components/ui/primitives";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { IS_STATIC } from "@/lib/staticDemo";
 import type { Role } from "@/lib/types";
 
 const LANDING: Record<Role, string> = {
@@ -37,7 +38,7 @@ function LoginForm() {
     api<typeof demo>("/api/auth/demo-users").then(setDemo).catch(() => setDemo(null));
   }, []);
   useEffect(() => {
-    if (user) router.replace(sp.get("next") || LANDING[user.role]);
+    if (user) router.replace(sp.get("next") || (IS_STATIC ? "/overview" : LANDING[user.role]));
   }, [user, router, sp]);
 
   async function submit(u = username, p = password) {
@@ -54,7 +55,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,#0f1b2a,#0a0e13_60%)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--color-accent)_14%,var(--color-bg)),var(--color-bg)_60%)] p-4">
       <div className="w-full max-w-md">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -67,7 +68,7 @@ function LoginForm() {
           <LanguageSwitcher />
         </div>
         <form
-          className="space-y-3 rounded-[4px] border border-line bg-panel p-5"
+          className="space-y-3 rounded-[8px] border border-line bg-panel p-5 shadow-[var(--shadow-card)]"
           onSubmit={(e) => { e.preventDefault(); submit(); }}
         >
           <h1 className="text-sm font-semibold uppercase tracking-wider text-ink-2">{t("title")}</h1>

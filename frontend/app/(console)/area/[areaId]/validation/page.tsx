@@ -7,7 +7,7 @@ import { useTranslations } from "use-intl";
 import { useAreaCtx } from "@/components/area/AreaContext";
 import { ScreenHeader } from "@/components/common/ScreenHeader";
 import { Badge, Button, Empty, ErrorState, InlineNote, Loading, Metric, Panel } from "@/components/ui/primitives";
-import { api, getToken, post } from "@/lib/api";
+import { api, apiFetch, post } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dateTime, num, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
@@ -51,7 +51,7 @@ function useAuthImage(url: string | null) {
   useEffect(() => {
     if (!url) return;
     let revoked = "";
-    fetch(url, { headers: { Authorization: `Bearer ${getToken() || ""}` } })
+    apiFetch(url)
       .then((r) => (r.ok ? r.blob() : null))
       .then((b) => { if (b) { revoked = URL.createObjectURL(b); setSrc(revoked); } });
     return () => { if (revoked) URL.revokeObjectURL(revoked); };

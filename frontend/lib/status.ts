@@ -21,9 +21,16 @@ export const TONE_TEXT: Record<Tone, string> = {
   muted: "text-muted", live: "text-live", stale: "text-stale", offline: "text-offline",
 };
 
+/** CSS colour per tone that follows the light / dark theme (DOM / SVG / inline styles). */
+export const TONE_VAR: Record<Tone, string> = {
+  ok: "var(--color-ok)", watch: "var(--color-watch)", warn: "var(--color-warn)", crit: "var(--color-crit)", info: "var(--color-accent)",
+  sim: "var(--color-sim)", muted: "var(--color-muted)", live: "var(--color-live)", stale: "var(--color-stale)", offline: "var(--color-offline)",
+};
+
+/** Literal colours for MapLibre paint properties (cannot read CSS variables); readable on light and dark maps. */
 export const TONE_HEX: Record<Tone, string> = {
-  ok: "#34c38f", watch: "#e2c541", warn: "#f59e2b", crit: "#ef4d4d", info: "#3fb3ff", sim: "#a78bfa",
-  muted: "#738396", live: "#34c38f", stale: "#e0a13a", offline: "#ef4d4d",
+  ok: "#22a06b", watch: "#d6a400", warn: "#ee7d14", crit: "#e0393e", info: "#139a92", sim: "#8b6cf0",
+  muted: "#7d8b91", live: "#22a06b", stale: "#d08a1c", offline: "#e0393e",
 };
 
 const MAP: Record<string, Tone> = {

@@ -24,11 +24,11 @@ export function SeriesChart({ xs, series, nowX, cursorX, fmtX, height = 120, yLa
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={yLabel}>
       {ticks.map((v, i) => (
         <g key={i}>
-          <line x1={P.l} x2={W - P.r} y1={Y(v)} y2={Y(v)} stroke="#1c2836" />
-          <text x={P.l - 4} y={Y(v) + 3} fontSize={8.5} textAnchor="end" fill="#738396">{Math.round(v).toLocaleString()}</text>
+          <line x1={P.l} x2={W - P.r} y1={Y(v)} y2={Y(v)} stroke="var(--color-line)" />
+          <text x={P.l - 4} y={Y(v) + 3} fontSize={8.5} textAnchor="end" fill="var(--color-muted)">{Math.round(v).toLocaleString()}</text>
         </g>
       ))}
-      {xs.filter((_, i) => i % 6 === 0).map((x) => <text key={x} x={X(x)} y={H - 5} fontSize={8.5} textAnchor="middle" fill="#738396">{fmtX(x)}</text>)}
+      {xs.filter((_, i) => i % 6 === 0).map((x) => <text key={x} x={X(x)} y={H - 5} fontSize={8.5} textAnchor="middle" fill="var(--color-muted)">{fmtX(x)}</text>)}
       {series.map((s) => {
         const d = s.values.map((v, i) => `${i ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(v).toFixed(1)}`).join("");
         return (
@@ -38,8 +38,8 @@ export function SeriesChart({ xs, series, nowX, cursorX, fmtX, height = 120, yLa
           </g>
         );
       })}
-      {nowX !== null && <line x1={X(nowX)} x2={X(nowX)} y1={P.t} y2={H - P.b} stroke="#dbe4ee" strokeWidth={1.2} />}
-      {cursorX !== null && nowX !== null && Math.abs(cursorX - nowX) > 0.5 && <line x1={X(cursorX)} x2={X(cursorX)} y1={P.t} y2={H - P.b} stroke="#f59e2b" strokeDasharray="2 2" />}
+      {nowX !== null && <line x1={X(nowX)} x2={X(nowX)} y1={P.t} y2={H - P.b} stroke="var(--color-ink)" strokeWidth={1.2} />}
+      {cursorX !== null && nowX !== null && Math.abs(cursorX - nowX) > 0.5 && <line x1={X(cursorX)} x2={X(cursorX)} y1={P.t} y2={H - P.b} stroke="var(--color-warn)" strokeDasharray="2 2" />}
     </svg>
   );
 }

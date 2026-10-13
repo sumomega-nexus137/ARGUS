@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
+import { StaticGate } from "@/components/common/StaticGate";
 import { ApiError } from "@/lib/api";
 import { AuthProvider } from "@/lib/auth";
 import { I18nProvider } from "@/lib/i18n";
@@ -26,7 +27,9 @@ export function Providers({ locale, children }: { locale: Locale; children: Reac
   return (
     <QueryClientProvider client={qc}>
       <I18nProvider initialLocale={locale}>
-        <AuthProvider>{children}</AuthProvider>
+        <StaticGate>
+          <AuthProvider>{children}</AuthProvider>
+        </StaticGate>
       </I18nProvider>
     </QueryClientProvider>
   );

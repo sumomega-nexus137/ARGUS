@@ -161,3 +161,21 @@ map/timeline widgets, global) and a localized 404 page, so a failure never shows
 | Browser: import wizard kk/ru/en | valid + invalid rows, cp1251 file, broken file, wrong extension, confirm, resume preview from history, export → re-import round trip (31 rows, 0 errors) |
 | Browser sweep: every screen × every tab, both cities, kk / ru / en, planner / admin / viewer | no page errors, no server 5xx, no missing translations (remaining codes = Sentinel-2 product IDs and recorded system log text) |
 | `node scripts/e2e/demo26.mjs` on a fresh DB | **26 / 26 PASS**, no server or page errors; alternatives 0.391 → 0.462 (identical on repeated runs) |
+
+## Light theme + online demo on GitHub — test record (13 Oct 2026)
+
+* **Light theme by default** (white panels, soft grey background, teal accent; blue reserved for water / flood depth),
+  light "paper" map; the original dark theme stays one click away (sun / moon button, remembered per browser,
+  applied before first paint). Map, markers, popups and charts follow the theme live.
+* **Online demo on GitHub Pages** (`.github/workflows/pages.yml`): CI installs the packs, runs the real engines once
+  (`scripts/static_demo/record.py`, deterministic CP-SAT) and publishes a read-only static console that answers from
+  that snapshot. Local recording: 619 responses, 72 MB, 6 min, no failed request.
+* **Full version in GitHub Codespaces** (`.devcontainer/`).
+
+| Check | Result |
+|---|---|
+| `npx tsc` / `npx eslint .` / i18n check | clean / 0 errors / 1467 keys × 3, 0 problems |
+| `npx vitest run` | 9 passed (new: JS ↔ Python snapshot key compatibility) |
+| Static export (`ARGUS_STATIC_EXPORT=1`, base path `/ARGUS`) served like GitHub Pages | every screen × every tab, both cities: 0 missing responses, 0 page errors, 0 HTTP errors |
+| Static demo buttons | stress test 9/23 and CP-SAT alternatives ALT-1…3 answered from the recorded real runs; data-changing actions show the localized read-only message |
+| Server build + `node scripts/e2e/demo26.mjs` on a fresh DB | **26 / 26 PASS**, no server or page errors; alternatives 0.391 → 0.462 |

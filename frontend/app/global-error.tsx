@@ -3,6 +3,7 @@
 import en from "@/messages/en.json";
 import kk from "@/messages/kk.json";
 import ru from "@/messages/ru.json";
+import { BASE_PATH } from "@/lib/staticDemo";
 
 import "./globals.css";
 
@@ -23,7 +24,7 @@ export default function GlobalError({ error, retry, reset }: { error: Error & { 
   const t = MESSAGES[l].crash;
   const again = retry ?? reset;
   return (
-    <html lang={l} className="dark">
+    <html lang={l}>
       <body className="min-h-screen bg-bg text-ink antialiased">
         <div role="alert" className="mx-auto mt-16 max-w-xl rounded-[8px] border border-warn/40 bg-panel p-5">
           <h1 className="text-base font-bold">{t.title}</h1>
@@ -31,7 +32,7 @@ export default function GlobalError({ error, retry, reset }: { error: Error & { 
           <div className="mt-4 flex gap-2">
             {again && <button className="rounded-[3px] border border-accent-2 bg-accent-2 px-3 py-1 text-xs font-semibold text-white" onClick={again}>{t.retry}</button>}
             {/* a full document load on purpose: the router may be what failed */}
-            <a className="rounded-[3px] border border-line-2 px-3 py-1 text-xs font-semibold" href="/overview">{t.overview}</a>
+            <a className="rounded-[3px] border border-line-2 px-3 py-1 text-xs font-semibold" href={`${BASE_PATH}/overview/`}>{t.overview}</a>
           </div>
           {error.digest && <p className="mt-3 font-mono text-[10.5px] text-muted">#{error.digest}</p>}
         </div>

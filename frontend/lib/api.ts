@@ -1,4 +1,7 @@
 // ARGUS backend client. All data flows through the ARGUS API (never directly to external providers).
+// In the static online demo build the same calls are answered from the recorded snapshot (lib/staticDemo).
+
+import { IS_STATIC, staticAssetUrl, staticFetch } from "./staticDemo";
 
 export class ApiError extends Error {
   status: number;
@@ -45,7 +48,7 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
   }
   let res: Response;
   try {
-    res = await fetch(path, { ...init, headers, body });
+    res = IS_STATIC ? await staticFetch(path, { ...init, headers, body }) : await fetch(path, { ...init, headers, body });
   } catch {
     throw new ApiError(0, "network_unavailable", "ARGUS server unreachable");
   }
@@ -83,8 +86,23 @@ export async function upload<T = unknown>(path: string, file: File): Promise<T> 
   return api<T>(path, { method: "POST", body: fd });
 }
 
+/** Raw (non-JSON) request to the ARGUS API with the session token — images, HTML reports, GeoJSON. */
+export function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  if (IS_STATIC) return staticFetch(path, init);
+  const headers = new Headers(init.headers);
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return fetch(path, { ...init, headers });
+}
+
+/** Link target for a downloadable API file (templates). */
+export function apiHref(path: string): string {
+  return IS_STATIC ? staticAssetUrl(path) : path;
+}
+
 /** Adds the bearer token to MapLibre requests for ARGUS API resources (images, tiles, GeoJSON). */
 export function mapTransformRequest(url: string): { url: string; headers?: Record<string, string> } {
+  if (IS_STATIC) return { url };
   const token = getToken();
   if (token && (url.startsWith("/api/") || url.includes(`${typeof window !== "undefined" ? window.location.host : ""}/api/`))) {
     return { url, headers: { Authorization: `Bearer ${token}` } };
@@ -94,6 +112,7 @@ export function mapTransformRequest(url: string): { url: string; headers?: Recor
 
 /** Absolute same-origin URL. String concatenation keeps tile templates ({z}/{x}/{y}) unencoded. */
 export function absUrl(path: string): string {
+  if (IS_STATIC && path.startsWith("/api/")) return staticAssetUrl(path);
   if (typeof window === "undefined" || /^https?:/.test(path)) return path;
   return `${window.location.origin}${path.startsWith("/") ? "" : "/"}${path}`;
 }

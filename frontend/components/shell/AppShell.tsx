@@ -29,8 +29,10 @@ import { useAuth } from "@/lib/auth";
 import { dateOnly, hhmm, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { useArea, useAreas, useHealth } from "@/lib/queries";
+import { getManifest, IS_STATIC, REPO_URL } from "@/lib/staticDemo";
 
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 
 const AREA_NAV: { id: string; icon: LucideIcon; perm?: string }[] = [
   { id: "situation", icon: MapIcon },
@@ -128,16 +130,25 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           )}
           <LanguageSwitcher />
+          <ThemeToggle />
           <div className="hidden items-center gap-2 border-l border-line pl-2 sm:flex">
             <div className="text-right leading-tight">
-              <div className="text-[11.5px] font-semibold">{user.full_name}</div>
+              <div className="text-[11.5px] font-semibold">{IS_STATIC ? ta("staticUser") : user.full_name}</div>
               <div className="text-[10px] uppercase tracking-wider text-accent">{tr(user.role)}</div>
             </div>
-            <button onClick={() => { logout(); router.replace("/login"); }} title={ta("signOut")} aria-label={ta("signOut")}
-              className="rounded p-1 text-muted hover:bg-panel-2 hover:text-ink"><LogOut className="h-4 w-4" /></button>
+            {!IS_STATIC && (
+              <button onClick={() => { logout(); router.replace("/login"); }} title={ta("signOut")} aria-label={ta("signOut")}
+                className="rounded p-1 text-muted hover:bg-panel-2 hover:text-ink"><LogOut className="h-4 w-4" /></button>
+            )}
           </div>
         </div>
       </header>
+      {IS_STATIC && (
+        <div className="shrink-0 border-b border-accent/30 bg-accent/10 px-3 py-1 text-center text-[11px] text-ink-2">
+          <b className="text-accent">{ta("staticBadge")}</b> — {ta("staticBanner", { date: dateOnly(getManifest()?.created ?? null, 300) })}
+          {REPO_URL && <> · <a className="font-semibold text-accent underline" href={`${REPO_URL}#run-the-full-version`} target="_blank" rel="noreferrer">{ta("staticFull")}</a></>}
+        </div>
+      )}
       {areaInfo?.is_demo && (
         <div className="shrink-0 border-b border-sim/30 bg-sim/10 px-3 py-0.5 text-center text-[10.5px] font-semibold tracking-wider text-sim">{ta("demoBanner")}</div>
       )}

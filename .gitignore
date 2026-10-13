@@ -38,3 +38,6 @@ data/realdata/_cache/
 data/realdata/*/generated/
 data/realdata/*/.*-extract-*/
 data/runtime/
+
+# Static online demo snapshot (recorded in CI by scripts/static_demo/record.py)
+frontend/public/demo-data/

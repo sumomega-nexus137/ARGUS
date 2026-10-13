@@ -2,14 +2,15 @@
 
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, Crosshair, Pause, Play, RotateCcw, SkipBack, TimerReset } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { useAreaCtx } from "@/components/area/AreaContext";
-import { Badge } from "@/components/ui/primitives";
+import { Badge, useErrorText } from "@/components/ui/primitives";
 import { post } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { offsetLabel } from "@/lib/format";
+import { IS_STATIC } from "@/lib/staticDemo";
 import { useInvalidateArea } from "@/lib/queries";
 import { useUi } from "@/lib/store";
 
@@ -25,6 +26,8 @@ const PLAY_TICK_MS = 420;
 
 export function Timeline() {
   const tt = useTranslations("timeline");
+  const errText = useErrorText();
+  const [clockErr, setClockErr] = useState<string | null>(null);
   const { areaId, scenario, t, nowMin, fmt, accessTl, access, area } = useAreaCtx();
   const setCursor = useUi((s) => s.setCursor);
   const playing = useUi((s) => s.playing);
@@ -82,9 +85,14 @@ export function Timeline() {
   };
 
   const clock = async (body: object) => {
-    await post(`/api/areas/${areaId}/clock`, body);
-    setCursor(null);
-    invalidate(areaId);
+    setClockErr(null);
+    try {
+      await post(`/api/areas/${areaId}/clock`, body);
+      setCursor(null);
+      invalidate(areaId);
+    } catch (e) {
+      setClockErr(errText(e));
+    }
   };
 
   if (!scenario || t === null || nowMin === null) return <div className="h-[74px] border-t border-line bg-panel" />;
@@ -119,8 +127,9 @@ export function Timeline() {
           <Badge tone={forecast ? "warn" : "info"}>{forecast ? tt("forecast") : Math.abs(t - nowMin) < 0.5 ? tt("now") : tt("analysis")}</Badge>
           {forecast && <span className="hidden text-[10.5px] text-muted xl:inline">{scenario.mode === "HISTORICAL" ? tt("forecastNoteHistorical") : tt("forecastNote")}</span>}
         </div>
-        {area?.clock_mode !== "LIVE" && can("plan_edit") && (
-          <div className="ml-auto flex items-center gap-1" title={tt("clockHint")}>
+        {area?.clock_mode !== "LIVE" && can("plan_edit") && !IS_STATIC && (
+          <div className="ml-auto flex items-center gap-1" title={clockErr || tt("clockHint")}>
+            {clockErr && <span role="alert" className="max-w-[260px] truncate text-[10.5px] text-crit">{clockErr}</span>}
             <span className="hidden text-[10.5px] uppercase tracking-wider text-sim 2xl:inline">{area?.clock_mode === "HISTORICAL" ? tt("clockHintHistorical") : tt("clockHint")}</span>
             <button onClick={() => clock({ advance_min: 30 })} className="flex items-center gap-1 rounded border border-sim/40 px-1.5 py-0.5 text-[11px] font-semibold text-sim hover:bg-sim/10">
               <TimerReset className="h-3.5 w-3.5" />{tt("advanceClock")}

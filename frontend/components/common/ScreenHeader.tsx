@@ -14,13 +14,13 @@ export function ScreenHeader({ screen, right }: { screen: string; right?: React.
   const { area } = useAreaCtx();
   const { locale } = useLocale();
   return (
-    <div className="flex items-start justify-between gap-2">
-      <div>
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="min-w-[14rem] flex-1">
         <div className="text-[10.5px] font-semibold uppercase tracking-wider text-muted">{area ? pickName(area.names, locale) : ""}</div>
         <h1 className="text-base font-bold tracking-wide">{tn(screen)}</h1>
         <p className="text-[12.5px] text-accent">{tq(screen)}</p>
       </div>
-      <div className="flex shrink-0 items-start gap-2">
+      <div className="flex max-w-full flex-wrap items-start justify-end gap-2">
         {right}
         <ScreenHelp screen={screen} />
       </div>

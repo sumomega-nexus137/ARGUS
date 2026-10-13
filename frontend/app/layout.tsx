@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 
+import { THEME_SCRIPT } from "@/lib/theme";
 import type { Locale } from "@/lib/types";
 
 import "./globals.css";
@@ -11,14 +12,17 @@ export const metadata: Metadata = {
   description: "Regional Flood Decision & Response System",
 };
 
-export const viewport: Viewport = { themeColor: "#0a0e13", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#f3f5f4", width: "device-width", initialScale: 1 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const c = await cookies();
-  const raw = c.get("argus_locale")?.value;
+  // the static online demo has no server: the language comes from the browser (localStorage) after load
+  const raw = process.env.ARGUS_STATIC_EXPORT === "1" ? undefined : (await cookies()).get("argus_locale")?.value;
   const locale: Locale = raw === "ru" || raw === "en" || raw === "kk" ? raw : "kk";
   return (
-    <html lang={locale} className="dark">
+    <html lang={locale} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-screen antialiased">
         <Providers locale={locale}>{children}</Providers>
       </body>

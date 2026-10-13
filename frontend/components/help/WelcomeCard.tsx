@@ -24,7 +24,7 @@ export function WelcomeCard() {
   if (!show) return null;
   const steps = tg.raw("welcome.steps") as string[];
   return (
-    <div className="relative overflow-hidden rounded-[4px] border border-accent/40 bg-[linear-gradient(135deg,rgba(63,179,255,.14),rgba(63,179,255,.03))] p-4">
+    <div className="relative overflow-hidden rounded-[4px] border border-accent/40 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-accent)_14%,transparent),color-mix(in_srgb,var(--color-accent)_3%,transparent))] p-4">
       <button onClick={close} aria-label={tg("close")} className="absolute right-2 top-2 rounded p-1 text-muted hover:bg-panel-2 hover:text-ink"><X className="h-4 w-4" /></button>
       <div className="flex items-center gap-2 text-accent"><Sparkles className="h-4 w-4" /><h2 className="text-[15px] font-bold text-ink">{tg("welcome.title")}</h2></div>
       <p className="mt-1 max-w-[640px] text-[12.5px] leading-snug text-ink-2">{tg("welcome.body")}</p>

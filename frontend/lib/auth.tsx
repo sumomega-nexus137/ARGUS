@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { api, getToken, post, setToken } from "./api";
+import { getManifest, IS_STATIC } from "./staticDemo";
 import type { User } from "./types";
 
 interface AuthCtx {
@@ -35,6 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+    if (IS_STATIC) {
+      // online demo: everyone enters as the recorded read-only demo planner, no password
+      setUser((getManifest()?.user as User | undefined) ?? null);
+      setReady(true);
+      return;
+    }
     if (!getToken()) {
       setReady(true);
       return;

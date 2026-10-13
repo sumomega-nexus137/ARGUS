@@ -48,10 +48,10 @@ function DailyChart({ rows, field, color, unit }: { rows: Row[]; field: string; 
         const h = (Math.abs(v) / range) * H;
         return <rect key={i} x={i * bw + 0.5} y={v >= 0 ? y0 - h : y0} width={Math.max(1, bw - 1)} height={h} fill={color} opacity={v >= 0 ? 0.75 : 0.45}><title>{`${r.date}: ${v} ${unit}`}</title></rect>;
       })}
-      {min < 0 && <line x1={0} x2={W} y1={y0} y2={y0} stroke="#738396" strokeWidth={0.5} />}
-      <text x={0} y={H + 10} fontSize={8} fill="#738396">{rows[0]?.date}</text>
-      <text x={W} y={H + 10} fontSize={8} fill="#738396" textAnchor="end">{rows[rows.length - 1]?.date}</text>
-      <text x={W} y={9} fontSize={8} fill="#738396" textAnchor="end">{tc("max")} {num(max, 2)} {unit}{min < 0 ? ` · ${tc("min")} ${num(min, 2)} ${unit}` : ""}</text>
+      {min < 0 && <line x1={0} x2={W} y1={y0} y2={y0} stroke="var(--color-muted)" strokeWidth={0.5} />}
+      <text x={0} y={H + 10} fontSize={8} fill="var(--color-muted)">{rows[0]?.date}</text>
+      <text x={W} y={H + 10} fontSize={8} fill="var(--color-muted)" textAnchor="end">{rows[rows.length - 1]?.date}</text>
+      <text x={W} y={9} fontSize={8} fill="var(--color-muted)" textAnchor="end">{tc("max")} {num(max, 2)} {unit}{min < 0 ? ` · ${tc("min")} ${num(min, 2)} ${unit}` : ""}</text>
     </svg>
   );
 }
@@ -112,7 +112,7 @@ export function HistoryPanel({ areaId }: { areaId: string }) {
             <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted">
               <span>{th("glofas")}</span><Badge tone="muted">{th("globalModel")}</Badge>
             </div>
-            <DailyChart rows={h.glofas.rows} field="river_discharge" color="#3fb3ff" unit="m³/s" />
+            <DailyChart rows={h.glofas.rows} field="river_discharge" color="var(--color-water)" unit="m³/s" />
             <p className="text-[10px] text-muted">{th("glofasCaveat")}</p>
           </div>
         )}
@@ -121,8 +121,8 @@ export function HistoryPanel({ areaId }: { areaId: string }) {
             <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted">
               <span>{th("weather")}</span><Badge tone="muted">{th("reanalysis")}</Badge>
             </div>
-            <DailyChart rows={h.weather.rows} field="temperature_2m_max" color="#f59e2b" unit="°C" />
-            <DailyChart rows={h.weather.rows} field="precipitation_sum" color="#7aa2c7" unit="mm" />
+            <DailyChart rows={h.weather.rows} field="temperature_2m_max" color="var(--color-warn)" unit="°C" />
+            <DailyChart rows={h.weather.rows} field="precipitation_sum" color="var(--color-cached)" unit="mm" />
           </div>
         )}
       </div>
@@ -166,7 +166,7 @@ export function LiveContextPanel({ areaId }: { areaId: string }) {
               {f.fetched_at ? `${tl("dataAge")}: ${tl("minutes", { n: f.age_min !== null ? num(f.age_min, 0) : "—" })} · ${tl("fetched")} ${f.fetched_at.replace("T", " ").slice(0, 16)} UTC` : tl("noData")}
               {f.message && ` · ${f.message}`}
             </div>
-            {f.data?.rows?.length ? <DailyChart rows={f.data.rows} field={k === "glofas" ? "river_discharge" : "precipitation_sum"} color={k === "glofas" ? "#3fb3ff" : "#7aa2c7"} unit={k === "glofas" ? "m³/s" : "mm"} /> : null}
+            {f.data?.rows?.length ? <DailyChart rows={f.data.rows} field={k === "glofas" ? "river_discharge" : "precipitation_sum"} color={k === "glofas" ? "var(--color-water)" : "var(--color-cached)"} unit={k === "glofas" ? "m³/s" : "mm"} /> : null}
           </div>
         );
       })}

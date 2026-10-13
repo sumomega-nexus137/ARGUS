@@ -74,7 +74,7 @@ export default function HelpPage() {
           ))}
         </nav>
         <main className="min-w-0 flex-1 space-y-4">
-          <header className="rounded-[6px] border border-accent/30 bg-[linear-gradient(135deg,rgba(63,179,255,.16),rgba(63,179,255,.02))] p-5">
+          <header className="rounded-[6px] border border-accent/30 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-accent)_14%,transparent),color-mix(in_srgb,var(--color-accent)_3%,transparent))] p-5">
             <div className="flex items-center gap-2 text-accent"><BookOpen className="h-5 w-5" /><h1 className="text-xl font-bold text-ink">{tg("title")}</h1></div>
             <p className="mt-1 text-[13.5px] text-ink-2">{tg("subtitle")}</p>
           </header>
