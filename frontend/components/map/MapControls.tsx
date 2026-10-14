@@ -14,7 +14,7 @@ import { useUi, type LayerToggles } from "@/lib/store";
 const GROUPS: { key: string; items: (keyof LayerToggles)[] }[] = [
   { key: "groupFlood", items: ["flood", "extent", "waterFx"] },
   { key: "groupCity", items: ["buildings", "roads", "labels", "facilities", "sites", "sectors"] },
-  { key: "groupBase", items: ["hillshade", "basemap"] },
+  { key: "groupBase", items: ["hillshade"] },
 ];
 
 const DEPTH_STOPS = [

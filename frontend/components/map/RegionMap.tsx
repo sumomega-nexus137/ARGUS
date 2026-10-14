@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { getMaplibre } from "@/lib/maplibre";
 import { useEffect, useRef } from "react";
 
-import { BASEMAP, MAP_PALETTE } from "@/lib/mapPalette";
+import { MAP_PALETTE } from "@/lib/mapPalette";
 import { TONE_HEX, TONE_VAR, toneOf } from "@/lib/status";
 import type { AreaOverview } from "@/lib/types";
 
@@ -27,11 +27,9 @@ export function RegionMap({ areas, labels, onSelect }: { areas: AreaOverview[]; 
       style: {
         version: 8,
         sources: {
-          carto: { type: "raster", tiles: [...BASEMAP.tiles], tileSize: 256, attribution: BASEMAP.attribution, maxzoom: BASEMAP.maxzoom },
         },
         layers: [
           { id: "bg", type: "background", paint: { "background-color": palRef.current.bg } },
-          { id: "carto", type: "raster", source: "carto", paint: { "raster-opacity": palRef.current.carto.opacity, "raster-brightness-max": palRef.current.carto.brightnessMax, "raster-saturation": palRef.current.carto.saturation, "raster-contrast": 0.1 } },
         ],
       },
       center: [68.9, 52.6],
