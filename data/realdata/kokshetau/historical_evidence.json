@@ -1,0 +1,75 @@
+{
+  "mode": "HISTORICAL",
+  "status": "OFFICIALLY_REPORTED_IMPACT_NOT_INUNDATION_POLYGON",
+  "note": {
+    "kk": "Бұл нүктелер/дәліздер ресми хабарламаларда зардап шеккен немесе су басқан орындар ретінде аталған. Олар модельдік су басу полигоны емес.",
+    "ru": "Эти места/коридоры названы в официальных сообщениях как затронутые или подтопленные. Это не модельный полигон затопления.",
+    "en": "These places/corridors are named in official reports as affected or flooded. They are not modelled inundation polygons."
+  },
+  "items": [
+    {
+      "id": "KOK-EVID-ERT",
+      "when": "2024-03-28",
+      "kind": "OFFICIAL_REPORTED_IMPACT",
+      "name": {
+        "kk": "«Ертөстік» балабақшасы",
+        "ru": "детский сад «Ертөстік»",
+        "en": "Ertostik kindergarten"
+      },
+      "description": {
+        "kk": "Ресми хабарламада ғимараттың бірінші қабатын су басқаны және суды сору жұмыстары жүргізілгені көрсетілген.",
+        "ru": "В официальном сообщении указано затопление первого этажа здания и проведение откачки воды.",
+        "en": "Official reporting states that the first floor was flooded and water pumping was carried out."
+      },
+      "source_url": "https://www.gov.kz/memleket/entities/aqmola-edu/press/news/details/738704?lang=ru"
+    },
+    {
+      "id": "KOK-EVID-S12",
+      "when": "2024-03-28",
+      "kind": "OFFICIAL_REPORTED_ACCESS",
+      "name": {
+        "kk": "№12 мектеп маңындағы көпір",
+        "ru": "мост у школы №12",
+        "en": "bridge near School No. 12"
+      },
+      "description": {
+        "kk": "Қылшақты арнасынан су асып, көпір уақытша жабылғаны және маңайдағы құрылыстарға су кіргені хабарланды.",
+        "ru": "Сообщалось о переливе Кылшакты через район моста, его временном закрытии и подтоплении близлежащих строений.",
+        "en": "Reports described Kylshakty overflow around the bridge, temporary closure and flooding of nearby structures."
+      },
+      "source_url": "https://www.gov.kz/memleket/entities/aqmola/press/news/details/736409?lang=ru"
+    },
+    {
+      "id": "KOK-EVID-STATION",
+      "when": "2024-04",
+      "kind": "OFFICIAL_REPORTED_IMPACT_CORRIDOR",
+      "name": {
+        "kk": "Вокзал маңы / Жангелдинова және Железнодорожная көшелері",
+        "ru": "район вокзала / улицы Джангильдинова и Железнодорожная",
+        "en": "railway-station area / Dzhangildinova and Zheleznodorozhnaya streets"
+      },
+      "description": {
+        "kk": "Ресми материалдарда өзенге жақын осы аумақтардағы үйлер су басу аймағында болғаны көрсетілген.",
+        "ru": "В официальных материалах указано, что дома в этих близких к реке районах находились в зоне подтопления.",
+        "en": "Official material states that homes in these river-adjacent areas were in the flood-affected zone."
+      },
+      "source_url": "https://www.gov.kz/memleket/entities/aqmola/press/news/details/747114?lang=ru"
+    },
+    {
+      "id": "KOK-EVID-AGG",
+      "when": "2024-03-29T05:25:00+05:00",
+      "kind": "OFFICIAL_REPORTED_AGGREGATE",
+      "name": {
+        "kk": "Көкшетау бойынша ресми жиынтық",
+        "ru": "официальный итог по Кокшетау",
+        "en": "official Kokshetau impact aggregate"
+      },
+      "description": {
+        "kk": "16 жеке үй, 29 жеке аула, 12 көпқабатты үй ауласы және «Ертөстік» балабақшасының бірінші қабаты зардап шеккен; 113 адам, оның ішінде 30 бала эвакуацияланған.",
+        "ru": "Затронуты 16 частных домов, 29 частных дворов, 12 дворов многоквартирных домов и первый этаж детсада «Ертөстік»; эвакуированы 113 человек, включая 30 детей.",
+        "en": "Reported impacts: 16 private houses, 29 private yards, 12 apartment courtyards and the first floor of Ertostik kindergarten; 113 people evacuated, including 30 children."
+      },
+      "source_url": "https://www.gov.kz/memleket/entities/emer/press/news/details/737252?lang=ru"
+    }
+  ]
+}

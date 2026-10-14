@@ -1,0 +1,28 @@
+name: ARGUS upstream API/data readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/festive-faraday-90f1gh
+    paths:
+      - ".github/workflows/api-readiness.yml"
+      - "scripts/realdata/api_preflight.py"
+      - "data/realdata/source_registry.json"
+
+jobs:
+  source-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - name: Probe public sources and document configured providers
+        run: python scripts/realdata/api_preflight.py --output data/realdata/api_readiness.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: argus-api-readiness
+          path: data/realdata/api_readiness.json
+          retention-days: 30

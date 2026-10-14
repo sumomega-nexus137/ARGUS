@@ -1,0 +1,152 @@
+{
+  "generated_for": "ARGUS FloodOps",
+  "updated": "2026-10-01",
+  "principles": [
+    "Public global APIs are context/forecast inputs, not substitutes for verified local hydropost or field observations.",
+    "Frontend must call ARGUS backend; upstream URLs stay server-side.",
+    "All provider outputs retain source, timestamp, mode, quality and uncertainty/provenance.",
+    "Closed official integrations remain NOT_CONFIGURED until an authorized endpoint is supplied."
+  ],
+  "profiles": [
+    {
+      "key": "open_meteo_glofas",
+      "provider": "Open-Meteo Flood API (GloFAS v4)",
+      "endpoint": "https://flood-api.open-meteo.com/v1/flood",
+      "method": "GET",
+      "auth": "none for ordinary non-commercial API access",
+      "params": {
+        "latitude": "WGS84 latitude",
+        "longitude": "WGS84 longitude",
+        "daily": "river_discharge,river_discharge_mean,river_discharge_median,river_discharge_max,river_discharge_min,river_discharge_p25,river_discharge_p75",
+        "forecast_days": "1..210",
+        "past_days": "optional",
+        "start_date": "YYYY-MM-DD optional",
+        "end_date": "YYYY-MM-DD optional",
+        "cell_selection": "nearest"
+      },
+      "normalize_to": {
+        "kind": "discharge_forecast",
+        "value_unit": "m3/s",
+        "source_type": "GLOBAL_MODEL",
+        "source": "Open-Meteo / GloFAS v4",
+        "quality": "GLOBAL_MODEL"
+      },
+      "caveats": [
+        "GloFAS/Open-Meteo resolution is about 5 km; the selected river cell may not correspond exactly to Zhabai or Kylshakty.",
+        "Use for forecast/context and scenario forcing, not as an official local gauge observation.",
+        "Local verified observation overrides this source."
+      ]
+    },
+    {
+      "key": "open_meteo_weather",
+      "provider": "Open-Meteo Forecast API",
+      "endpoint": "https://api.open-meteo.com/v1/forecast",
+      "method": "GET",
+      "auth": "none for ordinary non-commercial API access",
+      "params": {
+        "latitude": "WGS84 latitude",
+        "longitude": "WGS84 longitude",
+        "hourly": "temperature_2m,precipitation,rain,snowfall,snow_depth,soil_moisture_0_to_7cm",
+        "forecast_days": "1..16 depending model",
+        "timezone": "Asia/Almaty"
+      },
+      "normalize_to": {
+        "kind": "weather",
+        "source_type": "GLOBAL_MODEL",
+        "source": "Open-Meteo",
+        "quality": "GLOBAL_MODEL"
+      },
+      "caveats": [
+        "Weather-model data are contextual forcing, not local hydropost measurements.",
+        "Snow depth and soil moisture are model-grid estimates and require uncertainty labelling."
+      ]
+    },
+    {
+      "key": "open_meteo_archive",
+      "provider": "Open-Meteo Historical Weather API",
+      "endpoint": "https://archive-api.open-meteo.com/v1/archive",
+      "method": "GET",
+      "auth": "none for ordinary non-commercial API access",
+      "params": {
+        "latitude": "WGS84 latitude",
+        "longitude": "WGS84 longitude",
+        "start_date": "YYYY-MM-DD",
+        "end_date": "YYYY-MM-DD",
+        "hourly": "temperature_2m,precipitation,rain,snowfall,snow_depth,soil_moisture_0_to_7cm",
+        "timezone": "Asia/Almaty"
+      },
+      "role": "historical meteorological context for event analysis/calibration",
+      "quality": "REANALYSIS_OR_HISTORICAL_MODEL"
+    },
+    {
+      "key": "earth_search_sentinel2",
+      "provider": "Element84 Earth Search STAC",
+      "endpoint": "https://earth-search.aws.element84.com/v1",
+      "collection": "sentinel-2-l2a",
+      "method": "STAC",
+      "auth": "none",
+      "role": "historical optical flood evidence"
+    },
+    {
+      "key": "planetary_computer_jrc",
+      "provider": "Microsoft Planetary Computer STAC",
+      "endpoint": "https://planetarycomputer.microsoft.com/api/stac/v1",
+      "collection": "jrc-gsw",
+      "method": "STAC",
+      "auth": "signed asset URLs via planetary-computer SDK",
+      "role": "long-term permanent-water baseline"
+    },
+    {
+      "key": "copernicus_dem",
+      "provider": "Copernicus DEM GLO-30 public AWS",
+      "endpoint": "https://copernicus-dem-30m.s3.amazonaws.com",
+      "method": "COG/HTTP",
+      "auth": "none",
+      "role": "terrain"
+    },
+    {
+      "key": "osm_overpass",
+      "provider": "OpenStreetMap Overpass",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "method": "POST/GET via OSMnx",
+      "auth": "none",
+      "role": "roads, buildings, waterways, bridges/culverts, candidate facilities"
+    },
+    {
+      "key": "worldpop",
+      "provider": "WorldPop public data",
+      "endpoint": "https://worldpop-public-data.soton.ac.uk",
+      "method": "COG/HTTP",
+      "auth": "none",
+      "role": "modelled population exposure"
+    },
+    {
+      "key": "kazhydromet",
+      "provider": "Kazhydromet",
+      "endpoint": null,
+      "method": "authorized integration or bulletin/manual import",
+      "auth": "agency-dependent",
+      "state": "NOT_CONFIGURED_UNTIL_AUTHORIZED_ENDPOINT",
+      "role": "official local hydrology"
+    },
+    {
+      "key": "tasqyn",
+      "provider": "Tasqyn",
+      "endpoint": null,
+      "method": "authorized integration/manual import",
+      "auth": "agency-dependent",
+      "state": "NOT_CONFIGURED_UNTIL_AUTHORIZED_ENDPOINT",
+      "role": "official upstream flood forecast/model input"
+    }
+  ],
+  "demo_coordinates": {
+    "atbasar": {
+      "latitude": 51.80854,
+      "longitude": 68.35823
+    },
+    "kokshetau": {
+      "latitude": 53.2836,
+      "longitude": 69.4049
+    }
+  }
+}

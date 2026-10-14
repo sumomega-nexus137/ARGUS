@@ -1,0 +1,44 @@
+name: ARGUS optical flood-observation probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/festive-faraday-90f1gh
+    paths:
+      - ".github/workflows/optical-probe.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe Sentinel-2 and Landsat around Atbasar flood
+        run: |
+          python - <<'PY'
+          import json, urllib.parse, urllib.request
+          bbox="68.15,51.68,68.58,51.95"
+          dt="2024-04-01T00:00:00Z/2024-04-25T23:59:59Z"
+          for coll in ["sentinel-2-l2a","landsat-c2-l2"]:
+              url="https://earth-search.aws.element84.com/v1/search?"+urllib.parse.urlencode({
+                  "collections":coll,"bbox":bbox,"datetime":dt,"limit":100
+              })
+              print("\n###",coll,url)
+              req=urllib.request.Request(url,headers={"User-Agent":"ARGUS-FloodOps/1.0"})
+              with urllib.request.urlopen(req,timeout=60) as r:
+                  data=json.load(r)
+              feats=data.get("features",[])
+              feats.sort(key=lambda x:(x.get("properties",{}).get("eo:cloud_cover",999), x.get("properties",{}).get("datetime","")))
+              print("matched",data.get("context",{}).get("matched"),"returned",len(feats))
+              for x in feats[:20]:
+                  p=x.get("properties",{})
+                  print(json.dumps({
+                      "id":x.get("id"),
+                      "datetime":p.get("datetime"),
+                      "cloud":p.get("eo:cloud_cover"),
+                      "platform":p.get("platform"),
+                      "assets":sorted(x.get("assets",{}).keys())
+                  }))
+          PY

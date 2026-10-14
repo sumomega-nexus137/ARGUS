@@ -1,0 +1,16 @@
+# Build contexts: repository root (backend) and frontend/. Keep large / local-only files out of images.
+.git
+**/node_modules
+**/.next
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+backend/.venv
+data/argus.db*
+data/runtime
+data/processed
+data/imports
+data/realdata/_cache
+data/realdata/*/generated
+data/realdata/*/.extract-*

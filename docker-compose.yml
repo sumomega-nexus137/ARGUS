@@ -1,0 +1,44 @@
+# ARGUS FloodOps — production-like stack: PostGIS + API + console.
+#   docker compose up --build        → http://localhost:3000  (demo accounts: see README)
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: argus
+      POSTGRES_USER: argus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-argus}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus -d argus"]
+      interval: 5s
+      retries: 20
+
+  backend:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    environment:
+      ARGUS_DATABASE_URL: postgresql+psycopg2://argus:${POSTGRES_PASSWORD:-argus}@db:5432/argus
+      ARGUS_DEMO_MODE: ${ARGUS_DEMO_MODE:-true}
+      ARGUS_JWT_SECRET: ${ARGUS_JWT_SECRET:-change-me}
+      ARGUS_CORS_ORIGINS: '["http://localhost:3000"]'
+      # auto: HISTORICAL real-data pilots when both packs are installed, else DEMO; historical: fail if missing
+      ARGUS_DATA_PROFILE: ${ARGUS_DATA_PROFILE:-auto}
+      # install pinned real-data packs into the "packs" volume on first start (verified; no re-download later)
+      ARGUS_INSTALL_REALDATA: ${ARGUS_INSTALL_REALDATA:-true}
+      ARGUS_OPEN_METEO_ENABLED: ${ARGUS_OPEN_METEO_ENABLED:-true}
+    volumes:
+      - ./data/imports:/srv/argus/data/imports
+      - packs:/srv/argus/packs            # installed real-data packs (~150 MB archives + extracted files)
+      - runtime:/srv/argus/data/runtime   # derived bundles, API caches
+    depends_on: { db: { condition: service_healthy } }
+    ports: ["8000:8000"]
+
+  frontend:
+    build: { context: ./frontend, args: { ARGUS_API_URL: "http://backend:8000" } }
+    environment: { ARGUS_API_URL: "http://backend:8000" }
+    depends_on: [backend]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
+  packs:
+  runtime:
