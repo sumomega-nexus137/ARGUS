@@ -9,7 +9,7 @@ import { absUrl, apiFetch, mapTransformRequest } from "@/lib/api";
 import { countdown, pickName } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { getMaplibre } from "@/lib/maplibre";
-import { buildingColor, MAP_PALETTE, roadLineColor } from "@/lib/mapPalette";
+import { BASEMAP, buildingColor, MAP_PALETTE, roadLineColor } from "@/lib/mapPalette";
 import { useUi } from "@/lib/store";
 import { IS_STATIC } from "@/lib/staticDemo";
 import { toneOf, type Tone } from "@/lib/status";
@@ -89,10 +89,7 @@ export function OpsMap() {
         sources: {
           dem: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: DEM_MAXZOOM },
           demhs: { type: "raster-dem", tiles: [demUrl], tileSize: 256, encoding: "terrarium", maxzoom: DEM_MAXZOOM },
-          carto: {
-            type: "raster", tileSize: 256, attribution: "© OpenStreetMap contributors",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-          },
+          carto: { type: "raster", tileSize: 256, attribution: BASEMAP.attribution, tiles: [...BASEMAP.tiles], maxzoom: BASEMAP.maxzoom },
         },
         layers: [
           { id: "bg", type: "background", paint: { "background-color": p0.bg } },

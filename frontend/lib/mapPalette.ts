@@ -51,3 +51,12 @@ export function buildingColor(p: MapPalette): ML.ExpressionSpecification {
     ["interpolate", ["linear"], ["coalesce", ["feature-state", "depth"], 0], 10, "#f2c14e", 50, "#f59e2b", 100, "#ef6b3b", 200, "#c81d3d"],
     ["interpolate", ["linear"], ["get", "height_m"], 3, p.buildings[0], 9, p.buildings[1], 18, p.buildings[2], 30, p.buildings[3]]];
 }
+
+/** Optional external basemap: CARTO Voyager raster tiles (keyless, attribution required; high-DPI for sharp text).
+ *  tile.openstreetmap.org must NOT be used — its usage policy forbids app traffic and it answers with "Access blocked"
+ *  images. Offline or when CARTO is unreachable the map still shows every ARGUS layer (local data). */
+export const BASEMAP = {
+  tiles: ["a", "b", "c", "d"].map((s) => `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png`),
+  attribution: "© OpenStreetMap contributors © CARTO",
+  maxzoom: 19,
+} as const;
