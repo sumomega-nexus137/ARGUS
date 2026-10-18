@@ -1,0 +1,85 @@
+name: ARGUS real data — publish packs as release assets
+
+# Republishes the successful, integrity-checked real-data build artifacts as permanent GitHub
+# Release assets. Actions artifacts expire (30 days) and are served from a storage host that many
+# restricted networks block; release assets are durable and fetched once by
+# `python -m app.cli install-realdata` (see docs/REAL_DATA_INSTALL.md). Nothing is rebuilt here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag"
+        default: "realdata-2026-10-01"
+  push:
+    branches:
+      - claude/festive-faraday-90f1gh
+    paths:
+      - ".github/workflows/realdata-release.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  TAG: ${{ github.event.inputs.tag || 'realdata-2026-10-01' }}
+  ATBASAR_RUN_ID: "36886595533"
+  KOKSHETAU_RUN_ID: "36886613476"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: scripts/realdata/requirements.txt
+
+      - name: Download Atbasar artifact (run ${{ env.ATBASAR_RUN_ID }})
+        uses: actions/download-artifact@v4
+        with:
+          name: argus-atbasar-realdata
+          path: packs/atbasar
+          run-id: ${{ env.ATBASAR_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Kokshetau artifact (run ${{ env.KOKSHETAU_RUN_ID }})
+        uses: actions/download-artifact@v4
+        with:
+          name: argus-kokshetau-realdata
+          path: packs/kokshetau
+          run-id: ${{ env.KOKSHETAU_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-validate packs
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/realdata/requirements.txt
+          python scripts/realdata/validate_pack.py --area atbasar --root packs/atbasar
+          python scripts/realdata/validate_pack.py --area kokshetau --root packs/kokshetau
+
+      - name: Build deterministic tarballs + checksums
+        run: |
+          mkdir -p dist
+          for area in atbasar kokshetau; do
+            tar --sort=name --mtime='2026-10-01 00:00:00Z' --owner=0 --group=0 --numeric-owner \
+                -C packs/$area -czf dist/argus-$area-realdata.tar.gz .
+          done
+          (cd dist && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS)
+          du -h dist/*
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --target "${GITHUB_SHA}" --prerelease \
+              --title "ARGUS real-data packs ($TAG)" \
+              --notes "Atbasar run $ATBASAR_RUN_ID / Kokshetau run $KOKSHETAU_RUN_ID. Integrity-checked historical packs. Install with: python -m app.cli install-realdata. Observed flood mask: AUTOMATED_EARTH_OBSERVATION_BASELINE_REQUIRES_QC (Sentinel-2 fallback; no Sentinel-1 acquisition for the event)."
+          fi

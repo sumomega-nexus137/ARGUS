@@ -1,0 +1,50 @@
+name: ARGUS Sentinel source probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/festive-faraday-90f1gh
+    paths:
+      - ".github/workflows/sentinel-probe.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe Sentinel catalogues
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, urllib.parse, urllib.request
+          bbox="67.0,50.5,70.0,53.0"
+          dt="2024-01-01T00:00:00Z/2024-12-31T23:59:59Z"
+          urls={
+            "earth_search": "https://earth-search.aws.element84.com/v1/search?"+urllib.parse.urlencode({"collections":"sentinel-1-grd","bbox":bbox,"datetime":dt,"limit":20}),
+            "cdse": "https://stac.dataspace.copernicus.eu/v1/search?"+urllib.parse.urlencode({"collections":"sentinel-1-grd","bbox":bbox,"datetime":dt,"limit":10}),
+            "pc_rtc": "https://planetarycomputer.microsoft.com/api/stac/v1/search?"+urllib.parse.urlencode({"collections":"sentinel-1-rtc","bbox":bbox,"datetime":dt,"limit":10}),
+            "pc_grd": "https://planetarycomputer.microsoft.com/api/stac/v1/search?"+urllib.parse.urlencode({"collections":"sentinel-1-grd","bbox":bbox,"datetime":dt,"limit":10}),
+          }
+          for name,url in urls.items():
+            print("\n###",name,url)
+            try:
+              req=urllib.request.Request(url,headers={"User-Agent":"ARGUS-FloodOps/1.0"})
+              with urllib.request.urlopen(req,timeout=60) as r:
+                data=json.load(r)
+              feats=data.get("features",[])
+              print("features",len(feats),"context",data.get("context"))
+              for x in feats[:5]:
+                print(json.dumps({
+                  "id":x.get("id"),
+                  "datetime":x.get("properties",{}).get("datetime"),
+                  "orbit":x.get("properties",{}).get("sat:relative_orbit"),
+                  "orbit_state":x.get("properties",{}).get("sat:orbit_state"),
+                  "polarizations":x.get("properties",{}).get("sar:polarizations"),
+                  "assets":{k:v.get("href") for k,v in x.get("assets",{}).items()},
+                },indent=2))
+            except Exception as e:
+              print("ERROR",repr(e))
+          PY

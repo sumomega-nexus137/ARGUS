@@ -1,0 +1,36 @@
+{
+  "area_id": "atbasar",
+  "display_name": "Atbasar / Zhabai",
+  "country": "Kazakhstan",
+  "region": "Akmola",
+  "center_wgs84": [
+    68.35823,
+    51.80854
+  ],
+  "analysis_bbox_wgs84": [
+    68.15,
+    51.68,
+    68.58,
+    51.95
+  ],
+  "city_bbox_wgs84": [
+    68.25,
+    51.75,
+    68.47,
+    51.88
+  ],
+  "projected_crs": "EPSG:32642",
+  "event": {
+    "name": "Atbasar flood 2024",
+    "search_start": "2024-03-20",
+    "search_end": "2024-04-25",
+    "flood_window_start": "2024-04-09",
+    "flood_window_end": "2024-04-16",
+    "pre_flood_target_date": "2024-04-05",
+    "flood_target_date": "2024-04-12",
+    "post_flood_target_date": "2024-04-21",
+    "post_flood_window_start": "2024-04-20",
+    "post_flood_window_end": "2024-04-25",
+    "optical_reference_strategy": "Use post-recession Sentinel-2 baseline because the clear pre-flood 2024-04-04 scene is predominantly snow/ice over the AOI; compare flood-period open water against a clear post-recession scene."
+  }
+}
