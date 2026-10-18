@@ -31,7 +31,7 @@ export function Badge({ tone = "muted", icon = true, children, className, title 
 }) {
   const Icon = TONE_ICON[tone];
   return (
-    <span title={title} className={clsx("inline-flex items-center gap-1 rounded-[3px] border px-1.5 py-[1px] text-[10.5px] font-semibold uppercase tracking-wide whitespace-nowrap", TONE_CLASS[tone], className)}>
+    <span title={title} className={clsx("inline-flex items-center gap-1 rounded-[7px] border px-1.5 py-[1px] text-[10.5px] font-semibold uppercase tracking-wide whitespace-nowrap", TONE_CLASS[tone], className)}>
       {icon && <Icon aria-hidden className="h-3 w-3 shrink-0" />}
       {children}
     </span>
@@ -50,10 +50,10 @@ export function Panel({ title, right, children, className, bodyClass, id }: {
   title?: ReactNode; right?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; id?: string;
 }) {
   return (
-    <section id={id} className={clsx("rounded-[6px] border border-line bg-panel/95 shadow-[var(--shadow-card)]", className)}>
+    <section id={id} className={clsx("rise rounded-[12px] border border-line bg-panel/95 shadow-[var(--shadow-card)]", className)}>
       {(title || right) && (
-        <header className="flex items-center justify-between gap-2 border-b border-line px-3 py-1.5">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-ink-2">{title}</h2>
+        <header className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{title}</h2>
           {right}
         </header>
       )}
@@ -68,7 +68,7 @@ export function Button({ variant = "default", size = "md", busy, icon: Icon, chi
   variant?: BtnVariant; size?: "sm" | "md" | "lg"; busy?: boolean; icon?: LucideIcon;
 }) {
   const v: Record<BtnVariant, string> = {
-    primary: "bg-accent-2 text-white hover:bg-accent border-accent-2",
+    primary: "bg-accent-2 text-white hover:bg-accent border-accent-2 shadow-[0_1px_2px_rgba(15,34,56,0.15),0_4px_10px_-4px_rgba(26,92,166,0.5)]",
     accent: "bg-accent/15 text-accent border-accent/50 hover:bg-accent/25",
     default: "bg-panel-2 text-ink border-line-2 hover:bg-panel-3",
     danger: "bg-crit/15 text-crit border-crit/50 hover:bg-crit/25",
@@ -79,7 +79,7 @@ export function Button({ variant = "default", size = "md", busy, icon: Icon, chi
     <button
       {...rest}
       disabled={rest.disabled || busy}
-      className={clsx("inline-flex items-center justify-center gap-1.5 rounded-[3px] border font-semibold tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50", v[variant], s, className)}
+      className={clsx("inline-flex items-center justify-center gap-1.5 rounded-[7px] border font-semibold transition-[background-color,border-color,box-shadow,transform] duration-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50", v[variant], s, className)}
     >
       {busy ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : Icon ? <Icon aria-hidden className="h-3.5 w-3.5" /> : null}
       {children}
@@ -126,7 +126,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
   const text = useErrorText();
   const tc = useTranslations("common");
   return (
-    <div role="alert" className="flex items-center justify-between gap-2 rounded-[3px] border border-crit/40 bg-crit/10 p-2 text-xs text-crit">
+    <div role="alert" className="flex items-center justify-between gap-2 rounded-[7px] border border-crit/40 bg-crit/10 p-2 text-xs text-crit">
       <span className="flex items-center gap-1.5"><AlertOctagon aria-hidden className="h-4 w-4" />{text(error)}</span>
       {onRetry && <Button size="sm" onClick={onRetry}>{tc("retry")}</Button>}
     </div>
@@ -136,7 +136,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 export function InlineNote({ tone = "info", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
   const Icon = TONE_ICON[tone];
   return (
-    <div className={clsx("flex items-start gap-1.5 rounded-[3px] border px-2 py-1.5 text-[11.5px] leading-snug", TONE_CLASS[tone], className)}>
+    <div className={clsx("flex items-start gap-1.5 rounded-[7px] border px-2 py-1.5 text-[11.5px] leading-snug", TONE_CLASS[tone], className)}>
       <Icon aria-hidden className="mt-[1px] h-3.5 w-3.5 shrink-0" />
       <div className="min-w-0">{children}</div>
     </div>
@@ -155,12 +155,12 @@ export function Tabs<T extends string>({ tabs, value, onChange, className }: {
           aria-selected={value === tb.id}
           onClick={() => onChange(tb.id)}
           className={clsx(
-            "-mb-px border-b-2 px-3 py-1.5 text-xs font-semibold tracking-wide",
+            "-mb-px border-b-2 px-3 py-2 text-xs font-semibold transition-colors duration-200",
             value === tb.id ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink-2",
           )}
         >
           {tb.label}
-          {tb.badge !== undefined && <span className="ml-1.5 rounded-[3px] bg-line-2 px-1 py-[1px] text-[10px] tabular text-ink-2">{tb.badge}</span>}
+          {tb.badge !== undefined && <span className="ml-1.5 rounded-[7px] bg-line-2 px-1 py-[1px] text-[10px] tabular text-ink-2">{tb.badge}</span>}
         </button>
       ))}
     </div>
@@ -179,14 +179,14 @@ export function Dialog({ open, onClose, title, children, wide }: { open: boolean
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#0f2238]/45 p-4 backdrop-blur-[2px]" onClick={onClose}>
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={clsx("max-h-[88vh] w-full overflow-auto rounded-[4px] border border-line-2 bg-panel shadow-2xl outline-none", wide ? "max-w-4xl" : "max-w-xl")}
+        className={clsx("rise max-h-[88vh] w-full overflow-auto rounded-[14px] border border-line-2 bg-panel shadow-2xl outline-none", wide ? "max-w-4xl" : "max-w-xl")}
       >
         <div className="sticky top-0 flex items-center justify-between border-b border-line bg-panel px-4 py-2">
           <h2 className="text-sm font-semibold">{title}</h2>
@@ -208,7 +208,7 @@ export function Field({ label, children, hint }: { label: ReactNode; children: R
   );
 }
 
-export const inputCls = "h-7 w-full rounded-[3px] border border-line-2 bg-bg px-2 text-xs text-ink placeholder:text-muted focus:border-accent";
+export const inputCls = "h-8 w-full rounded-[7px] border border-line-2 bg-panel px-2.5 text-xs text-ink placeholder:text-muted transition-[border-color,box-shadow] focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-accent)_18%,transparent)]";
 
 export function KeyValue({ rows }: { rows: [ReactNode, ReactNode][] }) {
   return (

@@ -51,11 +51,11 @@ function NavItem({ href, icon: Icon, label, active }: { href: string; icon: Luci
       href={href}
       aria-current={active ? "page" : undefined}
       className={clsx(
-        "group flex items-center gap-2.5 rounded-[3px] px-2.5 py-1.5 text-[12.5px] font-medium",
-        active ? "bg-white/18 font-semibold text-ink shadow-[inset_3px_0_0_#ffffff]" : "text-ink-2 hover:bg-panel-2 hover:text-ink",
+        "group relative flex items-center gap-2.5 rounded-[9px] px-2.5 py-[7px] text-[13px] font-medium transition-colors duration-200",
+        active ? "bg-panel font-semibold text-ink shadow-[var(--shadow-card)] before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-accent" : "text-ink-2 hover:bg-panel/70 hover:text-ink",
       )}
     >
-      <Icon aria-hidden className={clsx("h-4 w-4 shrink-0", active ? "text-accent" : "text-muted group-hover:text-ink-2")} />
+      <Icon aria-hidden className={clsx("h-4 w-4 shrink-0 transition-colors", active ? "text-accent" : "text-muted group-hover:text-accent")} />
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -94,11 +94,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-screen flex-col overflow-hidden">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-[100] focus:bg-panel focus:p-2">{ta("skipToContent")}</a>
       {/* top bar */}
-      <header className="chrome flex h-12 shrink-0 items-center gap-3 border-b border-line-2 bg-[linear-gradient(90deg,#2b5c98,#3470b0)] px-3 shadow-[0_1px_4px_rgba(18,38,60,0.18)]">
+      <header className="chrome chrome-bar flex h-[52px] shrink-0 items-center gap-3 px-3 shadow-[0_1px_0_rgba(15,34,56,0.12),0_4px_14px_-6px_rgba(15,34,56,0.35)] lg:px-4">
         <Link href="/overview" className="flex items-center gap-2">
-          <span aria-hidden className="grid h-7 w-7 place-items-center rounded-[5px] bg-white/20 text-white"><Gauge className="h-4 w-4" /></span>
+          <span aria-hidden className="grid h-8 w-8 place-items-center rounded-[9px] bg-white/18 text-white ring-1 ring-white/25"><Gauge className="h-4 w-4" /></span>
           <span className="leading-tight">
-            <span className="block text-[13px] font-bold tracking-[0.14em]">ARGUS <span className="text-accent">FLOODOPS</span></span>
+            <span className="display block text-[14px]">ARGUS <span className="text-accent">FloodOps</span></span>
             <span className="hidden text-[10px] text-muted lg:block">{ta("subtitle")}</span>
           </span>
         </Link>
@@ -109,7 +109,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               const target = `/area/${a.id}/${section && areaId ? section : "situation"}`;
               return (
                 <Link key={a.id} href={target} aria-current={active ? "true" : undefined}
-                  className={clsx("rounded-[3px] border px-2 py-1 text-[11.5px] font-semibold", active ? "border-accent/60 bg-accent/10 text-ink" : "border-line text-ink-2 hover:bg-panel-2")}>
+                  className={clsx("rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors", active ? "border-white bg-white text-[#1d4f8c]" : "border-line-2 text-ink-2 hover:border-white/70 hover:text-ink")}>
                   {pickName(a.names, locale)}
                 </Link>
               );
@@ -120,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {serverDown && <Badge tone="offline">{tf("serverOffline")}</Badge>}
           {!serverDown && extOffline && <Badge tone="offline">{tf("externalOffline")}</Badge>}
           {areaInfo && (
-            <div className="flex items-center gap-1.5 rounded-[3px] border border-line-2 px-2 py-0.5" title={areaInfo.clock_mode}>
+            <div className="flex items-center gap-1.5 rounded-full border border-line-2 bg-white/10 py-0.5 pl-3 pr-1" title={areaInfo.clock_mode}>
               {areaInfo.clock_mode === "HISTORICAL" && <span className="tabular text-[11px] text-ink-2">{dateOnly(areaInfo.now, areaInfo.utc_offset_min)}</span>}
               <span className="tabular text-[15px] font-bold">{hhmm(areaInfo.now, areaInfo.utc_offset_min)}</span>
               <Badge tone={areaInfo.clock_mode === "LIVE" ? "live" : areaInfo.clock_mode === "HISTORICAL" ? "info" : "sim"}>
@@ -166,27 +166,27 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       <div className="flex min-h-0 flex-1">
-        <nav aria-label={ta("mainNav")} className="chrome hidden w-52 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-line p-2 lg:flex">
+        <nav aria-label={ta("mainNav")} className="hidden w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-line bg-panel-2 px-2.5 py-3 lg:flex">
           <NavItem href="/overview" icon={LayoutGrid} label={t("overview")} active={pathname.startsWith("/overview")} />
-          <div className="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{t("areaSection")}</div>
+          <div className="mt-4 mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">{t("areaSection")}</div>
           {AREA_NAV.map((n) => (
             <NavItem key={n.id} href={`/area/${currentArea}/${n.id}`} icon={n.icon} label={t(n.id)} active={!!areaId && section === n.id} />
           ))}
-          <div className="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{t("systemSection")}</div>
+          <div className="mt-4 mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">{t("systemSection")}</div>
           <NavItem href="/audit" icon={History} label={t("audit")} active={pathname.startsWith("/audit")} />
           <NavItem href="/help" icon={BookOpen} label={t("help")} active={pathname.startsWith("/help")} />
           {(can("data_admin") || can("user_admin")) && <NavItem href="/admin" icon={Settings} label={t("admin")} active={pathname.startsWith("/admin")} />}
-          <div className="mt-auto px-2 pt-4 text-[10px] leading-snug text-muted">{ta("statement")}</div>
+          <div className="mt-auto border-t border-line px-2.5 pt-3 text-[10.5px] leading-snug text-muted">{ta("statement")}</div>
         </nav>
         {/* compact nav for tablets */}
-        <nav aria-label={ta("mainNav")} className="chrome flex w-11 shrink-0 flex-col items-center gap-1 border-r border-line py-2 lg:hidden">
-          <Link href="/overview" title={t("overview")} className="rounded p-1.5 text-muted hover:text-ink"><LayoutGrid className="h-4 w-4" /></Link>
+        <nav aria-label={ta("mainNav")} className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-line bg-panel-2 py-2 lg:hidden">
+          <Link href="/overview" title={t("overview")} className="rounded-[8px] p-2 text-muted hover:text-accent"><LayoutGrid className="h-4 w-4" /></Link>
           {AREA_NAV.map((n) => (
             <Link key={n.id} href={`/area/${currentArea}/${n.id}`} title={t(n.id)} aria-label={t(n.id)}
-              className={clsx("rounded p-1.5", section === n.id ? "bg-accent/15 text-accent" : "text-muted hover:text-ink")}><n.icon className="h-4 w-4" /></Link>
+              className={clsx("rounded-[8px] p-2", section === n.id ? "bg-panel text-accent shadow-[var(--shadow-card)]" : "text-muted hover:text-accent")}><n.icon className="h-4 w-4" /></Link>
           ))}
-          <Link href="/audit" title={t("audit")} className="rounded p-1.5 text-muted hover:text-ink"><History className="h-4 w-4" /></Link>
-          <Link href="/help" title={t("help")} aria-label={t("help")} className="rounded p-1.5 text-muted hover:text-ink"><BookOpen className="h-4 w-4" /></Link>
+          <Link href="/audit" title={t("audit")} className="rounded-[8px] p-2 text-muted hover:text-accent"><History className="h-4 w-4" /></Link>
+          <Link href="/help" title={t("help")} aria-label={t("help")} className="rounded-[8px] p-2 text-muted hover:text-accent"><BookOpen className="h-4 w-4" /></Link>
         </nav>
         <main id="main" className="min-w-0 flex-1 overflow-hidden">{children}</main>
       </div>

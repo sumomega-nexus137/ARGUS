@@ -46,7 +46,7 @@ function PlanImpact({ areaId, bid, t, roadName }: { areaId: string; bid: string;
   const b = q.data?.bottlenecks[0];
   if (!b) return null;
   return (
-    <div className="mt-2 rounded-[3px] border border-line bg-panel-2 p-2 text-xs" onClick={(e) => e.stopPropagation()}>
+    <div className="mt-2 rounded-[7px] border border-line bg-panel-2 p-2 text-xs" onClick={(e) => e.stopPropagation()}>
       <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">{tb("planImpact")}</div>
       {b.closed_roads && b.closed_roads.length > 0 && <div className="text-ink-2">{tb("closedRoads")}: {b.closed_roads.map(roadName).join(", ")}</div>}
       {!q.data?.plan_version_id ? <div className="text-muted">{tb("noActivePlan")}</div> : !b.affected_tasks?.length ? (
@@ -107,7 +107,7 @@ export default function BottlenecksPage() {
       {q.isLoading && <Loading />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {q.data?.bottlenecks.map((b) => (
-        <button key={b.id} onClick={() => setSel(sel === b.id ? null : b.id)} className={clsx("block w-full rounded-[4px] border p-3 text-left", sel === b.id ? "border-accent/60 bg-accent/5" : "border-line bg-panel hover:border-line-2")}>
+        <button key={b.id} onClick={() => setSel(sel === b.id ? null : b.id)} className={clsx("block w-full rounded-[10px] border p-3 text-left", sel === b.id ? "border-accent/60 bg-accent/5" : "border-line bg-panel hover:border-line-2")}>
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="text-sm font-bold">{pickName(b.names, locale)}</div>

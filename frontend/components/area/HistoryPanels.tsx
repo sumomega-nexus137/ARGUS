@@ -83,7 +83,7 @@ export function HistoryPanel({ areaId }: { areaId: string }) {
           <InlineNote tone="info">{h.event_peak.map((p) => `${p.event_period}: ${p.value} ${p.unit} — ${p.notes_i18n ? pickName(p.notes_i18n, locale) : p.notes}`).join(" ")}</InlineNote>
         )}
         {h.spatial_evidence?.items?.length ? (
-          <div className="rounded-[3px] border border-info/30 bg-info/5 p-2">
+          <div className="rounded-[7px] border border-info/30 bg-info/5 p-2">
             <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted">
               <span>{th("officialEvidence")}</span><Badge tone="info">{th("reportedNotModelled")}</Badge>
             </div>
@@ -154,7 +154,7 @@ export function LiveContextPanel({ areaId }: { areaId: string }) {
       {q.data && (["glofas", "weather"] as const).map((k) => {
         const f = q.data[k];
         return (
-          <div key={k} className="mt-2 rounded-[3px] border border-line p-2 text-[11px]">
+          <div key={k} className="mt-2 rounded-[7px] border border-line p-2 text-[11px]">
             <div className="flex flex-wrap items-center justify-between gap-1">
               <span className="font-semibold">{f.source}</span>
               <span className="flex items-center gap-1">

@@ -15,7 +15,7 @@ import { Badge, ErrorState, Loading, Metric, Panel, StatusBadge } from "@/compon
 import { ageLabel, countdown, num, pickName, relHHMM } from "@/lib/format";
 import { useLocale } from "@/lib/i18n";
 import { useAreas } from "@/lib/queries";
-import { TONE_CLASS, toneOf } from "@/lib/status";
+import { toneOf } from "@/lib/status";
 import type { AreaOverview } from "@/lib/types";
 
 const RegionMap = dynamic(() => import("@/components/map/RegionMap").then((m) => m.RegionMap), { ssr: false });
@@ -35,17 +35,16 @@ function AreaCard({ a }: { a: AreaOverview }) {
   const ref = a.scenario.reference_time;
   const nd = a.plan?.next_critical_decision;
   return (
-    <article className={clsx("rounded-[4px] border bg-panel", a.status === "CRITICAL" ? "border-crit/60" : a.status === "WARNING" ? "border-warn/50" : "border-line")}>
-      <header className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
+    <article className={clsx("rise lift relative overflow-hidden rounded-[14px] border bg-panel shadow-[var(--shadow-card)] before:absolute before:inset-y-0 before:left-0 before:w-1",
+      a.status === "CRITICAL" ? "border-crit/50 before:bg-crit" : a.status === "WARNING" ? "border-warn/45 before:bg-warn" : a.status === "WATCH" ? "border-line before:bg-watch" : "border-line before:bg-ok")}>
+      <header className="flex items-start justify-between gap-2 border-b border-line px-5 py-4">
         <div>
-          <h2 className="text-base font-bold tracking-wide">{pickName(a.names, locale)}</h2>
-          <p className="text-[11.5px] text-muted">{pickName(a.river_names, locale)} · {t(`archetype.${a.archetype}`)}</p>
+          <h2 className="display text-[17px]">{pickName(a.names, locale)}</h2>
+          <p className="mt-0.5 text-[12px] text-muted">{pickName(a.river_names, locale)} · {t(`archetype.${a.archetype}`)}</p>
         </div>
-        <div className={clsx("rounded-[3px] border px-2.5 py-1 text-sm font-bold tracking-wider", TONE_CLASS[toneOf(a.status)])}>
-          <StatusBadge ns="status" code={a.status} className="border-0 bg-transparent px-0 text-sm" />
-        </div>
+        <StatusBadge ns="status" code={a.status} className="rounded-full! px-3! py-1! text-[12.5px]! tracking-wider" />
       </header>
-      <div className="space-y-3 p-4">
+      <div className="space-y-3 p-5">
         {a.reasons.length > 0 && (
           <ul className="space-y-0.5 text-[12px] text-ink-2">
             {a.reasons.map((r, i) => (
@@ -57,7 +56,7 @@ function AreaCard({ a }: { a: AreaOverview }) {
           </ul>
         )}
         {g && (
-          <div className="grid grid-cols-3 gap-3 rounded-[3px] border border-line bg-panel-2 p-3">
+          <div className="grid grid-cols-3 gap-3 rounded-[7px] border border-line bg-panel-2 p-3">
             <Metric label={<span className="flex items-center gap-1"><Droplets className="h-3 w-3" />{t("stage")}</span>} value={obsG ? `${num(obsG.stage_cm, 0, locale)} ${tu("cm")}` : "—"}
               sub={obsG ? `${obsG.source_type ? ts(obsG.source_type === "FIELD" && obsG.verification === "VERIFIED" ? "VERIFIED_FIELD" : obsG.source_type) : "—"} · ${ageLabel(obsG.age_min)}` : t("noObservation")} />
             <Metric label={<span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{t("trend")}</span>} value={<span className="whitespace-nowrap text-base">{!obsG || obsG.trend_cm_h === null ? "—" : t("trendValue", { v: num(obsG.trend_cm_h, 1, locale) })}</span>}
@@ -75,7 +74,7 @@ function AreaCard({ a }: { a: AreaOverview }) {
             </div>
           </div>
         )}
-        <div className="rounded-[3px] border border-line bg-panel-2 p-3">
+        <div className="rounded-[7px] border border-line bg-panel-2 p-3">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-[10.5px] uppercase tracking-wider text-muted">{t("plan")}</span>
             {a.plan ? <StatusBadge ns="health" code={a.plan.status} /> : <Badge>{t("noActivePlan")}</Badge>}
@@ -94,9 +93,9 @@ function AreaCard({ a }: { a: AreaOverview }) {
           )}
         </div>
         <FreshnessSummary rows={a.freshness} />
-        <Link href={`/area/${a.id}/situation`} className="flex items-center justify-between rounded-[3px] border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/20">
+        <Link href={`/area/${a.id}/situation`} className="group flex items-center justify-between rounded-[10px] bg-accent-2 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-[0_4px_12px_-4px_rgba(26,92,166,0.55)] transition-colors hover:bg-accent">
           <span>{t("openArea")} — {tq("situation")}</span>
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
       </div>
     </article>
@@ -113,19 +112,19 @@ export default function OverviewPage() {
   const onSelect = useCallback((id: string) => router.push(`/area/${id}/situation`), [router]);
   return (
     <div className="flex h-full flex-col overflow-auto xl:flex-row xl:overflow-hidden">
-      <div className="min-w-0 flex-1 space-y-3 overflow-y-auto p-4 xl:max-w-[760px]">
+      <div className="min-w-0 flex-1 space-y-4 overflow-y-auto p-4 lg:p-6 xl:max-w-[780px]">
         <WelcomeCard />
         <div className="flex items-start justify-between gap-2">
           <div>
-          <h1 className="text-lg font-bold tracking-wide">{t("title")}</h1>
-          <p className="text-sm text-accent">{tq("overview")}</p>
-          <p className="text-[11.5px] text-muted">{areas.data && areas.data.length > 0 && areas.data.every((a) => !a.is_demo) ? t("regionReal") : t("region")}</p>
+          <h1 className="display text-[24px] text-ink">{t("title")}</h1>
+          <p className="mt-1 text-[14px] text-accent">{tq("overview")}</p>
+          <p className="mt-0.5 text-[12px] text-muted">{areas.data && areas.data.length > 0 && areas.data.every((a) => !a.is_demo) ? t("regionReal") : t("region")}</p>
           </div>
           <ScreenHelp screen="overview" />
         </div>
         {areas.isLoading && <Loading />}
         {areas.isError && <ErrorState error={areas.error} onRetry={() => areas.refetch()} />}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
           {areas.data?.map((a) => <AreaCard key={a.id} a={a} />)}
         </div>
       </div>

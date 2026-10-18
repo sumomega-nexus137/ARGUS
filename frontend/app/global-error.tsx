@@ -26,13 +26,13 @@ export default function GlobalError({ error, retry, reset }: { error: Error & { 
   return (
     <html lang={l}>
       <body className="min-h-screen bg-bg text-ink antialiased">
-        <div role="alert" className="mx-auto mt-16 max-w-xl rounded-[8px] border border-warn/40 bg-panel p-5">
+        <div role="alert" className="mx-auto mt-16 max-w-xl rounded-[14px] border border-warn/40 bg-panel p-5">
           <h1 className="text-base font-bold">{t.title}</h1>
           <p className="mt-1 text-sm text-ink-2">{t.body}</p>
           <div className="mt-4 flex gap-2">
-            {again && <button className="rounded-[3px] border border-accent-2 bg-accent-2 px-3 py-1 text-xs font-semibold text-white" onClick={again}>{t.retry}</button>}
+            {again && <button className="rounded-[7px] border border-accent-2 bg-accent-2 px-3 py-1 text-xs font-semibold text-white" onClick={again}>{t.retry}</button>}
             {/* a full document load on purpose: the router may be what failed */}
-            <a className="rounded-[3px] border border-line-2 px-3 py-1 text-xs font-semibold" href={`${BASE_PATH}/overview/`}>{t.overview}</a>
+            <a className="rounded-[7px] border border-line-2 px-3 py-1 text-xs font-semibold" href={`${BASE_PATH}/overview/`}>{t.overview}</a>
           </div>
           {error.digest && <p className="mt-3 font-mono text-[10.5px] text-muted">#{error.digest}</p>}
         </div>

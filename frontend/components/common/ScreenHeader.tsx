@@ -16,9 +16,9 @@ export function ScreenHeader({ screen, right }: { screen: string; right?: React.
   return (
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div className="min-w-[14rem] flex-1">
-        <div className="text-[10.5px] font-semibold uppercase tracking-wider text-muted">{area ? pickName(area.names, locale) : ""}</div>
-        <h1 className="text-base font-bold tracking-wide">{tn(screen)}</h1>
-        <p className="text-[12.5px] text-accent">{tq(screen)}</p>
+        <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted">{area ? pickName(area.names, locale) : ""}</div>
+        <h1 className="display mt-0.5 text-[17px] text-ink">{tn(screen)}</h1>
+        <p className="mt-0.5 text-[13px] text-accent">{tq(screen)}</p>
       </div>
       <div className="flex max-w-full flex-wrap items-start justify-end gap-2">
         {right}

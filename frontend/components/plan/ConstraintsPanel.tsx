@@ -67,7 +67,7 @@ export function ConstraintsPanel({ version, editable, resources, sectors, taskCo
         {(isDraft ? list : persisted).length === 0 && <div className="text-xs text-muted">{tc("none")}</div>}
         <ul className="space-y-1">
           {(isDraft ? list : persisted).map((c, i) => (
-            <li key={`${constraintKey(c)}-${i}`} className="flex items-center justify-between gap-2 rounded-[3px] border border-line bg-panel px-2 py-1 text-xs">
+            <li key={`${constraintKey(c)}-${i}`} className="flex items-center justify-between gap-2 rounded-[7px] border border-line bg-panel px-2 py-1 text-xs">
               <span><span className="font-semibold">{tp(`constraintKinds.${c.kind}`)}</span> <span className="font-mono text-ink-2">{describe(c)}</span>
                 {c.author && <span className="text-muted"> · {c.author}</span>}{c.note && <span className="text-muted"> — {c.note}</span>}</span>
               {isDraft && editable && <button aria-label={tc("remove")} onClick={() => setList(list.filter((_, j) => j !== i))} className="p-1 text-muted hover:text-crit"><Trash2 className="h-3.5 w-3.5" /></button>}
@@ -86,7 +86,7 @@ export function ConstraintsPanel({ version, editable, resources, sectors, taskCo
           <InlineNote tone="info">{tp("sessionConstraintsHint")}</InlineNote>
           <ul className="mt-1 space-y-1">
             {session.map((c, i) => (
-              <li key={`${constraintKey(c)}-${i}`} className="flex items-center justify-between gap-2 rounded-[3px] border border-accent/40 bg-accent/5 px-2 py-1 text-xs">
+              <li key={`${constraintKey(c)}-${i}`} className="flex items-center justify-between gap-2 rounded-[7px] border border-accent/40 bg-accent/5 px-2 py-1 text-xs">
                 <span><span className="font-semibold">{tp(`constraintKinds.${c.kind}`)}</span> <span className="font-mono text-ink-2">{describe(c)}</span></span>
                 <button aria-label={tc("remove")} onClick={() => onSession(session.filter((_, j) => j !== i))} className="p-1 text-muted hover:text-crit"><Trash2 className="h-3.5 w-3.5" /></button>
               </li>
@@ -96,7 +96,7 @@ export function ConstraintsPanel({ version, editable, resources, sectors, taskCo
       )}
 
       {editable && (
-        <div className="rounded-[4px] border border-line bg-panel p-2">
+        <div className="rounded-[10px] border border-line bg-panel p-2">
           <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">{tp("addConstraint")}</div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label={tp("constraintKind")}>
@@ -153,7 +153,7 @@ export function ResourcePool({ areaId, resources, type = "PUMP", editable, onDon
   const val = Number(n);
   const ok = Number.isInteger(val) && val >= 0 && val <= units.length && val !== available;
   return (
-    <span className="inline-flex flex-wrap items-center gap-1.5 rounded-[3px] border border-line-2 bg-bg px-2 py-0.5 text-[11px]">
+    <span className="inline-flex flex-wrap items-center gap-1.5 rounded-[7px] border border-line-2 bg-bg px-2 py-0.5 text-[11px]">
       <span className="font-semibold text-ink-2">{tp("availableOf", { type: tt.has(type) ? tt(type) : type })}</span>
       <Badge tone={available < units.length ? "warn" : "muted"} icon={false}>{available}/{units.length}</Badge>
       {editable && (

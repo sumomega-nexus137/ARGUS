@@ -34,8 +34,8 @@ const ACCOUNTS = ["viewer", "operator", "planner", "commander", "admin"];
 
 function Section({ id, icon: Icon, title, children }: { id: string; icon: LucideIcon; title: string; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-4 rounded-[6px] border border-line bg-panel p-5">
-      <h2 className="mb-3 flex items-center gap-2 text-[15px] font-bold"><span className="grid h-7 w-7 place-items-center rounded-[5px] bg-accent/15 text-accent"><Icon className="h-4 w-4" /></span>{title}</h2>
+    <section id={id} className="scroll-mt-4 rounded-[12px] border border-line bg-panel p-5">
+      <h2 className="mb-3 flex items-center gap-2 text-[15px] font-bold"><span className="grid h-7 w-7 place-items-center rounded-[8px] bg-accent/15 text-accent"><Icon className="h-4 w-4" /></span>{title}</h2>
       {children}
     </section>
   );
@@ -66,15 +66,15 @@ export default function HelpPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto flex max-w-[1180px] gap-6 p-4 lg:p-6">
-        <nav aria-label={tg("title")} className="sticky top-4 hidden h-fit w-56 shrink-0 rounded-[6px] border border-line bg-panel p-2 lg:block">
+        <nav aria-label={tg("title")} className="sticky top-4 hidden h-fit w-56 shrink-0 rounded-[12px] border border-line bg-panel p-2 lg:block">
           {SECTIONS.map((s) => (
-            <a key={s.id} href={`#${s.id}`} className="flex items-center gap-2 rounded-[3px] px-2 py-1.5 text-[12.5px] text-ink-2 hover:bg-panel-2 hover:text-ink">
+            <a key={s.id} href={`#${s.id}`} className="flex items-center gap-2 rounded-[7px] px-2 py-1.5 text-[12.5px] text-ink-2 hover:bg-panel-2 hover:text-ink">
               <s.icon className="h-3.5 w-3.5 shrink-0 text-muted" />{tg(`toc.${s.id}`)}
             </a>
           ))}
         </nav>
         <main className="min-w-0 flex-1 space-y-4">
-          <header className="rounded-[6px] border border-accent/30 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-accent)_14%,transparent),color-mix(in_srgb,var(--color-accent)_3%,transparent))] p-5">
+          <header className="rounded-[12px] border border-accent/30 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-accent)_14%,transparent),color-mix(in_srgb,var(--color-accent)_3%,transparent))] p-5">
             <div className="flex items-center gap-2 text-accent"><BookOpen className="h-5 w-5" /><h1 className="text-xl font-bold text-ink">{tg("title")}</h1></div>
             <p className="mt-1 text-[13.5px] text-ink-2">{tg("subtitle")}</p>
           </header>
@@ -88,8 +88,8 @@ export default function HelpPage() {
             <p className="mb-3 text-[13px] text-ink-2">{tg("modes.intro")}</p>
             <div className="grid gap-2 md:grid-cols-2">
               {MODES.map((m) => (
-                <div key={m.k} className="rounded-[4px] border border-line bg-panel-2 p-3">
-                  <span className={`inline-flex rounded-[3px] border px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${m.cls}`}>{modeLabel(m.k)}</span>
+                <div key={m.k} className="rounded-[10px] border border-line bg-panel-2 p-3">
+                  <span className={`inline-flex rounded-[7px] border px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${m.cls}`}>{modeLabel(m.k)}</span>
                   <p className="mt-1.5 text-[12.5px] leading-snug text-ink-2">{tg(`modes.items.${m.k}`)}</p>
                 </div>
               ))}
@@ -102,7 +102,7 @@ export default function HelpPage() {
           <Section id="screens" icon={LayoutGrid} title={tg("toc.screens")}>
             <div className="grid gap-2 md:grid-cols-2">
               {SCREENS.map((s) => (
-                <Link key={s.id} href={s.area ? `/area/${areaId}/${s.id}` : `/${s.id}`} className="group rounded-[4px] border border-line bg-panel-2 p-3 hover:border-accent/50">
+                <Link key={s.id} href={s.area ? `/area/${areaId}/${s.id}` : `/${s.id}`} className="group rounded-[10px] border border-line bg-panel-2 p-3 hover:border-accent/50">
                   <div className="flex items-center gap-2 text-[13px] font-bold"><s.icon className="h-4 w-4 text-accent" />{tn(s.id)}</div>
                   <div className="text-[11.5px] text-accent">{tq(s.id)}</div>
                   <p className="mt-1 text-[12.5px] leading-snug text-ink-2">{tg(`screens.${s.id}.what`)}</p>
@@ -115,7 +115,7 @@ export default function HelpPage() {
           <Section id="howto" icon={ListChecks} title={tg("toc.howto")}>
             <div className="grid gap-3 md:grid-cols-2">
               {RECIPES.map((r) => (
-                <div key={r} className="rounded-[4px] border border-line bg-panel-2 p-3">
+                <div key={r} className="rounded-[10px] border border-line bg-panel-2 p-3">
                   <h3 className="mb-2 text-[13px] font-bold">{tg(`howto.${r}.title`)}</h3>
                   <Steps steps={tg.raw(`howto.${r}.steps`) as string[]} />
                 </div>
@@ -127,7 +127,7 @@ export default function HelpPage() {
             <p className="mb-3 text-[13px] text-ink-2">{tg("addData.intro")}</p>
             <div className="grid gap-3 md:grid-cols-2">
               {DATA.map((r) => (
-                <div key={r} className="rounded-[4px] border border-line bg-panel-2 p-3">
+                <div key={r} className="rounded-[10px] border border-line bg-panel-2 p-3">
                   <h3 className="mb-2 text-[13px] font-bold">{tg(`addData.${r}.title`)}</h3>
                   <Steps steps={tg.raw(`addData.${r}.steps`) as string[]} />
                 </div>
@@ -161,7 +161,7 @@ export default function HelpPage() {
           <Section id="faq" icon={MessageCircleQuestion} title={tg("toc.faq")}>
             <div className="space-y-2">
               {(tg.raw("faq.items") as { q: string; a: string }[]).map((f, i) => (
-                <details key={i} className="group rounded-[4px] border border-line bg-panel-2 px-3 py-2 open:border-accent/40">
+                <details key={i} className="group rounded-[10px] border border-line bg-panel-2 px-3 py-2 open:border-accent/40">
                   <summary className="cursor-pointer list-none text-[13px] font-semibold marker:hidden">
                     <span className="mr-2 text-accent group-open:rotate-90">›</span>{f.q}
                   </summary>

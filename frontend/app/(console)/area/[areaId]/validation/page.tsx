@@ -204,7 +204,7 @@ function HistoricalEvidence({ h, areaId }: { h: HistoricalInfo; areaId: string }
           )}
         </div>
         <div>
-          {qc && <img src={qc} alt={tv("qcFigure")} className="w-full rounded-[3px] border border-line" />}
+          {qc && <img src={qc} alt={tv("qcFigure")} className="w-full rounded-[7px] border border-line" />}
           <p className="mt-1 text-[10px] text-muted">{tv("qcFigure")}</p>
         </div>
       </div>
@@ -232,7 +232,7 @@ function Curtain({ runId }: { runId: string }) {
     <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
       <div>
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">{tv("curtain")}</div>
-        <div className="relative aspect-[2/1] overflow-hidden rounded-[3px] border border-line bg-bg">
+        <div className="relative aspect-[2/1] overflow-hidden rounded-[7px] border border-line bg-bg">
           {mod && <img src={mod} alt={tv("modelled")} className="absolute inset-0 h-full w-full object-fill [image-rendering:pixelated]" />}
           {obs && <img src={obs} alt={tv("observed")} className="absolute inset-0 h-full w-full object-fill [image-rendering:pixelated]" style={{ clipPath: `inset(0 ${100 - x}% 0 0)` }} />}
           <div className="absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${x}%` }} />
@@ -243,7 +243,7 @@ function Curtain({ runId }: { runId: string }) {
       </div>
       <div>
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">{tv("difference")}</div>
-        <div className="relative aspect-[2/1] overflow-hidden rounded-[3px] border border-line bg-bg">
+        <div className="relative aspect-[2/1] overflow-hidden rounded-[7px] border border-line bg-bg">
           {diff && <img src={diff} alt={tv("difference")} className="absolute inset-0 h-full w-full object-fill [image-rendering:pixelated]" />}
         </div>
         <div className="mt-1 flex gap-3 text-[10.5px] text-muted">

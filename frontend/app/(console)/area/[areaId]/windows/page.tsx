@@ -69,7 +69,7 @@ export default function WindowsPage() {
   return (
     <div className="space-y-3 p-3">
       <ScreenHeader screen="windows" right={<Badge tone="info">{tw("asOf", { time: fmt(access.as_of) })}</Badge>} />
-      <section aria-live="polite" className={clsx("rounded-[4px] border p-4", nd && nd.minutes <= 45 ? "border-crit/60 bg-crit/10" : "border-warn/50 bg-warn/5")}>
+      <section aria-live="polite" className={clsx("rounded-[10px] border p-4", nd && nd.minutes <= 45 ? "border-crit/60 bg-crit/10" : "border-warn/50 bg-warn/5")}>
         <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-2"><AlarmClock className="h-4 w-4" />{tw("nextDecision")}</div>
         {nd ? (
           <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
@@ -86,7 +86,7 @@ export default function WindowsPage() {
         <div className="space-y-1">
           {access.tasks.map((x) => (
             <button key={x.code} onClick={() => setSel(sel === x.code ? null : x.code)}
-              className={clsx("grid w-full grid-cols-[46px_1fr_auto] items-center gap-2 rounded-[3px] border px-2 py-1.5 text-left", sel === x.code ? "border-accent/60 bg-accent/10" : "border-line bg-panel-2 hover:border-line-2")}>
+              className={clsx("grid w-full grid-cols-[46px_1fr_auto] items-center gap-2 rounded-[7px] border px-2 py-1.5 text-left", sel === x.code ? "border-accent/60 bg-accent/10" : "border-line bg-panel-2 hover:border-line-2")}>
               <span className="font-mono text-sm font-bold">{x.code}</span>
               <span className="min-w-0">
                 <span className="block truncate text-xs font-semibold">{names.action(x.template_id)} · {names.site(x.site_id)}</span>
@@ -116,7 +116,7 @@ export default function WindowsPage() {
       <Panel title={tw("roads")}>
         <div className="grid grid-cols-2 gap-1.5">
           {roads.map((r) => (
-            <div key={r.road_id} className={clsx("rounded-[3px] border px-2 py-1.5", r.state === "CLOSED" ? "border-crit/50 bg-crit/10" : "border-warn/40 bg-warn/5")}>
+            <div key={r.road_id} className={clsx("rounded-[7px] border px-2 py-1.5", r.state === "CLOSED" ? "border-crit/50 bg-crit/10" : "border-warn/40 bg-warn/5")}>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-sm font-bold">{r.road_id}</span>
                 <StatusBadge ns="road" code={r.state} />

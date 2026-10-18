@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 
 import type { Locale } from "@/lib/types";
 
-import "@fontsource-variable/inter";
+import "@fontsource-variable/onest";
+import "@fontsource-variable/unbounded";
 import "./globals.css";
 import { Providers } from "./providers";
 

@@ -143,7 +143,7 @@ export default function OperationsPage() {
         <Panel title={to("resources")}>
           <div className="grid grid-cols-2 gap-1 text-[11px] sm:grid-cols-3">
             {d.resources.map((r) => (
-              <div key={r.id} className="flex justify-between gap-1 rounded-[3px] border border-line px-1.5 py-0.5">
+              <div key={r.id} className="flex justify-between gap-1 rounded-[7px] border border-line px-1.5 py-0.5">
                 <span className="font-mono font-bold">{r.id}</span>
                 <span className={r.status === "AVAILABLE" ? "text-ink-2" : "text-crit"}>{r.status !== "AVAILABLE" ? r.status : r.assigned_task ? to("assigned", { task: r.assigned_task }) : to("free")}{r.delay_min ? ` +${r.delay_min}′` : ""}</span>
               </div>

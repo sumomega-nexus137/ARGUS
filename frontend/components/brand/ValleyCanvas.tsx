@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-import s from "./landing.module.css";
+import s from "./valley.module.css";
 
 /**
  * Illustrative valley model for the landing hero: a height field with contour lines, water that rises and falls between

@@ -32,7 +32,7 @@ export default function ReportPage() {
       <ScreenHeader screen="report" right={
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-muted">{tr("language")}</span>
-          <div role="radiogroup" aria-label={tr("language")} className="flex overflow-hidden rounded-[3px] border border-line-2">
+          <div role="radiogroup" aria-label={tr("language")} className="flex overflow-hidden rounded-[7px] border border-line-2">
             {LOCALES.map((l) => (
               <button key={l} role="radio" aria-checked={lang === l} onClick={() => setLang(l)}
                 className={`px-2 py-1 text-[11px] font-bold ${lang === l ? "bg-accent/20 text-accent" : "text-ink-2"}`}>{LOCALE_LABEL[l]}</button>
@@ -43,7 +43,7 @@ export default function ReportPage() {
       } />
       {q.isLoading && <Loading />}
       {q.isError && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
-      {q.data && <iframe ref={frame} title={tr("title")} srcDoc={q.data} className="min-h-[70vh] w-full flex-1 rounded-[4px] border border-line bg-white" />}
+      {q.data && <iframe ref={frame} title={tr("title")} srcDoc={q.data} className="min-h-[70vh] w-full flex-1 rounded-[10px] border border-line bg-white" />}
     </div>
   );
 }

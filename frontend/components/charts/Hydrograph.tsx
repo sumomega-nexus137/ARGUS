@@ -37,7 +37,7 @@ function ObservationList({ st, dateFmt }: { st: HydroStation; dateFmt: (iso: str
             <td className="tabular whitespace-nowrap font-semibold">{o.stage_cm} {tu("cm")}</td>
             <td className="w-full">
               <span className="break-words">{o.quality ? qualityLabel(o.quality, tq) : o.source_type}</span>
-              {o.future && <span className="ml-1 inline-block rounded-[2px] border border-line px-1 text-[9.5px] uppercase tracking-wide">{t("hindsight")}</span>}
+              {o.future && <span className="ml-1 inline-block rounded-[4px] border border-line px-1 text-[9.5px] uppercase tracking-wide">{t("hindsight")}</span>}
             </td>
           </tr>
         ))}

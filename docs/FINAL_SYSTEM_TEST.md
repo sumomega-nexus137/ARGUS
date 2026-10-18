@@ -186,3 +186,12 @@ One theme only (no switch): medium-blue header and navigation with white text, s
 off-white panels, navy text; Inter bundled locally (Kazakh / Russian Cyrillic, works offline); the smallest labels
 enlarged by 0.5 px. Checks: tsc / eslint clean, i18n 1465 keys × 3 with 0 problems, vitest 9 passed, every screen ×
 every tab (ru) without page or server errors.
+
+## Console restyle, "survey sheet" (18 Oct 2026)
+
+The console itself was restyled (no separate landing page; `/` still opens the console): Onest for text and
+Unbounded for screen titles (both bundled, Kazakh Cyrillic), header with faint contour lines, light navigation with
+a clear active item, softer corners and depth on panels, panels rise in when a screen opens and link cards lift on
+hover (both off with reduced motion), sign-in page with the valley model labelled as an illustration. Checks: tsc /
+eslint (0 errors), i18n 1476 keys × 3 with 0 problems, vitest 9 passed, server and static-export builds, screenshots
+of login / overview / situation / impact / plan without page errors.

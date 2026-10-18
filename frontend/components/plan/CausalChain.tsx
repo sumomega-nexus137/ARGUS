@@ -34,7 +34,7 @@ export function CausalChainView({ chain, fmt, siteName, compact }: { chain: Chai
     <ol className={clsx("flex flex-wrap items-stretch gap-1", compact ? "text-[10.5px]" : "text-[11.5px]")} aria-label={chain.task}>
       {chain.nodes.map((n, i) => (
         <li key={i} className="flex items-center gap-1">
-          <span className={clsx("rounded-[3px] border px-2 py-1 font-semibold leading-tight tracking-wide", TONE_CLASS[n.severity === "critical" ? "crit" : n.severity === "warning" ? "warn" : "info"])}>
+          <span className={clsx("rounded-[7px] border px-2 py-1 font-semibold leading-tight tracking-wide", TONE_CLASS[n.severity === "critical" ? "crit" : n.severity === "warning" ? "warn" : "info"])}>
             {text(n)}
           </span>
           {i < chain.nodes.length - 1 && <ChevronRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-muted" />}

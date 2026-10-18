@@ -176,7 +176,7 @@ export function Timeline() {
         <div className="absolute top-0 h-7 w-[2px] -translate-x-1/2 bg-ink" style={{ left: pos(nowMin) }}>
           <span className="absolute -top-0.5 left-1 whitespace-nowrap text-[9.5px] font-extrabold tracking-wider text-ink">{tt("now")}</span>
         </div>
-        <div className={clsx("absolute top-[7px] h-5 w-3 -translate-x-1/2 rounded-[2px] border-2 shadow", forecast ? "border-warn bg-warn/40" : "border-accent bg-accent/40")} style={{ left: pos(t) }} />
+        <div className={clsx("absolute top-[7px] h-5 w-3 -translate-x-1/2 rounded-[4px] border-2 shadow", forecast ? "border-warn bg-warn/40" : "border-accent bg-accent/40")} style={{ left: pos(t) }} />
       </div>
     </div>
   );

@@ -147,7 +147,7 @@ function Conflicts({ areaId }: { areaId: string }) {
       {msg && <InlineNote tone="ok">{msg}</InlineNote>}
       {resolve.isError && <ErrorState error={resolve.error} />}
       {q.data.map((c) => (
-        <div key={c.id} className={`rounded-[4px] border p-3 ${c.status === "OPEN" ? "border-warn/60 bg-warn/5" : "border-line bg-panel"}`}>
+        <div key={c.id} className={`rounded-[10px] border p-3 ${c.status === "OPEN" ? "border-warn/60 bg-warn/5" : "border-line bg-panel"}`}>
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={c.status === "OPEN" ? "warn" : "ok"}>{td("conflictTitle")}</Badge>
             <span className="font-mono text-xs">{c.station_id}</span>
@@ -157,7 +157,7 @@ function Conflicts({ areaId }: { areaId: string }) {
           <p className="mt-1 text-[11px] text-ink-2">{td("conflictDesc")}</p>
           <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
             {c.observations.map((o) => (
-              <div key={o.id} className={`rounded-[3px] border p-2 text-xs ${c.selected_observation_id === o.id ? "border-ok" : "border-line"}`}>
+              <div key={o.id} className={`rounded-[7px] border p-2 text-xs ${c.selected_observation_id === o.id ? "border-ok" : "border-line"}`}>
                 <div className="text-lg font-bold tabular">{o.water_level_cm} {tu("cm")}</div>
                 <div>{o.source}</div>
                 <div className="text-muted">{tsrc.has(o.authority) ? tsrc(o.authority) : o.authority} · {tver.has(o.verification) ? tver(o.verification) : o.verification} · {area.is_demo ? hhmm(o.observed_at, area.utc_offset_min) : dateTime(o.observed_at, area.utc_offset_min)}</div>

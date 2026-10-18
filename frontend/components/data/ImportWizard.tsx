@@ -169,7 +169,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label={ti("type")}>
             {KINDS.map((k) => (
               <button key={k} role="radio" aria-checked={kind === k} onClick={() => setKind(k)}
-                className={clsx("rounded-[5px] border p-2.5 text-left transition-colors", kind === k ? "border-accent bg-accent/10 shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_35%,transparent)]" : "border-line bg-panel hover:border-line-2 hover:bg-panel-2")}>
+                className={clsx("rounded-[8px] border p-2.5 text-left transition-colors", kind === k ? "border-accent bg-accent/10 shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_35%,transparent)]" : "border-line bg-panel hover:border-line-2 hover:bg-panel-2")}>
                 <div className={clsx("text-xs font-bold", kind === k ? "text-accent" : "text-ink")}>{ti(`types.${k}`)}</div>
                 <div className="mt-0.5 text-[11px] leading-snug text-ink-2">{ti(`typeDesc.${k}`)}</div>
                 <div className="mt-1 text-[10.5px] leading-snug text-muted">{ti(`effect.${k}`)}</div>
@@ -182,7 +182,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
               onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
               onDragLeave={() => setDrag(false)}
               onDrop={onDrop}
-              className={clsx("rounded-[6px] border-2 border-dashed p-4 transition-colors", drag ? "border-accent bg-accent/10" : file ? "border-ok/60 bg-ok/5" : "border-line-2 bg-panel/60")}
+              className={clsx("rounded-[12px] border-2 border-dashed p-4 transition-colors", drag ? "border-accent bg-accent/10" : file ? "border-ok/60 bg-ok/5" : "border-line-2 bg-panel/60")}
             >
               <input ref={inputRef} id="argus-import-file" type="file" accept={EXTENSIONS.join(",")} className="sr-only" onChange={(e) => pick(e.target.files?.[0])} />
               <div className="flex flex-wrap items-center gap-3">
@@ -202,7 +202,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
                     </>
                   )}
                 </div>
-                <label htmlFor="argus-import-file" className="cursor-pointer rounded-[3px] border border-line-2 bg-panel-2 px-3 py-1.5 text-xs font-semibold hover:border-accent">
+                <label htmlFor="argus-import-file" className="cursor-pointer rounded-[7px] border border-line-2 bg-panel-2 px-3 py-1.5 text-xs font-semibold hover:border-accent">
                   {file ? ti("changeFile") : ti("browse")}
                 </label>
                 {file && <button aria-label={ti("removeFile")} title={ti("removeFile")} onClick={reset} className="grid h-7 w-7 place-items-center rounded text-muted hover:bg-panel-2 hover:text-ink"><X className="h-4 w-4" /></button>}
@@ -254,7 +254,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
             </div>
             <div className="mt-2 grid grid-cols-1 gap-1.5 md:grid-cols-3">
               {["tipExcel", "tipTime", "tipNumbers"].map((k) => (
-                <div key={k} className="flex items-start gap-1.5 rounded-[3px] border border-line bg-bg/40 px-2 py-1.5 text-[11px] leading-snug text-ink-2">
+                <div key={k} className="flex items-start gap-1.5 rounded-[7px] border border-line bg-bg/40 px-2 py-1.5 text-[11px] leading-snug text-ink-2">
                   <Lightbulb className="mt-[1px] h-3.5 w-3.5 shrink-0 text-watch" />{ti(k)}
                 </div>
               ))}
@@ -296,7 +296,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
                   );
                 })}
               </div>
-              <div className="mt-2 max-h-[420px] overflow-auto rounded-[3px] border border-line">
+              <div className="mt-2 max-h-[420px] overflow-auto rounded-[7px] border border-line">
                 <table className="w-full text-[11px] [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1">
                   <thead className="sticky top-0 bg-panel-2 text-left text-[10px] uppercase tracking-wider text-muted">
                     <tr><th>{ti("row")}</th><th>{ti("statusCol")}</th>{cols.slice(0, 5).map((c) => <th key={c} className="font-mono normal-case">{c}</th>)}<th>{ti("issues")}</th></tr>
@@ -331,7 +331,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
               <span className="text-[11px] text-muted">{job.rows_invalid ? ti("invalidSkipped", { n: job.rows_invalid }) : ti("allGood")}</span>
             </div>
           ) : (
-            <div className="mt-3 space-y-2 rounded-[4px] border border-ok/40 bg-ok/5 p-3">
+            <div className="mt-3 space-y-2 rounded-[10px] border border-ok/40 bg-ok/5 p-3">
               <div className="flex items-center gap-2 text-sm font-bold text-ok"><CheckCircle2 className="h-4 w-4" />{ti("confirmed", { n: job.applied_count ?? 0, rejected: job.rows_invalid })}</div>
               {!!job.failed_on_apply?.length && (
                 <div className="text-[11px] text-warn">
@@ -343,8 +343,8 @@ export function ImportWizard({ areaId }: { areaId: string }) {
                 <div className="flex flex-wrap items-center gap-1.5 text-[11.5px]">{ti("planRechecked")} <StatusBadge ns="ops.outcome" code={job.pipeline.plan_status} /></div>
               )}
               <div className="flex flex-wrap gap-2 pt-1">
-                <Link href={`/area/${areaId}/situation`} className="flex items-center gap-1 rounded-[3px] border border-accent/60 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/20"><MapIcon className="h-3.5 w-3.5" />{ti("openMap")}</Link>
-                <Link href={`/area/${areaId}/plan`} className="rounded-[3px] border border-line-2 px-2.5 py-1 text-xs font-semibold hover:bg-panel-2">{ti("openPlan")}</Link>
+                <Link href={`/area/${areaId}/situation`} className="flex items-center gap-1 rounded-[7px] border border-accent/60 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/20"><MapIcon className="h-3.5 w-3.5" />{ti("openMap")}</Link>
+                <Link href={`/area/${areaId}/plan`} className="rounded-[7px] border border-line-2 px-2.5 py-1 text-xs font-semibold hover:bg-panel-2">{ti("openPlan")}</Link>
                 <Button size="sm" icon={RotateCcw} onClick={reset}>{ti("another")}</Button>
               </div>
             </div>
@@ -384,7 +384,7 @@ export function ImportWizard({ areaId }: { areaId: string }) {
 
 function Tile({ label, value, tone }: { label: string; value: number; tone?: "ok" | "crit" | "warn" }) {
   return (
-    <div className={clsx("rounded-[4px] border px-3 py-2", tone === "ok" ? "border-ok/40 bg-ok/5" : tone === "crit" ? "border-crit/40 bg-crit/5" : tone === "warn" ? "border-warn/40 bg-warn/5" : "border-line bg-bg/40")}>
+    <div className={clsx("rounded-[10px] border px-3 py-2", tone === "ok" ? "border-ok/40 bg-ok/5" : tone === "crit" ? "border-crit/40 bg-crit/5" : tone === "warn" ? "border-warn/40 bg-warn/5" : "border-line bg-bg/40")}>
       <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</div>
       <div className={clsx("tabular text-xl font-bold", tone === "ok" ? "text-ok" : tone === "crit" ? "text-crit" : tone === "warn" ? "text-warn" : "text-ink")}>{value}</div>
     </div>

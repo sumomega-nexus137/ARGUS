@@ -35,7 +35,7 @@ export function OptimizerControls({ policy, weights, onPolicy, onWeights, whatIf
         <div role="radiogroup" aria-label={tp("policy")} className="flex flex-wrap gap-1">
           {POLICIES.map((p) => (
             <button key={p} role="radio" aria-checked={policy === p} onClick={() => onPolicy(p)}
-              className={clsx("rounded-[3px] border px-2 py-1 text-[11px] font-semibold", policy === p ? "border-accent bg-accent/15 text-accent" : "border-line-2 text-ink-2 hover:border-accent/50")}>
+              className={clsx("rounded-[7px] border px-2 py-1 text-[11px] font-semibold", policy === p ? "border-accent bg-accent/15 text-accent" : "border-line-2 text-ink-2 hover:border-accent/50")}>
               {tpol(p)}
             </button>
           ))}
@@ -54,7 +54,7 @@ export function OptimizerControls({ policy, weights, onPolicy, onWeights, whatIf
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         <span className="font-semibold text-ink-2">{to("whatIfPumps")}:</span>
         {whatIf.map((id) => (
-          <button key={id} onClick={() => onWhatIf(whatIf.filter((x) => x !== id))} className="inline-flex items-center gap-0.5 rounded-[3px] border border-warn/50 bg-warn/10 px-1.5 py-[1px] font-mono text-warn">
+          <button key={id} onClick={() => onWhatIf(whatIf.filter((x) => x !== id))} className="inline-flex items-center gap-0.5 rounded-[7px] border border-warn/50 bg-warn/10 px-1.5 py-[1px] font-mono text-warn">
             {id}<X className="h-3 w-3" aria-hidden />
           </button>
         ))}
@@ -105,7 +105,7 @@ export function AlternativesView({ run, areaId, fmt, selected, onSelect, selecte
             ))}
           </div>
           {alt && (
-            <div className="space-y-2 rounded-[4px] border border-accent/40 bg-panel p-2">
+            <div className="space-y-2 rounded-[10px] border border-accent/40 bg-panel p-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-bold">{alt.id} · {to.has(`labels.${alt.label}`) ? to(`labels.${alt.label}`) : alt.label}</div>
                 <div className="flex items-center gap-2">
@@ -126,7 +126,7 @@ export function AlternativesView({ run, areaId, fmt, selected, onSelect, selecte
           )}
         </>
       )}
-      <details className="rounded-[4px] border border-line bg-panel p-2 text-[11px] text-ink-2">
+      <details className="rounded-[10px] border border-line bg-panel p-2 text-[11px] text-ink-2">
         <summary className="cursor-pointer font-semibold text-muted">{tm("title")}</summary>
         <ul className="mt-1 list-disc space-y-0.5 pl-4">
           <li>{tm("optimizer.objective")}</li>
@@ -147,7 +147,7 @@ function AltCard({ a, active, onClick, fmt }: { a: Alternative; active: boolean;
   const rob = a.robustness;
   return (
     <button onClick={onClick} aria-pressed={active}
-      className={clsx("rounded-[4px] border p-2 text-left", active ? "border-accent bg-accent/10" : "border-line bg-panel hover:border-line-2")}>
+      className={clsx("rounded-[10px] border p-2 text-left", active ? "border-accent bg-accent/10" : "border-line bg-panel hover:border-line-2")}>
       <div className="flex items-start justify-between gap-1">
         <div>
           <div className="text-[10px] font-bold text-muted">{a.id}</div>

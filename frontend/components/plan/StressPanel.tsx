@@ -62,7 +62,7 @@ export function StressPanel({ result, outdated, fmt, siteName }: {
           {result.task_criticality.map((c) => (
             <div key={c.task} className="flex items-center gap-2 text-xs">
               <span className="w-8 font-mono font-bold">{c.task}</span>
-              <div className="relative h-3 flex-1 overflow-hidden rounded-[2px] bg-line/60">
+              <div className="relative h-3 flex-1 overflow-hidden rounded-[4px] bg-line/60">
                 <div className="absolute inset-y-0 left-0 bg-crit/80" style={{ width: `${(c.failures / result.n_scenarios) * 100}%` }} />
                 <div className="absolute inset-y-0 bg-warn/60" style={{ left: `${(c.failures / result.n_scenarios) * 100}%`, width: `${(c.at_risk / result.n_scenarios) * 100}%` }} />
               </div>
@@ -92,12 +92,12 @@ export function StressPanel({ result, outdated, fmt, siteName }: {
         </div>
         <div className="flex flex-wrap gap-3 border-t border-line px-2 py-1.5 text-[10.5px] text-muted">
           {(["FEASIBLE", "AT_RISK", "INFEASIBLE"] as const).map((k) => (
-            <span key={k} className="flex items-center gap-1"><span className={clsx("inline-block h-2.5 w-2.5 rounded-[2px]", CELL[k])} />{ts(`legend.${k}`)}</span>
+            <span key={k} className="flex items-center gap-1"><span className={clsx("inline-block h-2.5 w-2.5 rounded-[4px]", CELL[k])} />{ts(`legend.${k}`)}</span>
           ))}
         </div>
       </Panel>
 
-      <details className="rounded-[4px] border border-line bg-panel p-2 text-[11px] text-ink-2">
+      <details className="rounded-[10px] border border-line bg-panel p-2 text-[11px] text-ink-2">
         <summary className="cursor-pointer font-semibold text-muted">{tm("title")}</summary>
         <ul className="mt-1 list-disc space-y-0.5 pl-4">
           <li>{tm("stress.robustness")}</li>
@@ -126,7 +126,7 @@ function FragmentRow({ s, tasks, open, onToggle, label, fmt, siteName }: {
         </td>
         {tasks.map((t) => (
           <td key={t} className="px-0.5 py-0.5">
-            <div title={`${t}: ${s.task_status[t] || "—"}`} className={clsx("mx-auto h-4 w-6 rounded-[2px]", CELL[s.task_status[t]] || "bg-line/40")} />
+            <div title={`${t}: ${s.task_status[t] || "—"}`} className={clsx("mx-auto h-4 w-6 rounded-[4px]", CELL[s.task_status[t]] || "bg-line/40")} />
           </td>
         ))}
         <td className={clsx("px-2 text-right tabular", s.min_slack !== null && s.min_slack < 0 ? "text-crit" : "text-ink-2")}>

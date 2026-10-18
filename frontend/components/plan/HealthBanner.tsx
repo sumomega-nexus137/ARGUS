@@ -27,7 +27,7 @@ export function HealthBanner({ health, fmt, siteName, planLabel, defaultOpen = f
     if (bad && defaultOpen) setOpen(true);
   }
   return (
-    <section aria-live="polite" className={clsx("rounded-[4px] border p-3", bad ? (health.severity === "critical" ? "border-crit/60 bg-crit/10" : "border-warn/50 bg-warn/5") : "border-ok/40 bg-ok/5")}>
+    <section aria-live="polite" className={clsx("rounded-[10px] border p-3", bad ? (health.severity === "critical" ? "border-crit/60 bg-crit/10" : "border-warn/50 bg-warn/5") : "border-ok/40 bg-ok/5")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold">{planLabel}</span>
@@ -50,7 +50,7 @@ export function HealthBanner({ health, fmt, siteName, planLabel, defaultOpen = f
           {open && (
             <div className="mt-2 space-y-2">
               {health.chains.map((c) => (
-                <div key={c.task} className="rounded-[3px] border border-line bg-panel p-2">
+                <div key={c.task} className="rounded-[7px] border border-line bg-panel p-2">
                   <CausalChainView chain={c} fmt={fmt} siteName={siteName} />
                 </div>
               ))}

@@ -209,7 +209,7 @@ export default function PlanPage() {
       } />
 
       {version && (
-        <div className="flex flex-wrap items-center gap-2 rounded-[4px] border border-line bg-panel px-3 py-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-line bg-panel px-3 py-2 text-[11px]">
           <span className="text-sm font-bold">{version.plan_name} v{version.version}</span>
           <StatusBadge ns="planStatus" code={version.status} />
           <Badge tone={version.origin === "HUMAN" ? "muted" : "info"} icon={false}>{tor.has(version.origin) ? tor(version.origin) : version.origin}</Badge>
@@ -333,7 +333,7 @@ function TaskDetail({ code, health, fmt }: { code: string; health?: { evaluation
   if (!t) return null;
   const comps = Object.entries(t.deadline_components || {}).filter(([, v]) => v !== null);
   return (
-    <div className="mt-2 grid grid-cols-1 gap-2 rounded-[3px] border border-accent/40 bg-accent/5 p-2 text-[11.5px] md:grid-cols-3">
+    <div className="mt-2 grid grid-cols-1 gap-2 rounded-[7px] border border-accent/40 bg-accent/5 p-2 text-[11.5px] md:grid-cols-3">
       <div>
         <div className="text-[10px] font-bold uppercase tracking-wider text-muted">{tp("route")}</div>
         <div className="font-mono">{t.route_roads.join(" → ") || "—"}</div>

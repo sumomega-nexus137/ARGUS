@@ -93,7 +93,7 @@ export function WhyTask({ task, fmt, facilityName, sectorName }: {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1 rounded-[3px] border border-line bg-bg/60 p-2">
+    <div className="space-y-1 rounded-[7px] border border-line bg-bg/60 p-2">
       <div className="text-[10px] font-bold tracking-wider text-accent">{title}</div>
       {children}
     </div>
