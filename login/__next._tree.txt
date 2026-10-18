@@ -1,0 +1,5 @@
+:HL["/ARGUS/_next/static/chunks/1n9uqbz88jj-h.css","style"]
+:HL["/ARGUS/_next/static/chunks/00234_opamgde.css","style"]
+:HC["/",""]
+:HL["/ARGUS/_next/static/chunks/43yu-b5-k9_9s.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"login","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"BZ3vZ73_AeqpQkJ21-XrS"}

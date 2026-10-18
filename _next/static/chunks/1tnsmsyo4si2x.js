@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,12833,r=>{"use strict";var e=r.i(43476),t=r.i(37684);r.s(["default",0,function({error:r,retry:o,reset:s}){return(0,e.jsx)("div",{className:"h-full overflow-auto",children:(0,e.jsx)(t.CrashCard,{error:r,retry:o??s})})}])}]);
