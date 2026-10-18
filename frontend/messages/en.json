@@ -1793,5 +1793,107 @@
     "SATELLITE": "Satellite",
     "OFFLINE": "Offline",
     "DEMO": "Demo"
+  },
+  "landing": {
+    "nav": {
+      "how": "How it works",
+      "modules": "Modules",
+      "honesty": "Data honesty",
+      "pilots": "Pilots",
+      "open": "Open console",
+      "signIn": "Sign in"
+    },
+    "hero": {
+      "eyebrow": "Regional flood decision system",
+      "title": "Emergency specialists know what to do.",
+      "titleAccent": "ARGUS calculates whether they can still do it in time.",
+      "lead": "An hour-by-hour flood map, the roads about to close, and the latest safe moment for every task in the plan. If the situation gets worse, ARGUS shows where and why the plan breaks and offers alternatives. A person always makes the decision.",
+      "primary": "Open console",
+      "secondary": "See how it works",
+      "caption": "Valley model · illustration",
+      "coords": "51.81° N · 68.36° E",
+      "closesIn": "Closes in",
+      "closed": "Road closed",
+      "open": "Road open",
+      "level": "Water level",
+      "site": "Work site"
+    },
+    "why": {
+      "eyebrow": "The WHY chain",
+      "title": "ARGUS shows a cause you can check",
+      "lead": "An example from the historical replay of the 2024 Atbasar flood.",
+      "s1t": "Scenario BASE → HIGH",
+      "s1d": "Exercise: the forecast was switched to the worst ensemble member.",
+      "s2t": "R37 closes earlier",
+      "s2d": "The road floods at 23:43 instead of 02:29.",
+      "s3t": "Cell C5 loses access",
+      "s3d": "The work site can no longer be reached through it.",
+      "s4t": "Task T1 misses its window",
+      "s4d": "The window closes before the crew arrives. An alternative is needed."
+    },
+    "modules": {
+      "eyebrow": "Modules",
+      "title": "Six calculations, one picture",
+      "scenarioT": "Flood scenario",
+      "scenarioD": "LOW / BASE / HIGH members on real terrain, a frame every 10 minutes, calibrated on 2024 observations.",
+      "scenarioF": "10 min",
+      "scenarioL": "frame step",
+      "impactT": "Impact",
+      "impactD": "Flooded buildings, population, critical facilities and roads. Money appears only where an approved valuation table exists.",
+      "impactF": "6,036",
+      "impactL": "Atbasar buildings, OpenStreetMap",
+      "windowsT": "Action windows",
+      "windowsD": "A road network that changes over time: the countdown to every closure and the latest safe departure for every task.",
+      "windowsF": "02:15",
+      "windowsL": "until R228 closes",
+      "stressT": "Stress test and alternatives",
+      "stressD": "The plan is checked against 23 ways the event can unfold. The CP-SAT optimizer proposes alternatives using weights a person sets.",
+      "stressA": "Plan A",
+      "stressB": "Best alternative",
+      "stressL": "robustness: share of scenarios in which the plan holds",
+      "opsT": "Operations",
+      "opsD": "Draft → reviewed → approved → active. When a road closes, ARGUS recomputes and sends a new plan version to the commander for approval.",
+      "opsF": "v2",
+      "opsL": "new version after a road closure",
+      "valT": "Validation",
+      "valD": "Comparison with Sentinel-2 masks on a held-out part of the same event. The metrics are computed, never typed in.",
+      "valF": "0.59 / 0.74",
+      "valL": "IoU / F1, Atbasar"
+    },
+    "honesty": {
+      "eyebrow": "Data honesty",
+      "title": "Every number knows where it came from",
+      "lead": "ARGUS never presents a simulation as an observation. Each source has its own authority. When sources disagree, the system shows the conflict instead of choosing silently.",
+      "ladder": "Authority, highest first",
+      "l1": "Verified field report",
+      "l2": "Hydropost",
+      "l3": "Official forecast",
+      "l4": "Satellite",
+      "l5": "Global model",
+      "l6": "Simulation",
+      "note": "A person makes the decision. ARGUS calculates and proposes but approves nothing on its own.",
+      "modes": "LIVE, HISTORICAL REPLAY and SIMULATION modes are always labelled on screen."
+    },
+    "pilots": {
+      "eyebrow": "Pilot areas",
+      "title": "Two cities, real geography",
+      "atbName": "Atbasar — Zhabai",
+      "atbRole": "Historical replay of the 2024 flood",
+      "atbFacts": "1,470 road segments · 6,036 buildings · 33 critical facilities",
+      "atbOpen": "Open the situation",
+      "kokName": "Kokshetau — Kylshakty",
+      "kokRole": "Exercise scenario on the real map, bottleneck analysis",
+      "kokFacts": "2,999 road segments · 20,253 buildings · 25 bottlenecks",
+      "kokOpen": "Open bottlenecks"
+    },
+    "cta": {
+      "title": "See the flood the way the operations room will",
+      "note": "Kazakh, Russian and English · runs offline once installed"
+    },
+    "footer": {
+      "statement": "ARGUS FloodOps is a decision-support system. It does not replace emergency specialists.",
+      "data": "Data: OpenStreetMap, Copernicus DEM GLO-30, WorldPop, JRC GSW, Sentinel-2 (ESA/Copernicus), gov.kz.",
+      "guide": "User guide"
+    }
   }
 }
